@@ -1,10 +1,10 @@
 // Integration tests using real rules from the repository
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { RulesTreeProvider } from '../../src/providers/rulesTreeProvider';
-import { RulesScanner } from '../../src/scanner/rulesScanner';
-import { Rule } from '../../src/scanner/rulesScanner';
-import { ProjectDefinition } from '../../src/types/project';
+import { RulesTreeProvider } from '../../../src/providers/rulesTreeProvider';
+import { RulesScanner } from '../../../src/scanner/rulesScanner';
+import { Rule } from '../../../src/scanner/rulesScanner';
+import { ProjectDefinition } from '../../../src/types/project';
 
 // Mock vscode module
 const mockVscode = {

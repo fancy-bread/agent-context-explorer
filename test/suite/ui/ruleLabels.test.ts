@@ -1,10 +1,10 @@
 // Unit tests for Rule Labels Removal
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { RulesTreeProvider, RulesTreeItem } from '../../src/providers/rulesTreeProvider';
-import { Rule } from '../../src/scanner/rulesScanner';
-import { ProjectState } from '../../src/scanner/stateScanner';
-import { ProjectDefinition } from '../../src/types/project';
+import { RulesTreeProvider, RulesTreeItem } from '../../../src/providers/rulesTreeProvider';
+import { Rule } from '../../../src/scanner/rulesScanner';
+import { ProjectState } from '../../../src/scanner/stateScanner';
+import { ProjectDefinition } from '../../../src/types/project';
 
 // Mock vscode module
 const mockVscode = {

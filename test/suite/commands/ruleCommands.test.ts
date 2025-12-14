@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { Rule } from '../../src/scanner/rulesScanner';
+import { Rule } from '../../../src/scanner/rulesScanner';
 
 // Mock VS Code API for testing
 const mockVscode = {

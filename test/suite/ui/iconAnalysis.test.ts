@@ -1,8 +1,8 @@
 // Analysis test to understand current icon assignments
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { RulesTreeProvider } from '../../src/providers/rulesTreeProvider';
-import { Rule } from '../../src/scanner/rulesScanner';
+import { RulesTreeProvider } from '../../../src/providers/rulesTreeProvider';
+import { Rule } from '../../../src/scanner/rulesScanner';
 
 // Mock vscode module
 const mockVscode = {

@@ -4,7 +4,7 @@ import {
 	deduplicateDependencies,
 	mergeAndDeduplicate,
 	deduplicateBy
-} from '../../src/utils/deduplicator';
+} from '../../../src/utils/deduplicator';
 
 describe('Deduplicator Utilities', () => {
 	describe('deduplicateArray', () => {
