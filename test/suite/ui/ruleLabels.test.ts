@@ -54,7 +54,7 @@ describe('Rule Labels Removal', () => {
 	let provider: RulesTreeProvider;
 	let mockProject: ProjectDefinition;
 	let mockRule: Rule;
-	let mockProjectData: Map<string, { rules: Rule[], state: ProjectState, commands: any[] }>;
+	let mockProjectData: Map<string, { rules: Rule[], state: ProjectState, commands: any[], globalCommands: any[] }>;
 
 	beforeEach(() => {
 		mockProject = {
@@ -92,7 +92,8 @@ describe('Rule Labels Removal', () => {
 				configuration: ['tsconfig.json'],
 				documentation: ['README.md']
 			},
-			commands: []
+			commands: [],
+			globalCommands: []
 		});
 
 		provider = new RulesTreeProvider(mockProjectData, [mockProject], mockProject);
@@ -181,7 +182,8 @@ describe('Rule Labels Removal', () => {
 			mockProjectData.set('test-project', {
 				rules: [mockRule, alwaysRule, autoRule],
 				state: mockProjectData.get('test-project')!.state,
-				commands: []
+				commands: [],
+				globalCommands: []
 			});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
@@ -265,6 +267,247 @@ describe('Rule Labels Removal', () => {
 
 			const icon = (provider as any).getContextAwareIcon(performanceRule);
 			assert.strictEqual(icon, 'speedometer', 'Performance rule should get speedometer icon');
+		});
+	});
+
+	describe('Commands Display', () => {
+		it('should show Commands section with Workspace and Global sub-sections', async () => {
+			// Setup project data with both workspace and global commands
+			const workspaceCommand = {
+				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+				fileName: 'create-plan.md',
+				content: '# Create Plan\n\nCreate a detailed implementation plan.',
+				location: 'workspace' as const
+			};
+			const globalCommand = {
+				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+				fileName: 'global-command.md',
+				content: '# Global Command\n\nThis is a global command.',
+				location: 'global' as const
+			};
+
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [workspaceCommand],
+				globalCommands: [globalCommand]
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Get project items
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+
+			assert.ok(commandsSection, 'Commands section should exist');
+
+			// Get sub-sections
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			assert.strictEqual(commandSubSections.length, 2, 'Should show Workspace and Global sub-sections');
+
+			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+			const globalSubSection = commandSubSections.find(item => item.category === 'commands-global');
+
+			assert.ok(workspaceSubSection, 'Workspace Commands sub-section should exist');
+			assert.ok(globalSubSection, 'Global Commands sub-section should exist');
+			assert.strictEqual(workspaceSubSection!.label, 'Workspace Commands');
+			assert.strictEqual(globalSubSection!.label, 'Global Commands');
+		});
+
+		it('should display workspace commands under Workspace Commands sub-section', async () => {
+			const workspaceCommand = {
+				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+				fileName: 'create-plan.md',
+				content: '# Create Plan\n\nCreate a detailed implementation plan.',
+				location: 'workspace' as const
+			};
+
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [workspaceCommand],
+				globalCommands: []
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Navigate to workspace commands
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+			const workspaceCommands = await provider.getChildren(workspaceSubSection!);
+
+			assert.strictEqual(workspaceCommands.length, 1);
+			assert.strictEqual(workspaceCommands[0].label, 'create-plan.md');
+			const workspaceTooltip = typeof workspaceCommands[0].tooltip === 'string' ? workspaceCommands[0].tooltip : workspaceCommands[0].tooltip?.value;
+			assert.ok(workspaceTooltip?.includes('(Workspace)'));
+			const workspaceIcon = typeof workspaceCommands[0].iconPath === 'object' && workspaceCommands[0].iconPath !== null ? (workspaceCommands[0].iconPath as any).id : null;
+			assert.strictEqual(workspaceIcon, 'terminal');
+		});
+
+		it('should display global commands under Global Commands sub-section', async () => {
+			const globalCommand = {
+				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+				fileName: 'global-command.md',
+				content: '# Global Command\n\nThis is a global command.',
+				location: 'global' as const
+			};
+
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [],
+				globalCommands: [globalCommand]
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Navigate to global commands
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			const globalSubSection = commandSubSections.find(item => item.category === 'commands-global');
+			const globalCommands = await provider.getChildren(globalSubSection!);
+
+			assert.strictEqual(globalCommands.length, 1);
+			assert.strictEqual(globalCommands[0].label, 'global-command.md');
+			const globalTooltip = typeof globalCommands[0].tooltip === 'string' ? globalCommands[0].tooltip : globalCommands[0].tooltip?.value;
+			assert.ok(globalTooltip?.includes('(Global)'));
+			const globalIcon = typeof globalCommands[0].iconPath === 'object' && globalCommands[0].iconPath !== null ? (globalCommands[0].iconPath as any).id : null;
+			assert.strictEqual(globalIcon, 'terminal');
+		});
+
+		it('should show empty state for workspace commands when none exist', async () => {
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [],
+				globalCommands: []
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Navigate to workspace commands
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+			const workspaceCommands = await provider.getChildren(workspaceSubSection!);
+
+			assert.strictEqual(workspaceCommands.length, 1);
+			assert.strictEqual(workspaceCommands[0].label, 'No workspace commands found');
+		});
+
+		it('should show empty state for global commands when none exist', async () => {
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [],
+				globalCommands: []
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Navigate to global commands
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			const globalSubSection = commandSubSections.find(item => item.category === 'commands-global');
+			const globalCommands = await provider.getChildren(globalSubSection!);
+
+			assert.strictEqual(globalCommands.length, 1);
+			assert.strictEqual(globalCommands[0].label, 'No global commands found');
+		});
+
+		it('should include location in command tooltips', async () => {
+			const workspaceCommand = {
+				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+				fileName: 'create-plan.md',
+				content: '# Create Plan\n\nCreate a detailed implementation plan.',
+				location: 'workspace' as const
+			};
+			const globalCommand = {
+				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+				fileName: 'global-command.md',
+				content: '# Global Command\n\nThis is a global command.',
+				location: 'global' as const
+			};
+
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [workspaceCommand],
+				globalCommands: [globalCommand]
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Get workspace command
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+			const workspaceCommands = await provider.getChildren(workspaceSubSection!);
+
+			// Get global command
+			const globalSubSection = commandSubSections.find(item => item.category === 'commands-global');
+			const globalCommands = await provider.getChildren(globalSubSection!);
+
+			const workspaceTooltip = typeof workspaceCommands[0].tooltip === 'string' ? workspaceCommands[0].tooltip : workspaceCommands[0].tooltip?.value;
+			const globalTooltip = typeof globalCommands[0].tooltip === 'string' ? globalCommands[0].tooltip : globalCommands[0].tooltip?.value;
+			assert.ok(workspaceTooltip?.includes('(Workspace)'));
+			assert.ok(globalTooltip?.includes('(Global)'));
+		});
+
+		it('should show correct command counts in sub-section descriptions', async () => {
+			const workspaceCommand1 = {
+				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+				fileName: 'create-plan.md',
+				content: '# Create Plan',
+				location: 'workspace' as const
+			};
+			const workspaceCommand2 = {
+				uri: vscode.Uri.file('/test/path/.cursor/commands/start-task.md'),
+				fileName: 'start-task.md',
+				content: '# Start Task',
+				location: 'workspace' as const
+			};
+			const globalCommand = {
+				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+				fileName: 'global-command.md',
+				content: '# Global Command',
+				location: 'global' as const
+			};
+
+			mockProjectData.set('test-project', {
+				rules: [mockRule],
+				state: mockProjectData.get('test-project')!.state,
+				commands: [workspaceCommand1, workspaceCommand2],
+				globalCommands: [globalCommand]
+			});
+
+			provider.updateData(mockProjectData, [mockProject], mockProject);
+
+			// Get sub-sections
+			const projectItems = await provider.getChildren();
+			const sections = await provider.getChildren(projectItems[0]);
+			const commandsSection = sections.find(item => item.category === 'commands');
+			const commandSubSections = await provider.getChildren(commandsSection!);
+
+			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+			const globalSubSection = commandSubSections.find(item => item.category === 'commands-global');
+
+			const workspaceDesc = typeof workspaceSubSection!.description === 'string' ? workspaceSubSection!.description : String(workspaceSubSection!.description);
+			const globalDesc = typeof globalSubSection!.description === 'string' ? globalSubSection!.description : String(globalSubSection!.description);
+			assert.ok(workspaceDesc.includes('2 workspace commands'));
+			assert.ok(globalDesc.includes('1 global command'));
 		});
 	});
 });

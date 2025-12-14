@@ -134,7 +134,11 @@ async function refreshData() {
 
 		// Always scan the current workspace first
 		const currentWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-		const projectData = new Map<string, { rules: Rule[], state: ProjectState, commands: Command[] }>();
+		const projectData = new Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }>();
+
+		// Scan global commands once (shared across all projects)
+		const globalCommands = await (commandsScanner?.scanGlobalCommands() || Promise.resolve([]));
+		outputChannel.appendLine(`Scanned global commands: ${globalCommands.length} commands`);
 
 		if (currentWorkspaceRoot) {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
@@ -148,9 +152,9 @@ async function refreshData() {
 
 			// Use workspace path as the key for current workspace
 			const workspaceKey = 'current-workspace';
-			projectData.set(workspaceKey, { rules: currentRules, state: currentState, commands: currentCommands });
+			projectData.set(workspaceKey, { rules: currentRules, state: currentState, commands: currentCommands, globalCommands });
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentState.languages.length + currentState.frameworks.length + currentState.dependencies.length + currentState.buildTools.length + currentState.testing.length + currentState.codeQuality.length + currentState.developmentTools.length + currentState.architecture.length + currentState.configuration.length + currentState.documentation.length} state items, ${currentCommands.length} commands`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentState.languages.length + currentState.frameworks.length + currentState.dependencies.length + currentState.buildTools.length + currentState.testing.length + currentState.codeQuality.length + currentState.developmentTools.length + currentState.architecture.length + currentState.configuration.length + currentState.documentation.length} state items, ${currentCommands.length} workspace commands, ${globalCommands.length} global commands`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -180,8 +184,8 @@ async function refreshData() {
 					projectCommandsScanner.scanWorkspaceCommands()
 				]);
 
-				projectData.set(project.id, { rules, state, commands });
-				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${state.languages.length + state.frameworks.length + state.dependencies.length + state.buildTools.length + state.testing.length + state.codeQuality.length + state.developmentTools.length + state.architecture.length + state.configuration.length + state.documentation.length} state items, ${commands.length} commands`;
+				projectData.set(project.id, { rules, state, commands, globalCommands });
+				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${state.languages.length + state.frameworks.length + state.dependencies.length + state.buildTools.length + state.testing.length + state.codeQuality.length + state.developmentTools.length + state.architecture.length + state.configuration.length + state.documentation.length} state items, ${commands.length} workspace commands, ${globalCommands.length} global commands`;
 				outputChannel.appendLine(logMessage);
 			} catch (error) {
 				const errorMessage = `Error scanning project ${project.name}: ${error}`;
@@ -206,7 +210,8 @@ async function refreshData() {
 						configuration: [],
 						documentation: []
 					},
-					commands: []
+					commands: [],
+					globalCommands: globalCommands
 				});
 			}
 		}

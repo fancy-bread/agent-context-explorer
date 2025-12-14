@@ -2,7 +2,7 @@
 	"name": "project-rules-explorer",
 	"displayName": "Project Rules Explorer",
 	"description": "Visualize and manage Cursor project rules and state with enhanced detection",
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"publisher": "fancybread-com",
 	"icon": "pre.png",
 	"repository": {

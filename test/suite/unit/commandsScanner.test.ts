@@ -32,7 +32,26 @@ Comprehensive security review to identify and fix vulnerabilities.
 				if (uri.fsPath.includes('error-command.md')) {
 					throw new Error('Permission denied');
 				}
+				if (uri.fsPath.includes('global-command.md')) {
+					return Buffer.from(`# Global Command
+
+## Overview
+This is a global command available across all workspaces.
+
+## Usage
+Use this command from any workspace.`);
+				}
 				return Buffer.from('# Test Command\n\nThis is a test command.');
+			},
+			stat: async (uri: any) => {
+				// Mock stat for directory existence check
+				if (uri.fsPath.includes('/home/user/.cursor/commands')) {
+					return { type: 2 }; // Directory
+				}
+				if (uri.fsPath.includes('/missing/.cursor/commands')) {
+					throw new Error('Directory not found');
+				}
+				return { type: 2 };
 			}
 		},
 		findFiles: async (pattern: any) => {
@@ -42,6 +61,12 @@ Comprehensive security review to identify and fix vulnerabilities.
 					{ fsPath: '/workspace/.cursor/commands/valid-command.md', path: '/workspace/.cursor/commands/valid-command.md' },
 					{ fsPath: '/workspace/.cursor/commands/security-audit.md', path: '/workspace/.cursor/commands/security-audit.md' },
 					{ fsPath: '/workspace/.cursor/commands/error-command.md', path: '/workspace/.cursor/commands/error-command.md' }
+				];
+			}
+			// Mock global commands - check if pattern is a RelativePattern with global path
+			if (pattern.pattern === '*.md' || (pattern.workspaceRoot && pattern.workspaceRoot.includes('/home/user/.cursor/commands'))) {
+				return [
+					{ fsPath: '/home/user/.cursor/commands/global-command.md', path: '/home/user/.cursor/commands/global-command.md' }
 				];
 			}
 			return [];
@@ -113,6 +138,61 @@ class MockCommandsScanner {
 		// Create watcher for .md files in .cursor/commands
 		const pattern = new mockVscode.RelativePattern(this.workspaceRoot, '.cursor/commands/*.md');
 		return mockVscode.workspace.createFileSystemWatcher(pattern);
+	}
+
+	async scanGlobalCommands(): Promise<any[]> {
+		const commands: any[] = [];
+
+		try {
+			// Mock global commands directory: ~/.cursor/commands
+			const globalCommandsDir = '/home/user/.cursor/commands';
+			const globalCommandsUri = mockVscode.Uri.file(globalCommandsDir);
+
+			// Check if directory exists
+			try {
+				await mockVscode.workspace.fs.stat(globalCommandsUri);
+			} catch {
+				// Directory doesn't exist, return empty array
+				return [];
+			}
+
+			// Find all .md files in global .cursor/commands directory
+			// Use RelativePattern with the directory as workspace root
+			const pattern = new mockVscode.RelativePattern(globalCommandsDir, '*.md');
+			// Store workspaceRoot in pattern for mock to detect
+			(pattern as any).workspaceRoot = globalCommandsDir;
+			const files = await mockVscode.workspace.findFiles(pattern);
+
+			// Read each file
+			for (const file of files) {
+				try {
+					const fileData = await mockVscode.workspace.fs.readFile(file);
+					const content = Buffer.from(fileData).toString('utf8');
+					const fileName = file.path.split('/').pop() || 'unknown';
+
+					commands.push({
+						uri: file,
+						content,
+						fileName,
+						location: 'global'
+					});
+				} catch (error) {
+					// Add a placeholder command for files that can't be read
+					const fileName = file.path.split('/').pop() || 'unknown';
+					commands.push({
+						uri: file,
+						content: 'Error reading file content',
+						fileName,
+						location: 'global'
+					});
+				}
+			}
+
+			return commands;
+		} catch (error) {
+			// Handle errors gracefully - return empty array
+			return [];
+		}
 	}
 }
 
@@ -290,6 +370,81 @@ describe('Commands Scanner Tests', () => {
 
 			assert.ok(validCommands.length > 0);
 			assert.ok(errorCommands.length > 0);
+		});
+	});
+
+	describe('Global Commands Scanning', () => {
+		it('should scan and read global commands', async () => {
+			const commands = await scanner.scanGlobalCommands();
+			assert.ok(Array.isArray(commands));
+			assert.ok(commands.length > 0);
+		});
+
+		it('should set location to global for global commands', async () => {
+			const commands = await scanner.scanGlobalCommands();
+
+			commands.forEach(command => {
+				assert.equal(command.location, 'global');
+			});
+		});
+
+		it('should read global commands from ~/.cursor/commands directory', async () => {
+			const commands = await scanner.scanGlobalCommands();
+			const globalCommand = commands.find(cmd => cmd.fileName === 'global-command.md');
+
+			assert.ok(globalCommand);
+			assert.ok(globalCommand.content.startsWith('# Global Command'));
+			assert.equal(globalCommand.location, 'global');
+		});
+
+		it('should return empty array when global commands directory does not exist', async () => {
+			const emptyScanner = new MockCommandsScanner(mockVscode.Uri.file('/missing/workspace'));
+			// Mock stat to throw error (directory doesn't exist)
+			const originalStat = mockVscode.workspace.fs.stat;
+			mockVscode.workspace.fs.stat = async () => {
+				throw new Error('Directory not found');
+			};
+
+			const commands = await emptyScanner.scanGlobalCommands();
+			assert.equal(commands.length, 0);
+
+			// Restore original
+			mockVscode.workspace.fs.stat = originalStat;
+		});
+
+		it('should handle file read errors gracefully for global commands', async () => {
+			// This would be tested with actual error files
+			// For now, we verify the structure handles errors
+			const commands = await scanner.scanGlobalCommands();
+
+			commands.forEach(command => {
+				assert.ok(typeof command.content === 'string');
+				assert.equal(command.location, 'global');
+			});
+		});
+
+		it('should return empty array on global scanning errors', async () => {
+			const errorScanner = new MockCommandsScanner(mockVscode.Uri.file('/error/workspace'));
+			// Mock findFiles to throw error
+			const originalFindFiles = mockVscode.workspace.findFiles;
+			mockVscode.workspace.findFiles = async () => {
+				throw new Error('Scanning failed');
+			};
+
+			const commands = await errorScanner.scanGlobalCommands();
+			assert.equal(commands.length, 0);
+
+			// Restore original
+			mockVscode.workspace.findFiles = originalFindFiles;
+		});
+
+		it('should include URI for each global command', async () => {
+			const commands = await scanner.scanGlobalCommands();
+
+			commands.forEach(command => {
+				assert.ok(command.uri);
+				assert.ok(command.uri.fsPath);
+			});
 		});
 	});
 });
