@@ -10,7 +10,8 @@ export interface RulesTreeItem extends vscode.TreeItem {
 	commandData?: Command; // Command data (avoiding conflict with TreeItem's command property)
 	stateItem?: any;
 	ruleType?: any;
-	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands';
+	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands' | 'commands-workspace' | 'commands-global';
+	commandLocation?: 'workspace' | 'global'; // For sub-section grouping
 	directory?: string;
 	project?: ProjectDefinition;
 }
@@ -20,7 +21,7 @@ export class RulesTreeProvider implements vscode.TreeDataProvider<RulesTreeItem>
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	constructor(
-		private projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[] }> = new Map(),
+		private projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }> = new Map(),
 		private projects: ProjectDefinition[] = [],
 		private currentProject: ProjectDefinition | null = null
 	) {}
@@ -34,7 +35,7 @@ export class RulesTreeProvider implements vscode.TreeDataProvider<RulesTreeItem>
 	}
 
 	updateData(
-		projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[] }>,
+		projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }>,
 		projects: ProjectDefinition[],
 		currentProject: ProjectDefinition | null
 	): void {
@@ -86,7 +87,9 @@ export class RulesTreeProvider implements vscode.TreeDataProvider<RulesTreeItem>
 				// Show Rules, State, and Commands sections for all projects
 				const currentProjectData = this.projectData.get(project.id);
 				const rulesCount = currentProjectData?.rules.length || 0;
-				const commandsCount = currentProjectData?.commands.length || 0;
+				const workspaceCommandsCount = currentProjectData?.commands.length || 0;
+				const globalCommandsCount = currentProjectData?.globalCommands.length || 0;
+				const commandsCount = workspaceCommandsCount + globalCommandsCount;
 
 				// Count sections (not individual items)
 				let stateCount = 0;
@@ -138,32 +141,97 @@ export class RulesTreeProvider implements vscode.TreeDataProvider<RulesTreeItem>
 
 				return items;
 		} else if (element.category === 'commands' && element.project) {
-			// Commands section for specific project
+			// Commands section for specific project - show Workspace Commands and Global Commands sub-sections
+			const projectData = this.projectData.get(element.project.id);
+			const workspaceCommands = projectData?.commands || [];
+			const globalCommands = projectData?.globalCommands || [];
+
+			const subSections = [
+				{
+					name: 'Workspace Commands',
+					id: 'commands-workspace',
+					icon: 'folder',
+					commands: workspaceCommands,
+					location: 'workspace' as const
+				},
+				{
+					name: 'Global Commands',
+					id: 'commands-global',
+					icon: 'globe',
+					commands: globalCommands,
+					location: 'global' as const
+				}
+			];
+
+			return subSections.map((section) => {
+				const item = new vscode.TreeItem(
+					section.name,
+					vscode.TreeItemCollapsibleState.Collapsed
+				) as RulesTreeItem;
+				item.category = section.id as 'commands-workspace' | 'commands-global';
+				item.project = element.project;
+				item.commandLocation = section.location;
+				item.description = `${section.commands.length} ${section.location} command${section.commands.length !== 1 ? 's' : ''}`;
+				item.iconPath = new vscode.ThemeIcon(section.icon);
+				return item;
+			});
+		} else if (element.category === 'commands-workspace' && element.project) {
+			// Workspace Commands sub-section
 			const projectData = this.projectData.get(element.project.id);
 			const commands = projectData?.commands || [];
 
 			if (commands.length === 0) {
 				return [{
-					label: 'No commands found',
+					label: 'No workspace commands found',
 					collapsibleState: vscode.TreeItemCollapsibleState.None,
 					description: 'Add commands to .cursor/commands directory'
 				} as RulesTreeItem];
 			}
 
-			// Show all commands in a flat list
 			return commands.map((cmd: Command) => {
 				const item = new vscode.TreeItem(
 					cmd.fileName,
 					vscode.TreeItemCollapsibleState.None
 				) as RulesTreeItem;
-				item.commandData = cmd; // Store Command data for context menu access
-				item.category = 'commands';
+				item.commandData = cmd;
+				item.category = 'commands-workspace';
 				item.project = element.project;
-				item.tooltip = this.getCommandPreview(cmd.content);
-				item.contextValue = 'command'; // Enable context menu for individual commands
+				item.tooltip = `${this.getCommandPreview(cmd.content)} (Workspace)`;
+				item.contextValue = 'command';
 				item.iconPath = new vscode.ThemeIcon('terminal');
 
-				// Open in editor
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Command',
+					arguments: [cmd.uri]
+				};
+				return item;
+			});
+		} else if (element.category === 'commands-global' && element.project) {
+			// Global Commands sub-section
+			const projectData = this.projectData.get(element.project.id);
+			const commands = projectData?.globalCommands || [];
+
+			if (commands.length === 0) {
+				return [{
+					label: 'No global commands found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add commands to ~/.cursor/commands directory'
+				} as RulesTreeItem];
+			}
+
+			return commands.map((cmd: Command) => {
+				const item = new vscode.TreeItem(
+					cmd.fileName,
+					vscode.TreeItemCollapsibleState.None
+				) as RulesTreeItem;
+				item.commandData = cmd;
+				item.category = 'commands-global';
+				item.project = element.project;
+				item.tooltip = `${this.getCommandPreview(cmd.content)} (Global)`;
+				item.contextValue = 'command';
+				item.iconPath = new vscode.ThemeIcon('globe');
+
 				item.command = {
 					command: 'vscode.open',
 					title: 'Open Command',

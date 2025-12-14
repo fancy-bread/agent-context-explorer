@@ -54,7 +54,7 @@ describe('Rule Labels Removal', () => {
 	let provider: RulesTreeProvider;
 	let mockProject: ProjectDefinition;
 	let mockRule: Rule;
-	let mockProjectData: Map<string, { rules: Rule[], state: ProjectState, commands: any[] }>;
+	let mockProjectData: Map<string, { rules: Rule[], state: ProjectState, commands: any[], globalCommands: any[] }>;
 
 	beforeEach(() => {
 		mockProject = {
@@ -92,7 +92,8 @@ describe('Rule Labels Removal', () => {
 				configuration: ['tsconfig.json'],
 				documentation: ['README.md']
 			},
-			commands: []
+			commands: [],
+			globalCommands: []
 		});
 
 		provider = new RulesTreeProvider(mockProjectData, [mockProject], mockProject);
@@ -181,7 +182,8 @@ describe('Rule Labels Removal', () => {
 			mockProjectData.set('test-project', {
 				rules: [mockRule, alwaysRule, autoRule],
 				state: mockProjectData.get('test-project')!.state,
-				commands: []
+				commands: [],
+				globalCommands: []
 			});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
