@@ -237,21 +237,51 @@ function setupFileWatcher() {
 	if (!workspaceRoot) {return;}
 
 	// Watch for changes in .cursor/rules directories
-	const pattern = new vscode.RelativePattern(workspaceRoot, '**/.cursor/rules/**/*.{mdc,md}');
-	fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+	const rulesPattern = new vscode.RelativePattern(workspaceRoot, '**/.cursor/rules/**/*.{mdc,md}');
+	const rulesWatcher = vscode.workspace.createFileSystemWatcher(rulesPattern);
 
-	fileWatcher.onDidCreate(() => {
+	// Watch for changes in .cursor/commands directory (flat structure)
+	const commandsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/commands/*.md');
+	const commandsWatcher = vscode.workspace.createFileSystemWatcher(commandsPattern);
+
+	// Rules watcher handlers
+	rulesWatcher.onDidCreate(() => {
 		outputChannel.appendLine('Rule file created, refreshing...');
 		refreshData();
 	});
 
-	fileWatcher.onDidChange(() => {
+	rulesWatcher.onDidChange(() => {
 		outputChannel.appendLine('Rule file changed, refreshing...');
 		refreshData();
 	});
 
-	fileWatcher.onDidDelete(() => {
+	rulesWatcher.onDidDelete(() => {
 		outputChannel.appendLine('Rule file deleted, refreshing...');
 		refreshData();
 	});
+
+	// Commands watcher handlers
+	commandsWatcher.onDidCreate(() => {
+		outputChannel.appendLine('Command file created, refreshing...');
+		refreshData();
+	});
+
+	commandsWatcher.onDidChange(() => {
+		outputChannel.appendLine('Command file changed, refreshing...');
+		refreshData();
+	});
+
+	commandsWatcher.onDidDelete(() => {
+		outputChannel.appendLine('Command file deleted, refreshing...');
+		refreshData();
+	});
+
+	// Combine watchers for disposal
+	fileWatcher = {
+		...rulesWatcher,
+		dispose: () => {
+			rulesWatcher.dispose();
+			commandsWatcher.dispose();
+		}
+	} as vscode.FileSystemWatcher;
 }
