@@ -4,6 +4,55 @@ import { ProjectManager } from '../services/projectManager';
 import { ProjectDefinition } from '../types/project';
 
 export class ProjectCommands {
+	/**
+	 * Parse command markdown to extract title and Overview section
+	 */
+	private static parseCommandMetadata(content: string): { title: string; overview: string } {
+		const lines = content.split('\n');
+		let title = '';
+		let overview = '';
+		let inOverview = false;
+		let overviewLines: string[] = [];
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+
+			// Extract title from first # heading
+			if (!title && line.trim().startsWith('# ')) {
+				title = line.trim().substring(2).trim();
+				continue;
+			}
+
+			// Check for Overview section (## Overview)
+			if (line.trim() === '## Overview') {
+				inOverview = true;
+				continue;
+			}
+
+			// Stop at next ## heading (end of Overview section)
+			if (inOverview && line.trim().startsWith('## ')) {
+				break;
+			}
+
+			// Collect Overview content
+			if (inOverview) {
+				overviewLines.push(line);
+			}
+		}
+
+		overview = overviewLines.join('\n').trim();
+
+		// Fallback: if no title found, use first non-empty line or filename
+		if (!title) {
+			title = lines.find(l => l.trim().length > 0)?.trim() || 'Untitled Command';
+		}
+
+		// Remove leading # if present
+		title = title.replace(/^#+\s*/, '');
+
+		return { title, overview };
+	}
+
 	static registerCommands(context: vscode.ExtensionContext): void {
 		const projectManager = new ProjectManager(context);
 
@@ -160,6 +209,7 @@ ${projectList}
 
 				const { RulesScanner } = await import('../scanner/rulesScanner');
 				const { StateScanner } = await import('../scanner/stateScanner');
+				const { CommandsScanner } = await import('../scanner/commandsScanner');
 
 				const projects = await projectManager.getProjects();
 				const currentProject = await projectManager.getCurrentProject();
@@ -171,13 +221,28 @@ ${projectList}
 					projects: []
 				};
 
+				// Scan global commands once (shared across all projects)
+				const globalCommandsScanner = new CommandsScanner(workspaceRoot);
+				const globalCommands = await globalCommandsScanner.scanGlobalCommands();
+				exportData.globalCommands = globalCommands.map(cmd => {
+					const { title, overview } = ProjectCommands.parseCommandMetadata(cmd.content);
+					return {
+						fileName: cmd.fileName,
+						location: cmd.location,
+						title,
+						overview
+					};
+				});
+
 				// Add current workspace
 				if (workspaceRoot) {
 					const currentRulesScanner = new RulesScanner(workspaceRoot);
 					const currentStateScanner = new StateScanner(workspaceRoot);
-					const [rules, state] = await Promise.all([
+					const currentCommandsScanner = new CommandsScanner(workspaceRoot);
+					const [rules, state, commands] = await Promise.all([
 						currentRulesScanner.scanRules(),
-						currentStateScanner.scanState()
+						currentStateScanner.scanState(),
+						currentCommandsScanner.scanWorkspaceCommands()
 					]);
 
 					exportData.projects.push({
@@ -192,6 +257,15 @@ ${projectList}
 							alwaysApply: rule.metadata.alwaysApply || false,
 							content: rule.content
 						})),
+							commands: commands.map(cmd => {
+							const { title, overview } = ProjectCommands.parseCommandMetadata(cmd.content);
+							return {
+								fileName: cmd.fileName,
+								location: cmd.location,
+								title,
+								overview
+							};
+						}),
 						state: {
 							// Basic state
 							languages: state.languages,
@@ -227,10 +301,12 @@ ${projectList}
 						const projectUri = vscode.Uri.file(project.path);
 						const projectRulesScanner = new RulesScanner(projectUri);
 						const projectStateScanner = new StateScanner(projectUri);
+						const projectCommandsScanner = new CommandsScanner(projectUri);
 
-						const [rules, state] = await Promise.all([
+						const [rules, state, commands] = await Promise.all([
 							projectRulesScanner.scanRules(),
-							projectStateScanner.scanState()
+							projectStateScanner.scanState(),
+							projectCommandsScanner.scanWorkspaceCommands()
 						]);
 
 						exportData.projects.push({
@@ -246,6 +322,15 @@ ${projectList}
 								alwaysApply: rule.metadata.alwaysApply || false,
 								content: rule.content
 							})),
+							commands: commands.map(cmd => {
+								const { title, overview } = ProjectCommands.parseCommandMetadata(cmd.content);
+								return {
+									fileName: cmd.fileName,
+									location: cmd.location,
+									title,
+									overview
+								};
+							}),
 							state: {
 								// Basic state
 								languages: state.languages,

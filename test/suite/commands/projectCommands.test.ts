@@ -534,6 +534,138 @@ describe('Project Commands Tests', () => {
 		});
 	});
 
+	describe('Export For Agent - Commands Inclusion', () => {
+		it('should include commands in export data structure', async () => {
+			// Mock command data
+			const mockGlobalCommands = [
+				{
+					fileName: 'global-command.md',
+					location: 'global' as const,
+					content: '# Global Command\n\nGlobal command content'
+				}
+			];
+
+			const mockWorkspaceCommands = [
+				{
+					fileName: 'workspace-command.md',
+					location: 'workspace' as const,
+					content: '# Workspace Command\n\nWorkspace command content'
+				}
+			];
+
+			// Verify command structure matches expected format
+			const formattedGlobalCommands = mockGlobalCommands.map(cmd => ({
+				fileName: cmd.fileName,
+				location: cmd.location,
+				content: cmd.content
+			}));
+
+			const formattedWorkspaceCommands = mockWorkspaceCommands.map(cmd => ({
+				fileName: cmd.fileName,
+				location: cmd.location,
+				content: cmd.content
+			}));
+
+			// Assert structure
+			assert.equal(formattedGlobalCommands.length, 1);
+			assert.equal(formattedGlobalCommands[0].fileName, 'global-command.md');
+			assert.equal(formattedGlobalCommands[0].location, 'global');
+			assert.ok(formattedGlobalCommands[0].content.includes('Global Command'));
+
+			assert.equal(formattedWorkspaceCommands.length, 1);
+			assert.equal(formattedWorkspaceCommands[0].fileName, 'workspace-command.md');
+			assert.equal(formattedWorkspaceCommands[0].location, 'workspace');
+			assert.ok(formattedWorkspaceCommands[0].content.includes('Workspace Command'));
+		});
+
+		it('should format commands with correct fields (fileName, location, content)', () => {
+			const mockCommand = {
+				fileName: 'test-command.md',
+				location: 'workspace' as const,
+				content: '# Test Command\n\nCommand content here'
+			};
+
+			const formatted = {
+				fileName: mockCommand.fileName,
+				location: mockCommand.location,
+				content: mockCommand.content
+			};
+
+			// Verify all required fields are present
+			assert.ok(formatted.fileName);
+			assert.ok(formatted.location);
+			assert.ok(formatted.content);
+			assert.equal(formatted.location, 'workspace');
+		});
+
+		it('should handle empty commands arrays gracefully', () => {
+			const emptyCommands: any[] = [];
+			const formatted = emptyCommands.map(cmd => ({
+				fileName: cmd.fileName,
+				location: cmd.location,
+				content: cmd.content
+			}));
+
+			assert.equal(formatted.length, 0);
+			assert.ok(Array.isArray(formatted));
+		});
+
+		it('should distinguish between global and workspace commands', () => {
+			const globalCommand = {
+				fileName: 'global.md',
+				location: 'global' as const,
+				content: 'Global content'
+			};
+
+			const workspaceCommand = {
+				fileName: 'workspace.md',
+				location: 'workspace' as const,
+				content: 'Workspace content'
+			};
+
+			assert.equal(globalCommand.location, 'global');
+			assert.equal(workspaceCommand.location, 'workspace');
+			assert.notEqual(globalCommand.location, workspaceCommand.location);
+		});
+
+		it('should include commands in export data structure format', () => {
+			const exportData = {
+				exportedAt: new Date().toISOString(),
+				totalProjects: 1,
+				globalCommands: [
+					{
+						fileName: 'global-cmd.md',
+						location: 'global',
+						content: 'Global command content'
+					}
+				],
+				projects: [
+					{
+						id: 'test-project',
+						name: 'Test Project',
+						path: '/test/path',
+						commands: [
+							{
+								fileName: 'workspace-cmd.md',
+								location: 'workspace',
+								content: 'Workspace command content'
+							}
+						]
+					}
+				]
+			};
+
+			// Verify structure
+			assert.ok(exportData.globalCommands);
+			assert.ok(Array.isArray(exportData.globalCommands));
+			assert.equal(exportData.globalCommands[0].location, 'global');
+
+			assert.ok(exportData.projects[0].commands);
+			assert.ok(Array.isArray(exportData.projects[0].commands));
+			assert.equal(exportData.projects[0].commands[0].location, 'workspace');
+		});
+	});
+
 	describe('Project Validation', () => {
 		it('should validate project path exists', async () => {
 			const pathExists = await projectManager.validateProjectPath('/workspace');

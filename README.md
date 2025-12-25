@@ -20,10 +20,16 @@ A VS Code extension that provides a comprehensive view of your Cursor rules and 
 - Provides AI-optimized project insights
 - Exports comprehensive project context for agents
 
+### **Commands Management**
+- Browse workspace and global Cursor commands in tree view
+- Auto-discover commands from `.cursor/commands/` directories
+- View command metadata (title, overview, location)
+- Commands included in agent exports for complete context
+
 ### **Multi-Project Support**
 - Manage multiple projects from a single workspace
 - Reference rules across different codebases
-- Export all projects and rules together
+- Export all projects, rules, and commands together
 - Switch between projects easily
 
 ## Getting Started
@@ -37,8 +43,9 @@ A VS Code extension that provides a comprehensive view of your Cursor rules and 
 ### Quick Start
 
 1. **View Rules**: Click the Project Rules icon in the sidebar to see all your Cursor rules
-2. **Create a Rule**: Click the `+` button or right-click in the Rules section
-3. **Export for Agents**: Click the Export button to generate `.cursor/project-rules-export.json`
+2. **View Commands**: Expand the Commands section to see workspace and global commands
+3. **Create a Rule**: Click the `+` button or right-click in the Rules section
+4. **Export for Agents**: Click the Export button to generate `.cursor/project-rules-export.json`
 
 ## Usage Guide
 
@@ -64,6 +71,40 @@ A VS Code extension that provides a comprehensive view of your Cursor rules and 
 - Rules in `.cursor/rules/` are always-apply rules
 - Create subdirectories for organization (e.g., `.cursor/rules/security/`)
 - Use file references like `@service-template.ts` in rule content
+
+### Commands Management
+
+The extension automatically discovers and displays Cursor commands from:
+- **Workspace commands**: `.cursor/commands/*.md` files in your workspace
+- **Global commands**: `~/.cursor/commands/*.md` files (shared across all projects)
+
+#### **Viewing Commands**
+- Commands appear in the tree view under the Commands section
+- Each command shows its filename, location (workspace/global), title, and overview
+- Click any command to see its details
+
+#### **Command Format**
+Commands are Markdown files with a title and Overview section:
+```markdown
+# Command Title
+
+## Overview
+Brief description of what this command does.
+
+## Steps
+1. Step one
+2. Step two
+...
+```
+
+#### **Commands in Exports**
+When exporting for AI agents, commands are included with:
+- `fileName`: Command filename
+- `location`: `"workspace"` or `"global"`
+- `title`: Extracted from the first heading
+- `overview`: Content from the Overview section
+
+This provides agents with context about available commands and how to use them.
 
 ### Project State Detection
 
@@ -123,6 +164,7 @@ The Export feature creates a comprehensive JSON file that AI agents can read:
 2. File is saved to `.cursor/project-rules-export.json`
 3. AI agents automatically have access to:
    - All project rules (always-apply and conditional)
+   - Workspace and global commands (title and overview)
    - Project identity and capabilities
    - Dependency purposes and critical paths
    - Architecture patterns and design decisions
@@ -131,6 +173,7 @@ The Export feature creates a comprehensive JSON file that AI agents can read:
 
 **What agents learn:**
 - What your project is and what it does
+- What commands are available and how to use them
 - Why dependencies exist (not just that they exist)
 - What architecture patterns you're using
 - What files are critical to understand
@@ -233,6 +276,12 @@ Run "Project Rules: View State" from the command palette to see a comprehensive 
 **Rules not appearing?**
 - Ensure `.cursor/rules/` directory exists
 - Check that files have `.mdc` or `.md` extension
+- Click refresh button to force update
+
+**Commands not appearing?**
+- Check that `.cursor/commands/` directory exists for workspace commands
+- Verify global commands are in `~/.cursor/commands/`
+- Ensure command files have `.md` extension
 - Click refresh button to force update
 
 **State detection incomplete?**
