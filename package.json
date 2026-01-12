@@ -238,7 +238,7 @@
 		"@types/node": "^25.0.3",
 		"@types/vscode": "^1.105.0",
 		"@typescript-eslint/eslint-plugin": "^8.50.1",
-		"@typescript-eslint/parser": "^8.50.1",
+		"@typescript-eslint/parser": "^8.52.0",
 		"@vscode/test-electron": "^2.3.0",
 		"eslint": "^9.39.1",
 		"glob": "^13.0.0",
