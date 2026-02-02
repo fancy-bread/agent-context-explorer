@@ -402,3 +402,48 @@ export interface AsdlcArtifacts {
 	schemas: SchemasInfo;
 	hasAnyArtifacts: boolean;
 }
+
+// =============================================================================
+// ASDLC Compliance Types
+// =============================================================================
+
+/**
+ * Status for a compliance check
+ */
+export type ComplianceStatus = 'pass' | 'fail' | 'warn';
+
+/**
+ * Individual compliance check result
+ */
+export interface PillarCheck {
+	name: string;
+	status: ComplianceStatus;
+	message: string;
+	details?: string[];
+}
+
+/**
+ * ASDLC pillar identifiers
+ */
+export type PillarName = 'factory-architecture' | 'standardized-parts' | 'quality-control';
+
+/**
+ * Result for a single ASDLC pillar validation
+ */
+export interface PillarResult {
+	pillar: PillarName;
+	status: ComplianceStatus;
+	checks: PillarCheck[];
+	summary: string;
+}
+
+/**
+ * Full ASDLC compliance report
+ */
+export interface ComplianceReport {
+	timestamp: string;
+	projectPath: string;
+	overallStatus: ComplianceStatus;
+	pillars: PillarResult[];
+	recommendations: string[];
+}

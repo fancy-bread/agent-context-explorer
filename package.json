@@ -140,6 +140,11 @@
 				"command": "ace.pasteRule",
 				"title": "Paste Rule",
 				"icon": "$(paste)"
+			},
+			{
+				"command": "ace.auditAsdlc",
+				"title": "Audit ASDLC Compliance",
+				"icon": "$(checklist)"
 			}
 		],
 		"menus": {
@@ -156,6 +161,11 @@
 				},
 				{
 					"command": "ace.exportForAgent",
+					"when": "view == aceExplorer",
+					"group": "navigation"
+				},
+				{
+					"command": "ace.auditAsdlc",
 					"when": "view == aceExplorer",
 					"group": "navigation"
 				}

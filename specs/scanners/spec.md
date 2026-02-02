@@ -47,6 +47,7 @@ class XxxScanner {
 | `RulesScanner` | `.mdc`, `.md` files | `.cursor/rules/` | Cursor rules with YAML frontmatter |
 | `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/` | Workspace and global commands |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
+| `AsdlcComplianceScanner` | Uses `AsdlcArtifactScanner` | N/A (delegates) | Validates ASDLC three-pillar compliance |
 
 #### Dependency Direction
 
@@ -58,6 +59,12 @@ extension.ts
     │       ├── RulesScanner
     │       ├── CommandsScanner
     │       └── AsdlcArtifactScanner (replaces StateScanner)
+    │
+    ├── StateCommands
+    │       │
+    │       └── AsdlcComplianceScanner
+    │               │
+    │               └── AsdlcArtifactScanner (delegates to)
     │
     └── Export commands
 ```
@@ -163,6 +170,7 @@ Scanners are instantiated by providers/commands. Scanners have no dependencies o
 | RulesScanner | `src/scanner/rulesScanner.ts` |
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
+| AsdlcComplianceScanner | `src/scanner/asdlcComplianceScanner.ts` |
 | StateScanner (deprecated) | `src/scanner/stateScanner.ts` |
 | Scanner types | `src/scanner/types.ts` |
 | MDC parser utility | `src/utils/mdcParser.ts` |
@@ -173,7 +181,8 @@ Scanners are instantiated by providers/commands. Scanners have no dependencies o
 |---------|-----------|
 | RulesScanner | `test/suite/scanner/rulesScanner.test.ts` |
 | CommandsScanner | `test/suite/unit/commandsScanner.test.ts` |
-| AsdlcArtifactScanner | `test/suite/scanner/asdlcArtifactScanner.test.ts` |
+| AsdlcArtifactScanner | `test/suite/unit/asdlcArtifactScanner.test.ts` |
+| AsdlcComplianceScanner | `test/suite/unit/asdlcComplianceScanner.test.ts` |
 | StateScanner | `test/suite/scanner/stateScanner.test.ts` |
 
 ---
