@@ -2,7 +2,7 @@
 
 import { Rule } from '../scanner/rulesScanner';
 import { Command } from '../scanner/commandsScanner';
-import { AsdlcArtifacts, ComplianceReport, SpecFile } from '../scanner/types';
+import { AsdlcArtifacts, SpecFile } from '../scanner/types';
 
 // =============================================================================
 // Rule Types (for MCP tools)
@@ -150,7 +150,6 @@ export interface ProjectContext {
 	rules: RuleInfo[];
 	commands: CommandInfo[];
 	asdlcArtifacts: AsdlcArtifacts;
-	compliance?: ComplianceReport;
 }
 
 // =============================================================================
@@ -202,4 +201,4 @@ export interface ResourceContent {
 }
 
 // Re-export types from scanner for convenience
-export { AsdlcArtifacts, ComplianceReport, SpecFile };
+export { AsdlcArtifacts, SpecFile };

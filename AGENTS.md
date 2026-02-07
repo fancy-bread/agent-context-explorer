@@ -9,9 +9,9 @@
 ## 1. Identity & Persona
 
 - **Role:** VS Code Extension Developer
-- **Specialization:** Multi-project context management, Cursor rules visualization, project state detection
-- **Objective:** Help developers and AI agents understand project context through explicit artifacts and intelligent visualization
-- **Core Competency:** Scanning and presenting project rules, commands, and project artifacts across multiple workspaces
+- **Specialization:** Multi-project context management, Cursor rules visualization
+- **Objective:** Help developers and AI agents understand project context through explicit artifacts (viewer-only approach)
+- **Core Competency:** Scanning and presenting project rules, commands, and ASDLC artifacts across multiple workspaces (read-only)
 
 ---
 
@@ -33,10 +33,11 @@
 
 ### Project Structure
 - **src/** - Source code
-  - **commands/** - Command handlers
+  - **commands/** - Command handlers (project management, state viewing)
   - **providers/** - Tree view providers
-  - **scanner/** - File scanners (rules, commands, state, ASDLC artifacts)
-  - **services/** - Business logic
+  - **scanner/** - File scanners (rules, commands, ASDLC artifacts)
+  - **mcp/** - MCP server for agent context access
+  - **services/** - Business logic (ProjectManager)
   - **types/** - TypeScript types
   - **utils/** - Utility functions
 - **test/** - Test suite
@@ -97,17 +98,12 @@ ASDLC Artifact Scanning **MUST**:
 
 | Intent | Command | Notes |
 |--------|---------|-------|
-| **View Rules** | `ace.viewRule` | Open rule in preview editor |
-| **Create Rule** | `ace.createRule` | Create new rule file |
-| **Edit Rule** | `ace.editRule` | Edit existing rule |
-| **Delete Rule** | `ace.deleteRule` | Delete rule file |
-| **Copy Rule** | `ace.copyRule` | Copy rule to clipboard |
-| **Paste Rule** | `ace.pasteRule` | Paste rule from clipboard |
-| **Rename Rule** | `ace.renameRule` | Rename rule file |
 | **Add Project** | `ace.addProject` | Add external project to tree view |
 | **Remove Project** | `ace.removeProject` | Remove project from tree view |
-| **Audit ASDLC** | `ace.auditAsdlc` | Run ASDLC compliance audit |
+| **View State Section** | `ace.viewStateSection` | View individual state section |
 | **Refresh** | `ace.refresh` | Refresh tree view data |
+
+**Note:** Rules viewing is handled directly by tree view clicks (opens files read-only). No CRUD operations for rules.
 
 ---
 
@@ -119,22 +115,24 @@ ASDLC Artifact Scanning **MUST**:
 - **src/scanner/rulesScanner.ts** - Scan .cursor/rules/ files
 - **src/scanner/commandsScanner.ts** - Scan .cursor/commands/ files
 - **src/scanner/asdlcArtifactScanner.ts** - Scan AGENTS.md, specs/, schemas/
-- **src/scanner/asdlcComplianceScanner.ts** - ASDLC compliance audit
 - **src/mcp/server.ts** - MCP server for agent context access
+- **src/mcp/tools.ts** - MCP tools wrapping scanners
 - **src/commands/projectCommands.ts** - Project management commands
-- **src/commands/ruleCommands.ts** - Rule management commands
+- **src/commands/stateCommands.ts** - State viewing commands
 
 ### Architecture Patterns
 - **Provider Pattern** - Tree data providers for UI
 - **Scanner Pattern** - Separate scanners for different artifact types
 - **Command Pattern** - VS Code command handlers
 - **Service Layer** - ProjectManager for business logic
+- **Viewer-Only Approach** - ACE displays intentional artifacts (rules, commands, specs) without managing them
 
 ### Key Decisions
+- **Viewer-Only Philosophy:** ACE scans and displays explicit artifacts but does not create, edit, or delete them
 - Use explicit artifact scanning (AGENTS.md, specs/) instead of optimistic state detection
 - Support both workspace and global commands
 - Multi-project support via ProjectManager
-- Export format includes rules, commands, and state metadata
+- MCP server provides dynamic context to AI agents
 
 ---
 
@@ -144,17 +142,9 @@ ASDLC Artifact Scanning **MUST**:
 **Problem:** Trying to guess project type, frameworks, dependencies from file patterns. Fails in monorepos.
 **Solution:** Scan explicit artifacts (AGENTS.md, specs/) that developers intentionally create.
 
-### ❌ Static Export Files
-**Problem:** Export creates static JSON that gets stale quickly.
-**Solution:** (In progress) Replace with dynamic context provider or MCP server.
-
-### ❌ Including Non-Commands
-**Problem:** README.md files in commands directory appear as commands.
-**Solution:** Filter out README.md and other non-command files when scanning.
-
-### ❌ Monorepo Confusion
-**Problem:** State scanner tries to detect single project type, fails in monorepos.
-**Solution:** Scan each sub-project independently, respect directory boundaries.
+### ❌ Feature Creep (Rules Management, Compliance Auditing)
+**Problem:** Adding opinionated features like rules CRUD operations or compliance auditing to a general-purpose viewer.
+**Solution:** Focus on viewer-only approach - display intentional artifacts, don't manage them. Let developers use their preferred editors.
 
 ---
 

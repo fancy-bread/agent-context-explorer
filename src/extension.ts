@@ -7,10 +7,8 @@ import { StateSectionContentProvider } from './providers/stateSectionContentProv
 import { RulesScanner } from './scanner/rulesScanner';
 import { StateScanner } from './scanner/stateScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
-import { RuleCommands } from './commands/ruleCommands';
 import { StateCommands } from './commands/stateCommands';
 import { ProjectCommands } from './commands/projectCommands';
-import { RulePreviewEditor } from './commands/rulePreviewEditor';
 import { ProjectManager } from './services/projectManager';
 import { ProjectDefinition } from './types/project';
 import { Rule } from './scanner/rulesScanner';
@@ -74,14 +72,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register commands
 	outputChannel.appendLine('Registering commands...');
 	try {
-		RuleCommands.registerCommands(context);
-		outputChannel.appendLine('RuleCommands registered');
 		StateCommands.registerCommands(context, stateSectionContentProvider);
 		outputChannel.appendLine('StateCommands registered');
 		ProjectCommands.registerCommands(context);
 		outputChannel.appendLine('ProjectCommands registered');
-		RulePreviewEditor.registerCommands(context);
-		outputChannel.appendLine('RulePreviewEditor registered');
 		outputChannel.appendLine('All commands registered successfully');
 	} catch (error) {
 		outputChannel.appendLine(`Error registering commands: ${error}`);

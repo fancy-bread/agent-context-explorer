@@ -10,11 +10,11 @@
 
 ### Context
 
-Scanners provide project context to AI agents by detecting and parsing artifacts in the workspace. The extension needs to understand what a project contains (rules, commands, project state) to present it in the tree view and export it for agent consumption.
+Scanners provide project context to AI agents by detecting and parsing artifacts in the workspace. The extension needs to understand what a project contains (rules, commands, ASDLC artifacts) to present it in the tree view and provide it to AI agents via MCP tools.
 
 **Problem solved**: AI agents lack persistent memory. Scanners extract explicit project context from intentional artifacts so agents can understand the codebase without inference.
 
-**Design principle**: Prefer explicit artifacts over optimistic inference. Scan what developers intentionally create (AGENTS.md, specs/, rules/) rather than guessing from file patterns.
+**Design principle**: ACE is a **viewer of intentional artifacts**. Scan what developers intentionally create (AGENTS.md, specs/, rules/) rather than guessing from file patterns. Do not manage, validate, or create artifacts - that's the developer's responsibility.
 
 ### Architecture
 
@@ -45,9 +45,8 @@ class XxxScanner {
 | Scanner | Artifacts | Location | Purpose |
 |---------|-----------|----------|---------|
 | `RulesScanner` | `.mdc`, `.md` files | `.cursor/rules/` | Cursor rules with YAML frontmatter |
-| `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/` | Workspace and global commands |
+| `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/`, `.cursor/skills/*/SKILL.md` | Workspace and global commands/skills |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
-| `AsdlcComplianceScanner` | Uses `AsdlcArtifactScanner` | N/A (delegates) | Validates ASDLC three-pillar compliance |
 
 #### Dependency Direction
 
@@ -62,14 +61,16 @@ extension.ts
     │
     ├── StateCommands
     │       │
-    │       └── AsdlcComplianceScanner
-    │               │
-    │               └── AsdlcArtifactScanner (delegates to)
+    │       └── (view state sections)
     │
-    └── Export commands
+    └── McpTools (MCP server)
+            │
+            ├── RulesScanner
+            ├── CommandsScanner
+            └── AsdlcArtifactScanner
 ```
 
-Scanners are instantiated by providers/commands. Scanners have no dependencies on each other.
+Scanners are instantiated by providers, commands, and MCP tools. Scanners have no dependencies on each other.
 
 #### Data Flow
 
@@ -170,7 +171,6 @@ Scanners are instantiated by providers/commands. Scanners have no dependencies o
 | RulesScanner | `src/scanner/rulesScanner.ts` |
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
-| AsdlcComplianceScanner | `src/scanner/asdlcComplianceScanner.ts` |
 | StateScanner (deprecated) | `src/scanner/stateScanner.ts` |
 | Scanner types | `src/scanner/types.ts` |
 | MDC parser utility | `src/utils/mdcParser.ts` |
@@ -182,12 +182,19 @@ Scanners are instantiated by providers/commands. Scanners have no dependencies o
 | RulesScanner | `test/suite/scanner/rulesScanner.test.ts` |
 | CommandsScanner | `test/suite/unit/commandsScanner.test.ts` |
 | AsdlcArtifactScanner | `test/suite/unit/asdlcArtifactScanner.test.ts` |
-| AsdlcComplianceScanner | `test/suite/unit/asdlcComplianceScanner.test.ts` |
 | StateScanner | `test/suite/scanner/stateScanner.test.ts` |
 
 ---
 
 ## Deprecation Notes
+
+### AsdlcComplianceScanner (Removed in FB-66)
+
+`AsdlcComplianceScanner` performed ASDLC three-pillar compliance auditing. This was **removed in FB-66** as compliance validation is too opinionated for a general-purpose viewer extension.
+
+**Reason for removal**: ACE's philosophy is "viewer of intentional artifacts" - displaying context, not validating it. Compliance auditing introduces opinions about what constitutes "good" ASDLC practices, which conflicts with the general-purpose nature of the extension.
+
+**Migration path**: Removed entirely. Projects needing compliance validation should implement it externally as a custom command or separate tool.
 
 ### StateScanner (Deprecated)
 
@@ -203,5 +210,5 @@ Scanners are instantiated by providers/commands. Scanners have no dependencies o
 ---
 
 **Status**: Active
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-07
 **Pattern**: ASDLC "The Spec"

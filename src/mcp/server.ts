@@ -366,52 +366,6 @@ function createServer(workspacePath: string): McpServer {
 		};
 	});
 
-	// get_compliance_report - Run ASDLC compliance audit (simplified version)
-	server.tool('get_compliance_report', 'Run ASDLC compliance audit and return results', async () => {
-		const [agentsMd, specs, schemas] = await Promise.all([
-			scanAgentsMd(workspacePath),
-			scanSpecs(workspacePath),
-			scanSchemas(workspacePath)
-		]);
-
-		// Simplified compliance check
-		const checks = {
-			hasAgentsMd: agentsMd.exists,
-			hasSpecs: specs.length > 0,
-			hasSchemas: schemas.length > 0,
-			specsWithBlueprint: specs.filter(s => s.hasBlueprint).length,
-			specsWithContract: specs.filter(s => s.hasContract).length
-		};
-
-		const overallStatus = checks.hasAgentsMd && checks.hasSpecs ? 'pass' :
-			checks.hasAgentsMd || checks.hasSpecs ? 'warn' : 'fail';
-
-		const report = {
-			timestamp: new Date().toISOString(),
-			projectPath: workspacePath,
-			overallStatus,
-			checks,
-			recommendations: [] as string[]
-		};
-
-		if (!checks.hasAgentsMd) {
-			report.recommendations.push('Add AGENTS.md to define project identity and operational boundaries');
-		}
-		if (!checks.hasSpecs) {
-			report.recommendations.push('Add specs/ directory with living specifications');
-		}
-		if (checks.specsWithBlueprint < specs.length) {
-			report.recommendations.push('Add Blueprint sections to all specs');
-		}
-		if (checks.specsWithContract < specs.length) {
-			report.recommendations.push('Add Contract sections to all specs');
-		}
-
-		return {
-			content: [{ type: 'text' as const, text: JSON.stringify(report, null, 2) }]
-		};
-	});
-
 	// get_project_context - Complete project context
 	server.tool('get_project_context', 'Get complete project context (rules, commands, artifacts)', async () => {
 		const [rules, commands, agentsMd, specs, schemas] = await Promise.all([

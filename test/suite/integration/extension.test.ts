@@ -12,8 +12,7 @@ suite('Extension Test Suite', () => {
 		const requiredCommands = [
 			'ace.refresh',
 			'ace.addProject',
-			'ace.createRule',
-			'ace.viewRule'
+			'ace.viewStateSection'
 		];
 
 		for (const command of requiredCommands) {

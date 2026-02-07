@@ -2,41 +2,43 @@
 
 **Provide rich project context to AI agents across multiple workspaces**
 
-A VS Code extension that helps AI agents understand your projects by visualizing Cursor rules, commands, and project state in one place. Manage context across multiple codebases and export comprehensive project intelligence for better AI-assisted development.
+A VS Code extension that helps AI agents understand your projects by visualizing Cursor rules, commands, and ASDLC artifacts in one place. Browse context across multiple codebases and provide comprehensive project intelligence for better AI-assisted development.
+
+*Viewer-only approach: ACE scans and displays intentional artifacts (rules, commands, AGENTS.md, specs) without managing them.*
 
 *Supports ASDLC (Agentic Software Development Life Cycle) workflows for teams adopting structured AI-assisted development practices.*
 
 ## Key Features
 
-### **Multi-Project Context Management**
-- Manage context across multiple projects from a single workspace
-- Browse all `.cursor/rules` files in an organized tree view
+### **Multi-Project Context Viewing**
+- Browse context across multiple projects from a single workspace
+- View all `.cursor/rules` files in an organized tree view (read-only)
 - View workspace and global Cursor commands
-- Inspect project state and configuration
-- Export comprehensive context for AI agents
+- Browse ASDLC artifacts (AGENTS.md, specs/, schemas/)
+- MCP server provides dynamic context to AI agents
 
-### **Rules Management**
-- Create, edit, and delete rules with a visual interface
-- Copy and paste rules between projects
-- Auto-refresh when files change
-- Markdown preview with syntax highlighting
+### **Viewer-Only Approach**
+- ACE **displays** intentional artifacts without creating, editing, or deleting them
+- Click rules to open them read-only in your editor
+- Use your preferred editor (VS Code, Cursor) to manage rules and commands
+- Focus on providing context to AI agents, not file management
 
-### **Intelligent State Detection**
-- Automatically analyzes your project's architecture and patterns
-- Detects dependencies and explains their purpose
-- Identifies frameworks, databases, and infrastructure
-- Provides AI-optimized project insights
+### **ASDLC Artifact Browsing**
+- Scan and display AGENTS.md (project identity and operational boundaries)
+- Browse specs/ directory (living specifications)
+- Browse schemas/ directory (JSON schema definitions)
+- MCP tools provide artifact access to AI agents
 
-### **Commands Management**
+### **Commands Viewing**
 - Browse workspace and global Cursor commands in tree view
 - Auto-discover commands from `.cursor/commands/` directories
 - View command metadata (title, overview, location)
-- Commands included in agent exports for complete context
+- Commands included in MCP context for AI agents
 
 ### **Multi-Project Support**
-- Manage multiple projects from a single workspace
-- Reference rules across different codebases
-- Export all projects, rules, and commands together
+- Browse multiple projects from a single workspace
+- Reference context across different codebases
+- MCP server provides context for all configured projects
 - Switch between projects easily
 
 ## Getting Started
@@ -51,44 +53,54 @@ A VS Code extension that helps AI agents understand your projects by visualizing
 
 1. **View Rules**: Click the Agent Context Explorer icon in the sidebar to see all your Cursor rules
 2. **View Commands**: Expand the Commands section to see workspace and global commands
-3. **Create a Rule**: Click the `+` button or right-click in the Rules section
-4. **Export for Agents**: Click the Export button to generate `.cursor/ace-export.json`
+3. **View ASDLC Artifacts**: Expand the ASDLC section to see AGENTS.md, specs/, schemas/
+4. **Click to Open**: Click any rule, command, or artifact to open it read-only in your editor
 
 ## Usage Guide
 
-### Managing Rules
+### Viewing Rules
 
-#### **Viewing Rules**
-- Click any rule to open it in a markdown preview
+#### **Browsing Rules**
+- Click any rule to open it read-only in your editor
 - Rules are organized by directory structure
 - File icons indicate rule types (security, testing, performance, etc.)
+- Rules auto-refresh when files change
 
-#### **Creating Rules**
-1. Click the `+` button in the Rules section
-2. Enter a filename (e.g., `testing.mdc`)
-3. The rule file is created with basic frontmatter
-4. Edit the rule content and save
-
-#### **Editing Rules**
-- Click a rule to view it
-- Click the edit icon to modify
-- Use the context menu for more options (copy, rename, delete)
-
-#### **Organizing Rules**
+#### **Managing Rules**
+- Use your preferred editor (VS Code, Cursor) to create, edit, or delete rules
+- ACE automatically detects changes and refreshes the tree view
 - Rules in `.cursor/rules/` are always-apply rules
 - Create subdirectories for organization (e.g., `.cursor/rules/security/`)
-- Use file references like `@service-template.ts` in rule content
 
-### Commands Management
+### Viewing Commands
 
 The extension automatically discovers and displays Cursor commands from:
 - **Workspace commands**: `.cursor/commands/*.md` files in your workspace
 - **Global commands**: `~/.cursor/commands/*.md` files (shared across all projects)
 
-#### **Viewing Commands**
+#### **Browsing Commands**
 - Commands appear in the tree view under the Commands section
 - Each command shows its filename, location (workspace/global), title, and overview
-- Click any command to see its details
+- Click any command to open it read-only in your editor
+
+### Viewing ASDLC Artifacts
+
+ACE scans for and displays ASDLC artifacts:
+
+#### **AGENTS.md**
+- Project identity, operational boundaries, and command registry
+- Provides explicit context to AI agents about the project
+- Click to open read-only
+
+#### **Specs (specs/)**
+- Living specifications (Blueprint + Contract pattern)
+- Each spec defines the "state" of a feature
+- Organized by feature domain (e.g., `specs/scanners/spec.md`)
+
+#### **Schemas (schemas/)**
+- JSON schema definitions for data models
+- Used in Standardized Parts pattern
+- Click any schema to view JSON definition
 
 #### **Command Format**
 Commands are Markdown files with a title and Overview section:
@@ -104,8 +116,8 @@ Brief description of what this command does.
 ...
 ```
 
-#### **Commands in Exports**
-When exporting for AI agents, commands are included with:
+#### **MCP Context**
+When using the MCP server, commands are included with:
 - `fileName`: Command filename
 - `location`: `"workspace"` or `"global"`
 - `title`: Extracted from the first heading
@@ -188,7 +200,7 @@ The Export feature creates a comprehensive JSON file that AI agents can read:
 
 ### MCP: Letting Cursor’s AI use ACE tools
 
-ACE includes an MCP server that exposes **tools** (e.g. `list_rules`, `get_rule`, `get_project_context`) and **resources** (e.g. `ace://rules`, `ace://agents-md`) so an AI can read project context on demand.
+ACE includes an MCP server that exposes **tools** (e.g. `list_rules`, `get_rule`, `get_project_context`, `get_asdlc_artifacts`) and **resources** (e.g. `ace://rules`, `ace://agents-md`, `ace://specs`) so an AI can read project context on demand.
 
 To give the AI access to ACE tools (if not using Cursor's Extension API):
 
@@ -214,20 +226,20 @@ To give the AI access to ACE tools (if not using Cursor's Extension API):
 
 #### **Adding Projects**
 1. Click the `+` button in the tree view header
-2. Choose "Add external project" or "Add current workspace"
+2. Choose "Add external project"
 3. Select the project directory
 4. The project appears in your tree view
 
-#### **Managing Projects**
-- Expand any project to see its rules and state
-- Edit or remove projects using context menu
-- Export all projects together for cross-project context
+#### **Browsing Projects**
+- Expand any project to see its rules, commands, and ASDLC artifacts
+- Click any artifact to open it read-only
+- MCP server provides context for all configured projects
 
 #### **Use Cases**
 - Reference shared rules across microservices
-- Maintain consistent standards across teams
-- Compare architectures between projects
-- Export multi-repo context for agents
+- Browse ASDLC artifacts across multiple projects
+- Compare specifications between projects
+- Provide multi-repo context to AI agents via MCP
 
 ## MDC Format
 
@@ -263,26 +275,20 @@ You can reference code files:
 ### **State Tree View**
 Click any state section to see detailed information:
 
-- **Project Identity**: Type, domain, language, maturity
-- **Capabilities**: Features and data formats
-- **Dependencies by Purpose**: Categorized with explanations
-- **Architecture**: Patterns, style, entry points
-- **VS Code Platform**: Extension-specific details (if applicable)
-- **Agent Guidance**: Best practices and warnings
-- **Technology Stack**: Languages and frameworks
-- **Development Environment**: Build, test, quality tools
-- **Project Structure**: Architecture and configuration
+- **Technology Stack**: Languages, frameworks, dependencies
+- **Development Environment**: Build tools, testing frameworks, code quality tools
+- **Project Structure**: Architecture patterns and configuration files
 
-### **View State Command**
-Run "ACE: View State" from the command palette to see a comprehensive markdown report of all project analysis.
+State detection provides basic project information to help AI agents understand the codebase.
 
-## Tips & Best practices
+## Tips & Best Practices
 
 ### **Organizing Rules**
 - Keep always-apply rules in the root `.cursor/rules/` directory
 - Group related rules in subdirectories (security, testing, performance)
 - Use clear, descriptive filenames
 - Add comprehensive descriptions in frontmatter
+- Manage rules with your preferred editor (VS Code, Cursor)
 
 ### **Writing Effective Rules**
 - Be specific about when rules apply (use globs)
@@ -290,17 +296,17 @@ Run "ACE: View State" from the command palette to see a comprehensive markdown r
 - Explain the "why" not just the "what"
 - Reference actual files in your project with @filename
 
-### **Using State Detection**
-- Export before starting major refactors
-- Share exports when onboarding new team members
-- Use agent guidance to understand critical paths
-- Review architecture patterns for consistency
+### **Using ASDLC Artifacts**
+- Create AGENTS.md to provide explicit context to AI agents
+- Use specs/ for living specifications (Blueprint + Contract pattern)
+- Use schemas/ for JSON schema definitions (Standardized Parts pattern)
+- ACE displays these artifacts for easy reference
 
 ### **Multi-Project Setup**
 - Add related projects for cross-repo context
-- Export all projects for full system understanding
-- Update projects when dependencies change
-- Remove stale projects to keep exports clean
+- MCP server provides context for all configured projects
+- Click refresh to update when artifacts change
+- Remove stale projects to keep tree view clean
 
 ## Troubleshooting
 
@@ -315,15 +321,11 @@ Run "ACE: View State" from the command palette to see a comprehensive markdown r
 - Ensure command files have `.md` extension
 - Click refresh button to force update
 
-**State detection incomplete?**
-- Run "ACE: Scan Project State" command
-- Ensure package.json exists for dependency analysis
-- Check that project structure follows conventions
-
-**Export not working?**
-- Verify workspace has write permissions
-- Check `.cursor/` directory exists
-- Look for errors in Output panel (View → Output → Agent Context Explorer)
+**ASDLC artifacts not appearing?**
+- Ensure AGENTS.md exists in workspace root
+- Check that specs/ directory exists with `spec.md` files
+- Check that schemas/ directory exists with `.json` files
+- Click refresh button to force update
 
 ## Contributing
 

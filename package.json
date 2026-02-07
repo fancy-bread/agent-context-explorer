@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.8.3",
+	"version": "0.8.4",
 	"publisher": "fancybread-com",
 	"icon": "ace.png",
 	"repository": {
@@ -58,41 +58,6 @@
 		},
 		"commands": [
 			{
-				"command": "ace.createRule",
-				"title": "Create Rule",
-				"icon": "$(add)"
-			},
-			{
-				"command": "ace.viewRule",
-				"title": "View Rule",
-				"icon": "$(eye)"
-			},
-			{
-				"command": "ace.editRule",
-				"title": "Edit Rule",
-				"icon": "$(edit)"
-			},
-			{
-				"command": "ace.deleteRule",
-				"title": "Delete Rule",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "ace.copyRule",
-				"title": "Copy Rule",
-				"icon": "$(copy)"
-			},
-			{
-				"command": "ace.renameRule",
-				"title": "Rename Rule",
-				"icon": "$(edit)"
-			},
-			{
-				"command": "ace.pasteRule",
-				"title": "Paste Rule",
-				"icon": "$(paste)"
-			},
-			{
 				"command": "ace.refresh",
 				"title": "Refresh",
 				"icon": "$(refresh)"
@@ -121,11 +86,6 @@
 				"command": "ace.viewStateSection",
 				"title": "View State Section",
 				"icon": "$(eye)"
-			},
-			{
-				"command": "ace.auditAsdlc",
-				"title": "Audit ASDLC Compliance",
-				"icon": "$(checklist)"
 			}
 		],
 		"menus": {
@@ -139,34 +99,9 @@
 					"command": "ace.addProject",
 					"when": "view == aceExplorer",
 					"group": "navigation"
-				},
-				{
-					"command": "ace.auditAsdlc",
-					"when": "view == aceExplorer",
-					"group": "navigation"
 				}
 			],
 			"view/item/context": [
-				{
-					"command": "ace.viewRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "inline"
-				},
-				{
-					"command": "ace.editRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "inline"
-				},
-				{
-					"command": "ace.copyRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "inline"
-				},
-				{
-					"command": "ace.deleteRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "inline"
-				},
 				{
 					"command": "ace.editProject",
 					"when": "view == aceExplorer && viewItem == activeProject",
@@ -176,31 +111,6 @@
 					"command": "ace.removeProject",
 					"when": "view == aceExplorer && viewItem == activeProject",
 					"group": "inline"
-				},
-				{
-					"command": "ace.createRule",
-					"when": "view == aceExplorer && viewItem == rules",
-					"group": "inline"
-				},
-				{
-					"command": "ace.pasteRule",
-					"when": "view == aceExplorer && viewItem == rules",
-					"group": "inline"
-				},
-				{
-					"command": "ace.copyRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "1_actions"
-				},
-				{
-					"command": "ace.renameRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "1_actions"
-				},
-				{
-					"command": "ace.deleteRule",
-					"when": "view == aceExplorer && viewItem == rule",
-					"group": "1_actions"
 				}
 			]
 		}

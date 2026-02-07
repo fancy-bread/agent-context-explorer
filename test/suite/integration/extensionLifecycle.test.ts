@@ -144,13 +144,7 @@ class MockExtension {
 			'ace.addProject',
 			'ace.editProject',
 			'ace.removeProject',
-			'ace.createRule',
-			'ace.editRule',
-			'ace.deleteRule',
-			'ace.viewRule',
-			'ace.renameRule',
-			'ace.copyRule',
-			'ace.pasteRule'
+			'ace.viewStateSection'
 		];
 
 		commands.forEach(command => {

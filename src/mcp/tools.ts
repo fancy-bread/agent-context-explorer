@@ -4,7 +4,6 @@ import * as vscode from 'vscode';
 import { RulesScanner } from '../scanner/rulesScanner';
 import { CommandsScanner } from '../scanner/commandsScanner';
 import { AsdlcArtifactScanner } from '../scanner/asdlcArtifactScanner';
-import { AsdlcComplianceScanner } from '../scanner/asdlcComplianceScanner';
 import {
 	RuleInfo,
 	RuleContent,
@@ -15,7 +14,6 @@ import {
 	GetRuleInput,
 	GetCommandInput,
 	AsdlcArtifacts,
-	ComplianceReport,
 	SpecFile,
 	toRuleInfo,
 	toRuleContent,
@@ -158,17 +156,6 @@ export class McpTools {
 	}
 
 	/**
-	 * get_compliance_report - Run ASDLC compliance audit
-	 */
-	static async getComplianceReport(input: ProjectScopedInput = {}): Promise<ComplianceReport> {
-		const workspaceUri = this.getWorkspaceUri(input.projectPath);
-		this.validateWorkspace(workspaceUri);
-
-		const scanner = new AsdlcComplianceScanner(workspaceUri);
-		return await scanner.audit();
-	}
-
-	/**
 	 * list_specs - List available specifications
 	 */
 	static async listSpecs(input: ProjectScopedInput = {}): Promise<SpecFile[]> {
@@ -186,18 +173,17 @@ export class McpTools {
 	// =========================================================================
 
 	/**
-	 * get_project_context - Complete project context (rules, commands, artifacts, compliance)
+	 * get_project_context - Complete project context (rules, commands, artifacts)
 	 */
 	static async getProjectContext(input: ProjectScopedInput = {}): Promise<ProjectContext> {
 		const workspaceUri = this.getWorkspaceUri(input.projectPath);
 		this.validateWorkspace(workspaceUri);
 
 		// Run all scans in parallel for performance
-		const [rules, commands, asdlcArtifacts, compliance] = await Promise.all([
+		const [rules, commands, asdlcArtifacts] = await Promise.all([
 			this.listRules(input),
 			this.listCommands(input),
-			this.getAsdlcArtifacts(input),
-			this.getComplianceReport(input).catch(() => undefined) // Compliance is optional
+			this.getAsdlcArtifacts(input)
 		]);
 
 		return {
@@ -205,8 +191,7 @@ export class McpTools {
 			projectPath: workspaceUri.fsPath,
 			rules,
 			commands,
-			asdlcArtifacts,
-			compliance
+			asdlcArtifacts
 		};
 	}
 }
