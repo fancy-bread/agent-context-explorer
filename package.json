@@ -2,9 +2,9 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.8.1",
+	"version": "0.8.3",
 	"publisher": "fancybread-com",
-	"icon": "pre.png",
+	"icon": "ace.png",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/fancybread-com/agent-context-explorer"
@@ -21,17 +21,23 @@
 		"agents",
 		"cursor",
 		"rules",
-		"multi-project"
+		"multi-project",
+		"mcp"
 	],
 	"activationEvents": [
 		"onView:aceExplorer",
 		"onCommand:ace.addProject",
 		"onCommand:ace.refresh",
-		"onCommand:ace.listProjects",
-		"onCommand:ace.exportForAgent"
+		"onCommand:ace.listProjects"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"mcpServerDefinitionProviders": [
+			{
+				"id": "ace-mcp",
+				"label": "Agent Context Explorer"
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{
@@ -45,7 +51,7 @@
 			"ace": [
 				{
 					"id": "aceExplorer",
-					"name": "Commands, Rules & State",
+					"name": "ACE Explorer",
 					"when": "workspaceFolderCount > 0"
 				}
 			]
@@ -55,6 +61,16 @@
 				"command": "ace.createRule",
 				"title": "Create Rule",
 				"icon": "$(add)"
+			},
+			{
+				"command": "ace.viewRule",
+				"title": "View Rule",
+				"icon": "$(eye)"
+			},
+			{
+				"command": "ace.editRule",
+				"title": "Edit Rule",
+				"icon": "$(edit)"
 			},
 			{
 				"command": "ace.deleteRule",
@@ -82,26 +98,6 @@
 				"icon": "$(refresh)"
 			},
 			{
-				"command": "ace.scanState",
-				"title": "Scan Project State",
-				"icon": "$(search)"
-			},
-			{
-				"command": "ace.viewState",
-				"title": "View State",
-				"icon": "$(info)"
-			},
-			{
-				"command": "ace.viewStateSection",
-				"title": "View State Section",
-				"icon": "$(eye)"
-			},
-			{
-				"command": "ace.exportState",
-				"title": "Export State",
-				"icon": "$(export)"
-			},
-			{
 				"command": "ace.addProject",
 				"title": "Add Project",
 				"icon": "$(add)"
@@ -122,24 +118,9 @@
 				"icon": "$(list)"
 			},
 			{
-				"command": "ace.exportForAgent",
-				"title": "Export All for Agent",
-				"icon": "$(export)"
-			},
-			{
-				"command": "ace.deleteRule",
-				"title": "Delete Rule",
-				"icon": "$(trash)"
-			},
-			{
-				"command": "ace.copyRule",
-				"title": "Copy Rule",
-				"icon": "$(copy)"
-			},
-			{
-				"command": "ace.pasteRule",
-				"title": "Paste Rule",
-				"icon": "$(paste)"
+				"command": "ace.viewStateSection",
+				"title": "View State Section",
+				"icon": "$(eye)"
 			},
 			{
 				"command": "ace.auditAsdlc",
@@ -156,11 +137,6 @@
 				},
 				{
 					"command": "ace.addProject",
-					"when": "view == aceExplorer",
-					"group": "navigation"
-				},
-				{
-					"command": "ace.exportForAgent",
 					"when": "view == aceExplorer",
 					"group": "navigation"
 				},
@@ -257,7 +233,9 @@
 		"typescript": "^5.4.0"
 	},
 	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.25.3",
 		"gray-matter": "^4.0.3",
-		"yaml": "^2.3.0"
+		"yaml": "^2.3.0",
+		"zod": "^3.25.76"
 	}
 }
