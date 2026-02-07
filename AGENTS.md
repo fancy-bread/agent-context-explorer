@@ -104,10 +104,9 @@ ASDLC Artifact Scanning **MUST**:
 | **Copy Rule** | `ace.copyRule` | Copy rule to clipboard |
 | **Paste Rule** | `ace.pasteRule` | Paste rule from clipboard |
 | **Rename Rule** | `ace.renameRule` | Rename rule file |
-| **View State** | `ace.viewState` | View project state analysis |
-| **Export for Agent** | `ace.exportForAgent` | Export rules, commands, state to JSON |
 | **Add Project** | `ace.addProject` | Add external project to tree view |
 | **Remove Project** | `ace.removeProject` | Remove project from tree view |
+| **Audit ASDLC** | `ace.auditAsdlc` | Run ASDLC compliance audit |
 | **Refresh** | `ace.refresh` | Refresh tree view data |
 
 ---
@@ -116,11 +115,12 @@ ASDLC Artifact Scanning **MUST**:
 
 ### Key Files
 - **src/extension.ts** - Extension activation and initialization
-- **src/providers/rulesTreeProvider.ts** - Tree view data provider
+- **src/providers/projectTreeProvider.ts** - Tree view data provider
 - **src/scanner/rulesScanner.ts** - Scan .cursor/rules/ files
 - **src/scanner/commandsScanner.ts** - Scan .cursor/commands/ files
-- **src/scanner/stateScanner.ts** - Scan project state (legacy, being replaced)
-- **src/scanner/asdlcArtifactScanner.ts** - Scan AGENTS.md, specs/, schemas/ (planned)
+- **src/scanner/asdlcArtifactScanner.ts** - Scan AGENTS.md, specs/, schemas/
+- **src/scanner/asdlcComplianceScanner.ts** - ASDLC compliance audit
+- **src/mcp/server.ts** - MCP server for agent context access
 - **src/commands/projectCommands.ts** - Project management commands
 - **src/commands/ruleCommands.ts** - Rule management commands
 
@@ -171,6 +171,6 @@ This project scans for and uses:
 
 ---
 
-**Status**: Active  
-**Last Updated**: 2026-02-01  
+**Status**: Active
+**Last Updated**: 2026-02-01
 **Pattern**: ASDLC "Agent Constitution" + explicit artifact scanning

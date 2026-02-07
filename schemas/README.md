@@ -21,10 +21,9 @@ Schemas are needed when you want to:
 
 - **MDC Rule Schema** - Validates Cursor rule structure (frontmatter: description, globs, alwaysApply)
 - **Spec Schema** - Validates living specification structure (Blueprint, Contract) for features
-- **Export Data Schema** - Validates project-rules-export.json structure (if still used)
-- **Project State Schema** - Validates project state data structure
+- **MCP Response Schema** - Validates MCP server tool response structure
 - **ASDLC Artifact Schema** - Validates AGENTS.md, specs/ structure
-- **Context Provider Tool Schema** - Validates Language Model Tool request/response structure (future)
+- **Compliance Report Schema** - Validates ASDLC compliance audit report structure
 
 ---
 
@@ -58,10 +57,10 @@ The `/setup-asdlc` command automatically creates this directory if it detects sc
 ## Example Use Cases
 
 - **Pre-commit validation** - Validate MDC rules before commit
-- **Export validation** - Ensure export JSON matches expected structure (if JSON export still used)
+- **MCP response validation** - Ensure MCP server responses match expected structure
 - **Spec validation** - Validate specs/ structure when scanning
 - **Type safety** - JSON Schema for runtime validation of scanned data
-- **Context Provider validation** - Validate tool request/response structures (future)
+- **Compliance report validation** - Validate ASDLC audit report structure
 
 ---
 
@@ -73,7 +72,7 @@ The `/setup-asdlc` command automatically creates this directory if it detects sc
 
 ---
 
-**Status**: Optional  
-**Last Updated**: 2026-01-26  
-**Pattern**: ASDLC "Standardized Parts"  
+**Status**: Optional
+**Last Updated**: 2026-01-26
+**Pattern**: ASDLC "Standardized Parts"
 **Project**: VS Code Extension - Agent Context Explorer (ACE)

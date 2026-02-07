@@ -186,6 +186,30 @@ The Export feature creates a comprehensive JSON file that AI agents can read:
 - What files are critical to understand
 - What to watch out for when making changes
 
+### MCP: Letting Cursor’s AI use ACE tools
+
+ACE includes an MCP server that exposes **tools** (e.g. `list_rules`, `get_rule`, `get_project_context`) and **resources** (e.g. `ace://rules`, `ace://agents-md`) so an AI can read project context on demand.
+
+To give the AI access to ACE tools (if not using Cursor's Extension API):
+
+1. Create or edit **`.cursor/mcp.json`** in your project (or use **`~/.cursor/mcp.json`** for all workspaces).
+2. Add the ACE server (replace `<extension-dir>` with your ACE extension path, e.g. from the Extensions view, and `<workspace-root>` with your project path):
+   ```json
+   {
+     "mcpServers": {
+       "ace": {
+         "command": "node",
+         "args": ["<extension-dir>/out/mcp/server.js", "<workspace-root>"]
+       }
+     }
+   }
+   ```
+3. Restart Cursor. In chat you can then ask the AI to use ACE (e.g. “What rules does this project have?” or “Use the get_project_context tool”).
+
+**In Cursor:** The extension now also registers via [Cursor's MCP Extension API](https://cursor.com/docs/context/mcp-extension-api) so the chat AI gets ACE tools without editing `mcp.json`. If that API isn't available, use the **Fallback** below.
+
+**Fallback (or non-Cursor):** Add ACE to **`.cursor/mcp.json`** (or **`~/.cursor/mcp.json`**) as in the snippet above. Replace `<extension-dir>` and `<workspace-root>`, then restart Cursor.
+
 ### Multi-Project Workflow
 
 #### **Adding Projects**

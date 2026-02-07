@@ -16,6 +16,7 @@ import { ProjectDefinition } from './types/project';
 import { Rule } from './scanner/rulesScanner';
 import { ProjectState } from './scanner/stateScanner';
 import { Command } from './scanner/commandsScanner';
+import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 
 let treeProvider: ProjectTreeProvider;
 let rulesScanner: RulesScanner;
@@ -24,6 +25,7 @@ let commandsScanner: CommandsScanner;
 let projectManager: ProjectManager;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let outputChannel: vscode.OutputChannel;
+let mcpServerProvider: McpServerProvider | undefined;
 let isActivated = false;
 
 // This method is called when your extension is activated
@@ -91,6 +93,16 @@ export function activate(context: vscode.ExtensionContext) {
 		await refreshData();
 	});
 
+	// Register MCP server provider
+	outputChannel.appendLine('Registering MCP server provider...');
+	try {
+		mcpServerProvider = registerMcpServerProvider(context);
+		outputChannel.appendLine('MCP server provider registered successfully');
+	} catch (error) {
+		outputChannel.appendLine(`Warning: Failed to register MCP server provider: ${error}`);
+		// Continue without MCP - extension still functions
+	}
+
 	// Set up file watcher (only if we have a workspace)
 	if (workspaceRoot) {
 		outputChannel.appendLine('Setting up file watcher...');
@@ -134,6 +146,9 @@ export function deactivate() {
 	}
 	if (treeProvider) {
 		treeProvider.dispose();
+	}
+	if (mcpServerProvider) {
+		mcpServerProvider.dispose();
 	}
 }
 
