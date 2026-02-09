@@ -2,6 +2,7 @@
 
 import { Rule } from '../scanner/rulesScanner';
 import { Command } from '../scanner/commandsScanner';
+import { Skill } from '../scanner/skillsScanner';
 import { AsdlcArtifacts, SpecFile } from '../scanner/types';
 
 // =============================================================================
@@ -138,6 +139,70 @@ export function toCommandContent(command: Command): CommandContent {
 }
 
 // =============================================================================
+// Skill Types (for MCP tools)
+// =============================================================================
+
+/**
+ * Skill information for list_skills tool
+ */
+export interface SkillInfo {
+	name: string;
+	title?: string;
+	overview?: string;
+	path: string;
+	location: 'workspace' | 'global';
+}
+
+/**
+ * Full skill content for get_skill tool
+ */
+export interface SkillContent {
+	name: string;
+	title?: string;
+	overview?: string;
+	path: string;
+	location: 'workspace' | 'global';
+	content: string;
+	metadata?: {
+		prerequisites?: string[];
+		steps?: string[];
+		tools?: string[];
+	};
+}
+
+/**
+ * Convert scanner Skill to MCP SkillInfo
+ */
+export function toSkillInfo(skill: Skill): SkillInfo {
+	return {
+		name: skill.fileName,
+		title: skill.metadata?.title,
+		overview: skill.metadata?.overview,
+		path: skill.uri.fsPath,
+		location: skill.location
+	};
+}
+
+/**
+ * Convert scanner Skill to MCP SkillContent
+ */
+export function toSkillContent(skill: Skill): SkillContent {
+	return {
+		name: skill.fileName,
+		title: skill.metadata?.title,
+		overview: skill.metadata?.overview,
+		path: skill.uri.fsPath,
+		location: skill.location,
+		content: skill.content,
+		metadata: {
+			prerequisites: skill.metadata?.prerequisites,
+			steps: skill.metadata?.steps,
+			tools: skill.metadata?.tools
+		}
+	};
+}
+
+// =============================================================================
 // Project Context Types (for combined get_project_context tool)
 // =============================================================================
 
@@ -149,6 +214,7 @@ export interface ProjectContext {
 	projectPath: string;
 	rules: RuleInfo[];
 	commands: CommandInfo[];
+	skills: SkillInfo[];
 	asdlcArtifacts: AsdlcArtifacts;
 }
 
@@ -174,6 +240,13 @@ export interface GetRuleInput extends ProjectScopedInput {
  * Input for get_command tool
  */
 export interface GetCommandInput extends ProjectScopedInput {
+	name: string;
+}
+
+/**
+ * Input for get_skill tool
+ */
+export interface GetSkillInput extends ProjectScopedInput {
 	name: string;
 }
 

@@ -26,6 +26,14 @@ interface CommandInfo {
 	location: 'workspace' | 'global';
 }
 
+interface SkillInfo {
+	name: string;
+	title?: string;
+	overview?: string;
+	path: string;
+	location: 'workspace' | 'global';
+}
+
 interface SpecInfo {
 	domain: string;
 	path: string;
@@ -169,6 +177,101 @@ async function scanCommands(workspacePath: string): Promise<CommandInfo[]> {
 	}
 
 	return commands;
+}
+
+/**
+ * Scan for Cursor skills in the workspace and global
+ */
+async function scanSkills(workspacePath: string): Promise<SkillInfo[]> {
+	const skillsDir = path.join(workspacePath, '.cursor', 'skills');
+	const skills: SkillInfo[] = [];
+
+	// Scan workspace skills
+	try {
+		const entries = await fs.readdir(skillsDir, { withFileTypes: true });
+
+		for (const entry of entries) {
+			if (entry.isDirectory()) {
+				const skillPath = path.join(skillsDir, entry.name, 'SKILL.md');
+				try {
+					const content = await fs.readFile(skillPath, 'utf-8');
+
+					// Extract title and overview from first heading or frontmatter
+					let title: string | undefined;
+					let overview: string | undefined;
+
+					// Try to extract title from first # heading
+					const titleMatch = content.match(/^#\s+(.+)$/m);
+					if (titleMatch) {
+						title = titleMatch[1].trim();
+					}
+
+					// Try to extract overview from ## Overview section
+					const overviewMatch = content.match(/## Overview\s*\n+([^\n#]+)/);
+					if (overviewMatch) {
+						overview = overviewMatch[1].trim();
+					}
+
+					skills.push({
+						name: entry.name,
+						title: title || entry.name,
+						overview,
+						path: skillPath,
+						location: 'workspace'
+					});
+				} catch {
+					// SKILL.md doesn't exist in this directory
+				}
+			}
+		}
+	} catch {
+		// Directory doesn't exist or can't be read
+	}
+
+	// Also scan global skills
+	const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+	const globalSkillsDir = path.join(homeDir, '.cursor', 'skills');
+
+	try {
+		const entries = await fs.readdir(globalSkillsDir, { withFileTypes: true });
+
+		for (const entry of entries) {
+			if (entry.isDirectory()) {
+				const skillPath = path.join(globalSkillsDir, entry.name, 'SKILL.md');
+				try {
+					const content = await fs.readFile(skillPath, 'utf-8');
+
+					// Extract title and overview
+					let title: string | undefined;
+					let overview: string | undefined;
+
+					const titleMatch = content.match(/^#\s+(.+)$/m);
+					if (titleMatch) {
+						title = titleMatch[1].trim();
+					}
+
+					const overviewMatch = content.match(/## Overview\s*\n+([^\n#]+)/);
+					if (overviewMatch) {
+						overview = overviewMatch[1].trim();
+					}
+
+					skills.push({
+						name: entry.name,
+						title: title || entry.name,
+						overview,
+						path: skillPath,
+						location: 'global'
+					});
+				} catch {
+					// SKILL.md doesn't exist
+				}
+			}
+		}
+	} catch {
+		// Global skills directory doesn't exist
+	}
+
+	return skills;
 }
 
 /**
@@ -327,6 +430,30 @@ function createServer(workspacePath: string): McpServer {
 		};
 	});
 
+	// list_skills - List all Cursor skills with metadata
+	server.tool('list_skills', 'List all Cursor skills with metadata', async () => {
+		const skills = await scanSkills(workspacePath);
+		return {
+			content: [{ type: 'text' as const, text: JSON.stringify(skills, null, 2) }]
+		};
+	});
+
+	// get_skill - Get skill content by name
+	server.tool('get_skill', 'Get skill content by name', { name: { type: 'string', description: 'Skill directory name' } } as any, async (args: any) => {
+		const skills = await scanSkills(workspacePath);
+		const normalizedName = args.name.toLowerCase();
+		const skill = skills.find(s => s.name.toLowerCase() === normalizedName);
+
+		if (!skill) {
+			return { content: [{ type: 'text' as const, text: `Skill "${args.name}" not found` }], isError: true };
+		}
+
+		const content = await fs.readFile(skill.path, 'utf-8');
+		return {
+			content: [{ type: 'text' as const, text: content }]
+		};
+	});
+
 	// get_asdlc_artifacts - Get ASDLC artifacts (AGENTS.md, specs, schemas)
 	server.tool('get_asdlc_artifacts', 'Get ASDLC artifacts (AGENTS.md, specs, schemas)', async () => {
 		const [agentsMd, specs, schemas] = await Promise.all([
@@ -367,10 +494,11 @@ function createServer(workspacePath: string): McpServer {
 	});
 
 	// get_project_context - Complete project context
-	server.tool('get_project_context', 'Get complete project context (rules, commands, artifacts)', async () => {
-		const [rules, commands, agentsMd, specs, schemas] = await Promise.all([
+	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, artifacts)', async () => {
+		const [rules, commands, skills, agentsMd, specs, schemas] = await Promise.all([
 			scanRules(workspacePath),
 			scanCommands(workspacePath),
+			scanSkills(workspacePath),
 			scanAgentsMd(workspacePath),
 			scanSpecs(workspacePath),
 			scanSchemas(workspacePath)
@@ -381,6 +509,7 @@ function createServer(workspacePath: string): McpServer {
 			projectPath: workspacePath,
 			rules,
 			commands,
+			skills,
 			asdlcArtifacts: {
 				agentsMd: { exists: agentsMd.exists, path: agentsMd.path },
 				specs: { exists: specs.length > 0, specs },
@@ -474,6 +603,47 @@ function createServer(workspacePath: string): McpServer {
 			}
 
 			const content = await fs.readFile(command.path, 'utf-8');
+			return {
+				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: content }]
+			};
+		}
+	);
+
+	// ace://skills - List of all skills
+	server.resource('skills', 'ace://skills', { description: 'List of all Cursor skills', mimeType: 'application/json' }, async () => {
+		const skills = await scanSkills(workspacePath);
+		return {
+			contents: [{ uri: 'ace://skills', mimeType: 'application/json', text: JSON.stringify(skills, null, 2) }]
+		};
+	});
+
+	// ace://skills/{name} - Individual skill content
+	server.resource(
+		'skill',
+		new ResourceTemplate('ace://skills/{name}', {
+			list: async () => {
+				const skills = await scanSkills(workspacePath);
+				return {
+					resources: skills.map(s => ({
+						uri: `ace://skills/${s.name}`,
+						name: s.name,
+						description: s.title || s.name,
+						mimeType: 'text/markdown'
+					}))
+				};
+			}
+		}),
+		{ description: 'Individual skill content', mimeType: 'text/markdown' },
+		async (uri, variables) => {
+			const name = variables.name as string;
+			const skills = await scanSkills(workspacePath);
+			const skill = skills.find(s => s.name.toLowerCase() === name.toLowerCase());
+
+			if (!skill) {
+				return { contents: [] };
+			}
+
+			const content = await fs.readFile(skill.path, 'utf-8');
 			return {
 				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: content }]
 			};
@@ -593,8 +763,10 @@ async function main(): Promise<void> {
 	}
 
 	// Create and start server
+	// Pass stdin/stdout explicitly - ensures we use Node's process streams
+	// (avoids bundler issues with node:process in StdioServerTransport)
 	const server = createServer(workspacePath);
-	const transport = new StdioServerTransport();
+	const transport = new StdioServerTransport(process.stdin!, process.stdout!);
 
 	await server.connect(transport);
 

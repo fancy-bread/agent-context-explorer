@@ -7,6 +7,8 @@ import { StateSectionContentProvider } from './providers/stateSectionContentProv
 import { RulesScanner } from './scanner/rulesScanner';
 import { StateScanner } from './scanner/stateScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
+import { SkillsScanner } from './scanner/skillsScanner';
+import { AsdlcArtifactScanner } from './scanner/asdlcArtifactScanner';
 import { StateCommands } from './commands/stateCommands';
 import { ProjectCommands } from './commands/projectCommands';
 import { ProjectManager } from './services/projectManager';
@@ -14,12 +16,16 @@ import { ProjectDefinition } from './types/project';
 import { Rule } from './scanner/rulesScanner';
 import { ProjectState } from './scanner/stateScanner';
 import { Command } from './scanner/commandsScanner';
+import { Skill } from './scanner/skillsScanner';
+import { AsdlcArtifacts } from './scanner/types';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 
 let treeProvider: ProjectTreeProvider;
 let rulesScanner: RulesScanner;
 let stateScanner: StateScanner;
 let commandsScanner: CommandsScanner;
+let skillsScanner: SkillsScanner;
+let asdlcArtifactScanner: AsdlcArtifactScanner;
 let projectManager: ProjectManager;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -51,6 +57,8 @@ export function activate(context: vscode.ExtensionContext) {
 		rulesScanner = new RulesScanner(workspaceRoot);
 		stateScanner = new StateScanner(workspaceRoot);
 		commandsScanner = new CommandsScanner(workspaceRoot);
+		skillsScanner = new SkillsScanner(workspaceRoot);
+		asdlcArtifactScanner = new AsdlcArtifactScanner(workspaceRoot);
 	} else {
 		outputChannel.appendLine('No workspace root found');
 	}
@@ -110,6 +118,13 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(globalCommandsWatcher);
 	}
 
+	// Always set up global skills watcher (workspace-independent)
+	outputChannel.appendLine('Setting up global skills file watcher...');
+	const globalSkillsWatcher = setupGlobalSkillsWatcher();
+	if (globalSkillsWatcher) {
+		context.subscriptions.push(globalSkillsWatcher);
+	}
+
 	// Initial data load (non-blocking)
 	outputChannel.appendLine('Starting initial data load...');
 	refreshData().then(() => {
@@ -152,27 +167,48 @@ async function refreshData() {
 
 		// Always scan the current workspace first
 		const currentWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-		const projectData = new Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }>();
+		const projectData = new Map<string, {
+			rules: Rule[],
+			state: ProjectState,
+			commands: Command[],
+			globalCommands: Command[],
+			skills: Skill[],
+			globalSkills: Skill[],
+			asdlcArtifacts: AsdlcArtifacts
+		}>();
 
-		// Scan global commands once (shared across all projects)
-		const globalCommands = await (commandsScanner?.scanGlobalCommands() || Promise.resolve([]));
-		outputChannel.appendLine(`Scanned global commands: ${globalCommands.length} commands`);
+		// Scan global commands and skills once (shared across all projects)
+		const [globalCommands, globalSkills] = await Promise.all([
+			commandsScanner?.scanGlobalCommands() || Promise.resolve([]),
+			skillsScanner?.scanGlobalSkills() || Promise.resolve([])
+		]);
+		outputChannel.appendLine(`Scanned global: ${globalCommands.length} commands, ${globalSkills.length} skills`);
 
 		if (currentWorkspaceRoot) {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
-			// Scan current workspace rules, state, and commands
-			const [currentRules, currentState, currentCommands] = await Promise.all([
+			// Scan current workspace rules, state, commands, skills, and ASDLC artifacts
+			const [currentRules, currentState, currentCommands, currentSkills, currentAsdlcArtifacts] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
 				stateScanner?.scanState() || Promise.resolve({ languages: [], frameworks: [], dependencies: [], buildTools: [], testing: [], codeQuality: [], developmentTools: [], architecture: [], configuration: [], documentation: [] }),
-				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([])
+				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
+				skillsScanner?.scanWorkspaceSkills() || Promise.resolve([]),
+				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false })
 			]);
 
 			// Use workspace path as the key for current workspace
 			const workspaceKey = 'current-workspace';
-			projectData.set(workspaceKey, { rules: currentRules, state: currentState, commands: currentCommands, globalCommands });
+			projectData.set(workspaceKey, {
+				rules: currentRules,
+				state: currentState,
+				commands: currentCommands,
+				globalCommands,
+				skills: currentSkills,
+				globalSkills,
+				asdlcArtifacts: currentAsdlcArtifacts
+			});
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentState.languages.length + currentState.frameworks.length + currentState.dependencies.length + currentState.buildTools.length + currentState.testing.length + currentState.codeQuality.length + currentState.developmentTools.length + currentState.architecture.length + currentState.configuration.length + currentState.documentation.length} state items, ${currentCommands.length} workspace commands, ${globalCommands.length} global commands`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ASDLC: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -194,16 +230,28 @@ async function refreshData() {
 				const projectRulesScanner = new RulesScanner(projectUri);
 				const projectStateScanner = new StateScanner(projectUri);
 				const projectCommandsScanner = new CommandsScanner(projectUri);
+				const projectSkillsScanner = new SkillsScanner(projectUri);
+				const projectAsdlcScanner = new AsdlcArtifactScanner(projectUri);
 
-				// Scan rules, state, and commands for this project
-				const [rules, state, commands] = await Promise.all([
+				// Scan rules, state, commands, skills, and ASDLC artifacts for this project
+				const [rules, state, commands, skills, asdlcArtifacts] = await Promise.all([
 					projectRulesScanner.scanRules(),
 					projectStateScanner.scanState(),
-					projectCommandsScanner.scanWorkspaceCommands()
+					projectCommandsScanner.scanWorkspaceCommands(),
+					projectSkillsScanner.scanWorkspaceSkills(),
+					projectAsdlcScanner.scanAll()
 				]);
 
-				projectData.set(project.id, { rules, state, commands, globalCommands });
-				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${state.languages.length + state.frameworks.length + state.dependencies.length + state.buildTools.length + state.testing.length + state.codeQuality.length + state.developmentTools.length + state.architecture.length + state.configuration.length + state.documentation.length} state items, ${commands.length} workspace commands, ${globalCommands.length} global commands`;
+				projectData.set(project.id, {
+					rules,
+					state,
+					commands,
+					globalCommands,
+					skills,
+					globalSkills,
+					asdlcArtifacts
+				});
+				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${commands.length} commands, ${skills.length} skills`;
 				outputChannel.appendLine(logMessage);
 			} catch (error) {
 				const errorMessage = `Error scanning project ${project.name}: ${error}`;
@@ -229,7 +277,15 @@ async function refreshData() {
 						documentation: []
 					},
 					commands: [],
-					globalCommands: globalCommands
+					globalCommands: globalCommands,
+					skills: [],
+					globalSkills: globalSkills,
+					asdlcArtifacts: {
+						agentsMd: { exists: false, sections: [] },
+						specs: { exists: false, specs: [] },
+						schemas: { exists: false, schemas: [] },
+						hasAnyArtifacts: false
+					}
 				});
 			}
 		}
@@ -275,6 +331,10 @@ function setupFileWatcher() {
 	const commandsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/commands/*.md');
 	const commandsWatcher = vscode.workspace.createFileSystemWatcher(commandsPattern);
 
+	// Watch for changes in .cursor/skills directories (SKILL.md files)
+	const skillsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/skills/*/SKILL.md');
+	const skillsWatcher = vscode.workspace.createFileSystemWatcher(skillsPattern);
+
 	// Rules watcher handlers
 	rulesWatcher.onDidCreate(() => {
 		outputChannel.appendLine('Rule file created, refreshing...');
@@ -307,12 +367,29 @@ function setupFileWatcher() {
 		refreshData();
 	});
 
+	// Skills watcher handlers
+	skillsWatcher.onDidCreate(() => {
+		outputChannel.appendLine('Skill file created, refreshing...');
+		refreshData();
+	});
+
+	skillsWatcher.onDidChange(() => {
+		outputChannel.appendLine('Skill file changed, refreshing...');
+		refreshData();
+	});
+
+	skillsWatcher.onDidDelete(() => {
+		outputChannel.appendLine('Skill file deleted, refreshing...');
+		refreshData();
+	});
+
 	// Combine watchers for disposal
 	fileWatcher = {
 		...rulesWatcher,
 		dispose: () => {
 			rulesWatcher.dispose();
 			commandsWatcher.dispose();
+			skillsWatcher.dispose();
 		}
 	} as vscode.FileSystemWatcher;
 }
@@ -345,6 +422,38 @@ function setupGlobalCommandsWatcher(): vscode.FileSystemWatcher | undefined {
 	} catch (error) {
 		outputChannel.appendLine(`Unable to watch global commands directory: ${error instanceof Error ? error.message : String(error)}`);
 		// Continue without global commands watcher - extension still functions
+		return undefined;
+	}
+}
+
+function setupGlobalSkillsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .cursor/skills directory
+	try {
+		const homeDir = os.homedir();
+		const globalSkillsPattern = path.join(homeDir, '.cursor', 'skills', '*', 'SKILL.md');
+		const globalSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalSkillsPattern);
+
+		// Global skills watcher handlers
+		globalSkillsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global skill file created, refreshing...');
+			refreshData();
+		});
+
+		globalSkillsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global skill file changed, refreshing...');
+			refreshData();
+		});
+
+		globalSkillsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global skill file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global skills file watcher created successfully');
+		return globalSkillsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global skills directory: ${error instanceof Error ? error.message : String(error)}`);
+		// Continue without global skills watcher - extension still functions
 		return undefined;
 	}
 }

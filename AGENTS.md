@@ -21,7 +21,9 @@
 - **IDE:** VS Code / Cursor IDE
 - **Language:** TypeScript
 - **Framework:** VS Code Extension API
-- **Build Tool:** TypeScript Compiler (tsc)
+- **Build System:** 
+  - **Vite** - Bundles extension code (`src/extension.ts` → `dist/extension.js`)
+  - **TypeScript Compiler (tsc)** - Compiles MCP server (`src/mcp/server.ts` → `out/mcp/server.js`)
 - **Testing:** Mocha, @vscode/test-electron
 - **Package Manager:** npm
 
@@ -30,6 +32,27 @@
 - **yaml** - YAML parsing
 - **@types/vscode** - VS Code API types
 - **@vscode/test-electron** - VS Code extension testing
+- **vite** - Modern bundler for production builds
+
+### Build Architecture
+The project uses **Vite bundling for both extension and MCP server**:
+
+1. **Extension Bundle**:
+   - Entry: `src/extension.ts`
+   - Output: `dist/extension.js` (~293 KB bundled)
+   - Used by: VS Code extension host
+   - Config: `vite.config.ts`
+   
+2. **MCP Server Bundle**:
+   - Entry: `src/mcp/server.ts`
+   - Output: `out/mcp/server.js` (~921 KB bundled)
+   - Used by: Standalone Node.js subprocess (MCP protocol)
+   - Config: `vite.config.mcp.ts`
+
+**Why bundle both?**
+- **Performance**: Reduces package from ~4,300 files to ~170 files (96% reduction)
+- **No trade-offs**: MCP server works with bundled code (Node.js built-ins externalized)
+- **Self-contained**: No dependency on `node_modules/` at runtime
 
 ### Project Structure
 - **src/** - Source code
@@ -114,6 +137,7 @@ ASDLC Artifact Scanning **MUST**:
 - **src/providers/projectTreeProvider.ts** - Tree view data provider
 - **src/scanner/rulesScanner.ts** - Scan .cursor/rules/ files
 - **src/scanner/commandsScanner.ts** - Scan .cursor/commands/ files
+- **src/scanner/skillsScanner.ts** - Scan .cursor/skills/*/SKILL.md files
 - **src/scanner/asdlcArtifactScanner.ts** - Scan AGENTS.md, specs/, schemas/
 - **src/mcp/server.ts** - MCP server for agent context access
 - **src/mcp/tools.ts** - MCP tools wrapping scanners
@@ -129,8 +153,9 @@ ASDLC Artifact Scanning **MUST**:
 
 ### Key Decisions
 - **Viewer-Only Philosophy:** ACE scans and displays explicit artifacts but does not create, edit, or delete them
+- **Tree Structure:** Platform-first organization (Cursor / Agents) to future-proof for multi-platform support
 - Use explicit artifact scanning (AGENTS.md, specs/) instead of optimistic state detection
-- Support both workspace and global commands
+- Support both workspace and global commands and skills
 - Multi-project support via ProjectManager
 - MCP server provides dynamic context to AI agents
 
@@ -146,6 +171,14 @@ ASDLC Artifact Scanning **MUST**:
 **Problem:** Adding opinionated features like rules CRUD operations or compliance auditing to a general-purpose viewer.
 **Solution:** Focus on viewer-only approach - display intentional artifacts, don't manage them. Let developers use their preferred editors.
 
+### ❌ Packaging Too Many Files
+**Problem:** Including thousands of `node_modules/` files in `.vsix` package (was 4,339 files before optimization).
+**Solution:** Bundle both extension and MCP server with Vite. Reduces to ~170 files (96% reduction) with no loss of functionality.
+
+### ❌ MCP Server Module Not Found
+**Problem:** MCP server can't find dependencies when bundled.
+**Solution:** Use Vite's `rollupOptions.external` to externalize only Node.js built-ins (fs, path, etc.), bundle everything else. MCP server works with bundled code.
+
 ---
 
 ## 7. ASDLC Artifacts
@@ -157,10 +190,11 @@ This project scans for and uses:
 - **schemas/** - JSON Schema definitions (if Standardized Parts pattern used)
 - **.plans/** - Transient implementation plans (already supported)
 - **.cursor/rules/** - Cursor rules (MDC format)
-- **.cursor/commands/** - Cursor commands (Markdown format)
+- **.cursor/commands/** - Cursor commands (Markdown format, being phased out)
+- **.cursor/skills/** - Cursor skills (SKILL.md format, replacing commands for SDLC workflows)
 
 ---
 
 **Status**: Active
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-02-07
 **Pattern**: ASDLC "Agent Constitution" + explicit artifact scanning

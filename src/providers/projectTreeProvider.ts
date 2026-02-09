@@ -3,15 +3,21 @@ import * as vscode from 'vscode';
 import { Rule } from '../scanner/rulesScanner';
 import { ProjectState } from '../scanner/stateScanner';
 import { Command } from '../scanner/commandsScanner';
+import { Skill } from '../scanner/skillsScanner';
 import { ProjectDefinition } from '../types/project';
+import { AsdlcArtifacts } from '../scanner/types';
 
 export interface ProjectTreeItem extends vscode.TreeItem {
 	rule?: Rule;
 	commandData?: Command; // Command data (avoiding conflict with TreeItem's command property)
+	skillData?: Skill; // Skill data
 	stateItem?: any;
 	ruleType?: any;
-	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands' | 'commands-workspace' | 'commands-global';
+	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands' | 'commands-workspace' | 'commands-global'
+		| 'cursor' | 'agents' | 'skills' | 'skills-workspace' | 'skills-global'
+		| 'agents-md' | 'specs' | 'schemas';
 	commandLocation?: 'workspace' | 'global'; // For sub-section grouping
+	skillLocation?: 'workspace' | 'global'; // For skills sub-section grouping
 	directory?: string;
 	project?: ProjectDefinition;
 }
@@ -21,7 +27,15 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	constructor(
-		private projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }> = new Map(),
+		private projectData: Map<string, {
+			rules: Rule[],
+			state: ProjectState,
+			commands: Command[],
+			globalCommands: Command[],
+			skills: Skill[],
+			globalSkills: Skill[],
+			asdlcArtifacts: AsdlcArtifacts
+		}> = new Map(),
 		private projects: ProjectDefinition[] = [],
 		private currentProject: ProjectDefinition | null = null
 	) {}
@@ -35,7 +49,15 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 	}
 
 	updateData(
-		projectData: Map<string, { rules: Rule[], state: ProjectState, commands: Command[], globalCommands: Command[] }>,
+		projectData: Map<string, {
+			rules: Rule[],
+			state: ProjectState,
+			commands: Command[],
+			globalCommands: Command[],
+			skills: Skill[],
+			globalSkills: Skill[],
+			asdlcArtifacts: AsdlcArtifacts
+		}>,
 		projects: ProjectDefinition[],
 		currentProject: ProjectDefinition | null
 	): void {
@@ -71,75 +93,121 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					) as ProjectTreeItem;
 					item.project = project;
 					item.category = 'projects';
-					item.description = project.active ? 'Active' : project.path;
-					item.tooltip = `${project.name}\n${project.path}\n${project.description || 'No description'}`;
-					item.iconPath = new vscode.ThemeIcon(project.active ? 'folder-opened' : 'folder');
+					item.description = project.path;
+					item.tooltip = `${project.name}\n${project.path}\n${project.description || 'No description'}${project.active ? '\n\n(Active workspace)' : ''}`;
+					item.iconPath = new vscode.ThemeIcon('root-folder');
 
 					// Add context menu for projects
 					item.contextValue = project.active ? 'activeProject' : 'inactiveProject';
 
 					return item;
 				});
-			} else if (element.category === 'projects' && element.project) {
-				// Project level: show Rules and State for this specific project
-				const project = element.project;
+		} else if (element.category === 'projects' && element.project) {
+			// Project level: show Cursor and Agents sections
+			const project = element.project;
+			const currentProjectData = this.projectData.get(project.id);
 
-				// Show Rules, State, and Commands sections for all projects
-				const currentProjectData = this.projectData.get(project.id);
-				const rulesCount = currentProjectData?.rules.length || 0;
-				const workspaceCommandsCount = currentProjectData?.commands.length || 0;
-				const globalCommandsCount = currentProjectData?.globalCommands.length || 0;
-				const commandsCount = workspaceCommandsCount + globalCommandsCount;
+			// Count artifacts
+			const rulesCount = currentProjectData?.rules.length || 0;
+			const workspaceCommandsCount = currentProjectData?.commands.length || 0;
+			const globalCommandsCount = currentProjectData?.globalCommands.length || 0;
+			const commandsCount = workspaceCommandsCount + globalCommandsCount;
+			const workspaceSkillsCount = currentProjectData?.skills.length || 0;
+			const globalSkillsCount = currentProjectData?.globalSkills.length || 0;
+			const skillsCount = workspaceSkillsCount + globalSkillsCount;
 
-				// Count sections (not individual items)
-				let stateCount = 0;
-				if (currentProjectData?.state) {
-					const state = currentProjectData.state;
+			const sections = [
+				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts' },
+				{ name: 'Agents', id: 'agents', icon: 'organization', description: 'ASDLC artifacts' }
+			];
 
-					// Enhanced sections (6 sections)
-					if (state.identity) { stateCount += 1; }
-					if (state.capabilities) { stateCount += 1; }
-					if (state.enhancedDependencies) { stateCount += 1; }
-					if (state.enhancedArchitecture) { stateCount += 1; }
-					if (state.platformContext) { stateCount += 1; }
-					if (state.agentGuidance) { stateCount += 1; }
+			const items = sections.map((section) => {
+				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Expanded) as ProjectTreeItem;
+				item.category = section.id as 'cursor' | 'agents';
+				item.project = project;
+				item.description = section.description;
+				item.iconPath = new vscode.ThemeIcon(section.icon);
+				return item;
+			});
 
-					// Grouped basic sections (3 sections)
-					stateCount += 3; // Tech Stack, Dev Environment, Project Structure
+			return items;
+		} else if (element.category === 'cursor' && element.project) {
+			// Cursor section: show Commands, Rules, Skills, Subagents
+			const projectData = this.projectData.get(element.project.id);
+			const rulesCount = projectData?.rules.length || 0;
+			const workspaceCommandsCount = projectData?.commands.length || 0;
+			const globalCommandsCount = projectData?.globalCommands.length || 0;
+			const commandsCount = workspaceCommandsCount + globalCommandsCount;
+			const workspaceSkillsCount = projectData?.skills.length || 0;
+			const globalSkillsCount = projectData?.globalSkills.length || 0;
+			const skillsCount = workspaceSkillsCount + globalSkillsCount;
 
-					// Conditional sections
-					if (state.infrastructure) { stateCount += 1; }
-					if (state.security) { stateCount += 1; }
-					if (state.api) { stateCount += 1; }
-					if (state.deployment) { stateCount += 1; }
-					if (state.projectMetrics) { stateCount += 1; }
-				}
+			const sections = [
+				{ name: 'Commands', id: 'commands', icon: 'terminal', description: `${commandsCount} commands` },
+				{ name: 'Rules', id: 'rules', icon: 'book', description: `${rulesCount} rules` },
+				{ name: 'Skills', id: 'skills', icon: 'lightbulb', description: `${skillsCount} skills` }
+			];
 
-				const sections = [
-					{ name: 'Commands', id: 'commands', icon: 'terminal', description: `${commandsCount} commands found` },
-					{ name: 'Rules', id: 'rules', icon: 'book', description: `${rulesCount} rules found` },
-					{ name: 'State', id: 'state', icon: 'database', description: `${stateCount} items` }
-				];
+			return sections.map((section) => {
+				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.category = section.id as 'commands' | 'rules' | 'skills';
+				item.project = element.project;
+				item.description = section.description;
+				item.iconPath = new vscode.ThemeIcon(section.icon);
+				return item;
+			});
+		} else if (element.category === 'agents' && element.project) {
+			// Agents section: show AGENTS.md, Specs, Schemas
+			const projectData = this.projectData.get(element.project.id);
+			const asdlcArtifacts = projectData?.asdlcArtifacts;
 
-				// Add a switch project option for non-active projects
-				const items = sections.map((section) => {
-					const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
-					item.category = section.id as 'rules' | 'state' | 'commands';
-					item.project = project;
-					item.description = section.description;
-					item.iconPath = new vscode.ThemeIcon(section.icon);
+			const items: ProjectTreeItem[] = [];
 
-					// Set contextValue for Rules section to enable + button
-					if (section.id === 'rules') {
-						item.contextValue = 'rules';
-					}
+			// AGENTS.md (if exists)
+			if (asdlcArtifacts?.agentsMd.exists && asdlcArtifacts.agentsMd.path) {
+				const item = new vscode.TreeItem('AGENTS.md', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem;
+				item.category = 'agents-md';
+				item.project = element.project;
+				item.description = 'Agent constitution';
+				item.iconPath = new vscode.ThemeIcon('hubot');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open AGENTS.md',
+					arguments: [vscode.Uri.file(asdlcArtifacts.agentsMd.path)]
+				};
+				items.push(item);
+			}
 
-					return item;
-				});
+			// Specs (if exists)
+			if (asdlcArtifacts?.specs.exists) {
+				const specsItem = new vscode.TreeItem('Specs', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				specsItem.category = 'specs';
+				specsItem.project = element.project;
+				specsItem.description = `${asdlcArtifacts.specs.specs.length} specs`;
+				specsItem.iconPath = new vscode.ThemeIcon('library');
+				items.push(specsItem);
+			}
 
-				// No switch option needed - users can expand any project to see its rules, state, and commands
+			// Schemas (if exists)
+			if (asdlcArtifacts?.schemas.exists) {
+				const schemasItem = new vscode.TreeItem('Schemas', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				schemasItem.category = 'schemas';
+				schemasItem.project = element.project;
+				schemasItem.description = `${asdlcArtifacts.schemas.schemas.length} schemas`;
+				schemasItem.iconPath = new vscode.ThemeIcon('list-tree');
+				items.push(schemasItem);
+			}
 
-				return items;
+			// If no artifacts, show placeholder
+			if (items.length === 0) {
+				return [{
+					label: 'No ASDLC artifacts found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add AGENTS.md, specs/, or schemas/'
+				} as ProjectTreeItem];
+			}
+
+			return items;
 		} else if (element.category === 'commands' && element.project) {
 			// Commands section for specific project - show Workspace Commands and Global Commands sub-sections
 			const projectData = this.projectData.get(element.project.id);
@@ -239,6 +307,169 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				};
 				return item;
 			});
+		} else if (element.category === 'skills' && element.project) {
+			// Skills section: show Workspace Skills and Global Skills sub-sections
+			const projectData = this.projectData.get(element.project.id);
+			const workspaceSkills = projectData?.skills || [];
+			const globalSkills = projectData?.globalSkills || [];
+
+			const subSections = [
+				{
+					name: 'Workspace Skills',
+					id: 'skills-workspace',
+					icon: 'target',
+					skills: workspaceSkills,
+					location: 'workspace' as const
+				},
+				{
+					name: 'Global Skills',
+					id: 'skills-global',
+					icon: 'globe',
+					skills: globalSkills,
+					location: 'global' as const
+				}
+			];
+
+			return subSections.map((section) => {
+				const item = new vscode.TreeItem(
+					section.name,
+					vscode.TreeItemCollapsibleState.Collapsed
+				) as ProjectTreeItem;
+				item.category = section.id as 'skills-workspace' | 'skills-global';
+				item.project = element.project;
+				item.skillLocation = section.location;
+				item.description = `${section.skills.length} ${section.location} skill${section.skills.length !== 1 ? 's' : ''}`;
+				item.iconPath = new vscode.ThemeIcon(section.icon);
+				return item;
+			});
+		} else if (element.category === 'skills-workspace' && element.project) {
+			// Workspace Skills sub-section
+			const projectData = this.projectData.get(element.project.id);
+			const skills = projectData?.skills || [];
+
+			if (skills.length === 0) {
+				return [{
+					label: 'No workspace skills found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add skills to .cursor/skills directory'
+				} as ProjectTreeItem];
+			}
+
+			return skills.map((skill: Skill) => {
+				const item = new vscode.TreeItem(
+					skill.metadata?.title || skill.fileName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.skillData = skill;
+				item.category = 'skills-workspace';
+				item.project = element.project;
+				item.tooltip = skill.metadata?.overview || `${skill.fileName} (Workspace)`;
+				item.contextValue = 'skill';
+				item.iconPath = new vscode.ThemeIcon('play-circle');
+
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Skill',
+					arguments: [skill.uri]
+				};
+				return item;
+			});
+		} else if (element.category === 'skills-global' && element.project) {
+			// Global Skills sub-section
+			const projectData = this.projectData.get(element.project.id);
+			const skills = projectData?.globalSkills || [];
+
+			if (skills.length === 0) {
+				return [{
+					label: 'No global skills found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add skills to ~/.cursor/skills directory'
+				} as ProjectTreeItem];
+			}
+
+			return skills.map((skill: Skill) => {
+				const item = new vscode.TreeItem(
+					skill.metadata?.title || skill.fileName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.skillData = skill;
+				item.category = 'skills-global';
+				item.project = element.project;
+				item.tooltip = skill.metadata?.overview || `${skill.fileName} (Global)`;
+				item.contextValue = 'skill';
+				item.iconPath = new vscode.ThemeIcon('play-circle');
+
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Skill',
+					arguments: [skill.uri]
+				};
+				return item;
+			});
+		} else if (element.category === 'specs' && element.project) {
+			// Specs section: show individual spec files
+			const projectData = this.projectData.get(element.project.id);
+			const asdlcArtifacts = projectData?.asdlcArtifacts;
+			const specs = asdlcArtifacts?.specs.specs || [];
+
+			if (specs.length === 0) {
+				return [{
+					label: 'No specs found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add specs to specs/ directory'
+				} as ProjectTreeItem];
+			}
+
+			return specs.map(spec => {
+				const item = new vscode.TreeItem(
+					spec.domain,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.category = 'specs';
+				item.project = element.project;
+				item.tooltip = `${spec.domain}/spec.md`;
+				item.description = spec.hasBlueprint && spec.hasContract ? 'Blueprint + Contract' : 
+								spec.hasBlueprint ? 'Blueprint only' : 
+								spec.hasContract ? 'Contract only' : '';
+				item.iconPath = new vscode.ThemeIcon('file-code');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Spec',
+					arguments: [vscode.Uri.file(spec.path)]
+				};
+				return item;
+			});
+		} else if (element.category === 'schemas' && element.project) {
+			// Schemas section: show individual schema files
+			const projectData = this.projectData.get(element.project.id);
+			const asdlcArtifacts = projectData?.asdlcArtifacts;
+			const schemas = asdlcArtifacts?.schemas.schemas || [];
+
+			if (schemas.length === 0) {
+				return [{
+					label: 'No schemas found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add schemas to schemas/ directory'
+				} as ProjectTreeItem];
+			}
+
+			return schemas.map(schema => {
+				const item = new vscode.TreeItem(
+					schema.name,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.category = 'schemas';
+				item.project = element.project;
+				item.tooltip = schema.schemaId || schema.name;
+				item.description = schema.schemaId ? `ID: ${schema.schemaId}` : '';
+				item.iconPath = new vscode.ThemeIcon('json');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Schema',
+					arguments: [vscode.Uri.file(schema.path)]
+				};
+				return item;
+			});
 		} else if (element.category === 'rules' && element.project) {
 			// Rules section for specific project
 			const projectData = this.projectData.get(element.project.id);
@@ -264,8 +495,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				item.tooltip = rule.metadata.description;
 				item.contextValue = 'rule'; // Enable context menu for individual rules
 
-				// Context-aware icon based on filename, content, and project context
-				item.iconPath = new vscode.ThemeIcon(this.getContextAwareIcon(rule, element.project));
+				// Consistent bookmark icon for all rules
+				item.iconPath = new vscode.ThemeIcon('bookmark');
 
 				// Open in editor instead of webview
 				item.command = {
@@ -275,271 +506,9 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				};
 				return item;
 			});
-		} else if (element.category === 'state' && element.project) {
-			// State section for specific project - show categories (basic + enhanced)
-			const projectData = this.projectData.get(element.project.id);
-			const state = projectData?.state;
+		}
 
-				if (!state) {
-					return [{
-						label: 'No state data available',
-						collapsibleState: vscode.TreeItemCollapsibleState.None,
-						description: 'State not scanned yet'
-					} as ProjectTreeItem];
-				}
-
-				const stateItems: Array<{name: string, items: any[], icon: string, isEnhanced?: boolean, sectionKey?: string}> = [
-					// === ENHANCED STATE (High Value) ===
-					// Project Identity
-					...(state.identity ? [{
-						name: 'Project Identity',
-						items: [
-							`Type: ${state.identity.projectType}`,
-							`Domain: ${state.identity.domain}`,
-							`Language: ${state.identity.primaryLanguage}`,
-							`Maturity: ${state.identity.maturityLevel}`
-						],
-						icon: 'target',
-						isEnhanced: true,
-						sectionKey: 'identity'
-					}] : []),
-
-					// Capabilities
-					...(state.capabilities ? [{
-						name: 'Capabilities',
-						items: [
-							...(state.capabilities.description ? [`Description: ${state.capabilities.description}`] : []),
-							...(state.capabilities.primaryFeatures || []),
-							...(state.capabilities.dataFormats?.length ? [`Formats: ${state.capabilities.dataFormats.join(', ')}`] : [])
-						],
-						icon: 'rocket',
-						isEnhanced: true,
-						sectionKey: 'capabilities'
-					}] : []),
-
-					// Dependencies by Purpose
-					...(state.enhancedDependencies ? [{
-						name: 'Dependencies by Purpose',
-						items: this.formatEnhancedDependencies(state.enhancedDependencies),
-						icon: 'package',
-						isEnhanced: true,
-						sectionKey: 'dependencies'
-					}] : []),
-
-					// Architecture Patterns
-					...(state.enhancedArchitecture ? [{
-						name: 'Architecture',
-						items: [
-							`Style: ${state.enhancedArchitecture.style}`,
-							`Organization: ${state.enhancedArchitecture.organization}`,
-							...(state.enhancedArchitecture.patterns || []),
-							...(state.enhancedArchitecture.entryPoints?.length ? [`Entry: ${state.enhancedArchitecture.entryPoints.join(', ')}`] : [])
-						],
-						icon: 'symbol-structure',
-						isEnhanced: true,
-						sectionKey: 'architecture'
-					}] : []),
-
-					// Platform Context
-					...(state.platformContext?.vscode ? [{
-						name: 'VS Code Platform',
-						items: [
-							`Type: ${state.platformContext.vscode.extensionType}`,
-							`Min Version: ${state.platformContext.vscode.minVersion}`,
-							`Commands: ${state.platformContext.vscode.contributes.commands}`,
-							`Views: ${state.platformContext.vscode.contributes.views}`,
-							...(state.platformContext.vscode.capabilities || [])
-						],
-						icon: 'extensions',
-						isEnhanced: true,
-						sectionKey: 'platform'
-					}] : []),
-
-					// Agent Guidance
-					...(state.agentGuidance ? [{
-						name: 'Agent Guidance',
-						items: [
-							`Approach: ${state.agentGuidance.suggestedApproach}`,
-							'',
-							'Critical Files:',
-							...(state.agentGuidance.criticalFiles || []).map(f => `  • ${f}`),
-							'',
-							'Common Tasks:',
-							...(state.agentGuidance.commonTasks || []).map(t => `  • ${t}`),
-							'',
-							'Watch Outs:',
-							...(state.agentGuidance.watchOuts || []).map(w => `  ⚠️ ${w}`)
-						],
-						icon: 'robot',
-						isEnhanced: true,
-						sectionKey: 'guidance'
-					}] : []),
-
-					// === GROUPED BASIC STATE ===
-					// Technology Stack
-					{
-						name: 'Technology Stack',
-						items: [
-							'Languages:',
-							...state.languages.map(l => `  • ${l}`),
-							'',
-							'Frameworks:',
-							...state.frameworks.map(f => `  • ${f}`)
-						],
-						icon: 'symbol-namespace',
-						sectionKey: 'tech-stack'
-					},
-
-					// Development Environment
-					{
-						name: 'Development Environment',
-						items: [
-							'Build Tools:',
-							...state.buildTools.map(b => `  • ${b}`),
-							'',
-							'Testing:',
-							...state.testing.map(t => `  • ${t}`),
-							'',
-							'Code Quality:',
-							...state.codeQuality.map(c => `  • ${c}`),
-							'',
-							'Development Tools:',
-							...state.developmentTools.map(d => `  • ${d}`)
-						],
-						icon: 'tools',
-						sectionKey: 'dev-environment'
-					},
-
-					// Project Structure
-					{
-						name: 'Project Structure',
-						items: [
-							'Architecture:',
-							...state.architecture.map(a => `  • ${a}`),
-							'',
-							'Configuration:',
-							...state.configuration.map(c => `  • ${c}`),
-							'',
-							'Documentation:',
-							...state.documentation.map(d => `  • ${d}`)
-						],
-						icon: 'folder-library',
-						sectionKey: 'project-structure'
-					},
-
-					// Conditional sections (only show if they have content)
-					...(state.infrastructure ? [{
-						name: 'Infrastructure',
-						items: [
-							'Databases:',
-							...state.infrastructure.databases.map((d: string) => `  • ${d}`),
-							'',
-							'Cache:',
-							...state.infrastructure.cache.map((c: string) => `  • ${c}`),
-							'',
-							'Queues:',
-							...state.infrastructure.queues.map((q: string) => `  • ${q}`),
-							'',
-							'Storage:',
-							...state.infrastructure.storage.map((s: string) => `  • ${s}`),
-							'',
-							'Messaging:',
-							...state.infrastructure.messaging.map((m: string) => `  • ${m}`)
-						],
-						icon: 'server',
-						sectionKey: 'infrastructure'
-					}] : []),
-
-					...(state.security ? [{
-						name: 'Security',
-						items: [
-							'Authentication Frameworks:',
-							...state.security.authFrameworks.map((a: string) => `  • ${a}`),
-							'',
-							'Encryption:',
-							...state.security.encryption.map((e: string) => `  • ${e}`),
-							'',
-							'Vulnerability Scanning:',
-							...state.security.vulnerabilityScanning.map((v: string) => `  • ${v}`),
-							'',
-							'Secrets Management:',
-							...state.security.secretsManagement.map((s: string) => `  • ${s}`)
-						],
-						icon: 'shield',
-						sectionKey: 'security'
-					}] : []),
-
-					...(state.api ? [{
-						name: 'API',
-						items: [
-							'API Type:',
-							...state.api.type.map((t: string) => `  • ${t}`),
-							'',
-							'Documentation:',
-							...state.api.documentation.map((d: string) => `  • ${d}`),
-							'',
-							'Authentication:',
-							...state.api.authentication.map((a: string) => `  • ${a}`),
-							'',
-							'Versioning:',
-							...state.api.versioning.map((v: string) => `  • ${v}`)
-						],
-						icon: 'cloud',
-						sectionKey: 'api'
-					}] : []),
-
-					...(state.deployment ? [{
-						name: 'Deployment',
-						items: [
-							'Environments:',
-							...state.deployment.environments.map((e: string) => `  • ${e}`),
-							'',
-							'Platforms:',
-							...state.deployment.platforms.map((p: string) => `  • ${p}`),
-							'',
-							'Orchestration:',
-							...state.deployment.orchestration.map((o: string) => `  • ${o}`)
-						],
-						icon: 'rocket',
-						sectionKey: 'deployment'
-					}] : []),
-
-					...(state.projectMetrics ? [{
-						name: 'Project Metrics',
-						items: [
-							`Size: ${state.projectMetrics.estimatedSize}`,
-							`Complexity: ${state.projectMetrics.complexity}`,
-							`Files Analyzed: ${state.projectMetrics.filesAnalyzed}`,
-							`Last Analyzed: ${new Date(state.projectMetrics.lastAnalyzed).toLocaleString()}`
-						],
-						icon: 'graph',
-						sectionKey: 'metrics'
-					}] : [])
-				].filter(section => section.items.length > 0); // Only show sections with content
-
-				return stateItems.map((section) => {
-					const item = new vscode.TreeItem(
-						section.name,
-						vscode.TreeItemCollapsibleState.None // Don't expand, click to open
-					) as ProjectTreeItem;
-					item.category = 'state';
-					item.project = element.project;
-					item.description = `${section.items.length} items`;
-					item.stateItem = section;
-					item.iconPath = new vscode.ThemeIcon(section.icon);
-
-					// Add command to open in a view instead of expanding
-					item.command = {
-						command: 'ace.viewStateSection',
-						title: 'View State Section',
-						arguments: [section.sectionKey || section.name.toLowerCase().replace(/\s+/g, '-'), section, element.project]
-					};
-
-					return item;
-				});
-			}
-
-			return [];
+		return [];
 		} catch (error) {
 			const errorItem = new vscode.TreeItem(
 				`Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -589,131 +558,6 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 		}
 
 		return items;
-	}
-
-	private getContextAwareIcon(rule: Rule, project?: ProjectDefinition): string {
-		const description = rule.metadata.description.toLowerCase();
-		const fileName = rule.fileName.toLowerCase();
-
-		// Filename-based icon detection (higher priority)
-		const filenameIconMappings: Array<[string[], string]> = [
-			// Security files
-			[['security', 'auth', 'authz'], 'shield'],
-			// Testing files
-			[['test', 'spec', 'testing'], 'beaker'],
-			// Performance files
-			[['performance', 'optimize', 'perf'], 'speedometer'],
-			// Documentation files
-			[['readme', 'docs', 'documentation'], 'book'],
-			// Deployment files
-			[['deploy', 'publish', 'ci-cd'], 'rocket'],
-			// Database files
-			[['database', 'db', 'sql'], 'database'],
-			// API files
-			[['api', 'endpoint', 'rest'], 'symbol-method'],
-			// Component files (higher priority than UI)
-			[['component'], 'symbol-component'],
-			// UI/UX files
-			[['ui', 'ux', 'interface'], 'symbol-interface'],
-			// Error handling files
-			[['error', 'exception', 'handling'], 'error'],
-			// Extension files (higher priority than TypeScript)
-			[['extension'], 'extensions'],
-			// TypeScript files
-			[['typescript', 'ts-config'], 'symbol-class'],
-			// Project specific files
-			[['project-specific', 'project-specific'], 'folder-library'],
-			// React files
-			[['react', 'component', 'jsx'], 'symbol-component'],
-			// Node.js files
-			[['node', 'server', 'express'], 'server'],
-			// Git files
-			[['git', 'version', 'vcs'], 'source-control'],
-			// Configuration files
-			[['config', 'settings', 'env'], 'settings-gear'],
-			// VS Code Extension files
-			[['vscode', 'extension'], 'extensions'],
-			// Always files
-			[['always'], 'star'],
-			// Auto files
-			[['auto'], 'wrench'],
-			// Agent files
-			[['agent'], 'symbol-function'],
-			// Manual files
-			[['manual'], 'symbol-keyword']
-		];
-
-		// Description-based icon detection (lower priority)
-		const iconMappings: Array<[string[], string]> = [
-			// Security
-			[['security', 'auth', 'authentication', 'authorization'], 'shield'],
-			// Testing
-			[['test', 'testing', 'spec'], 'beaker'],
-			// Performance
-			[['performance', 'optimize', 'optimization'], 'speedometer'],
-			// Documentation
-			[['documentation', 'readme', 'changelog'], 'book'],
-			// Publishing/Deployment
-			[['publishing', 'deployment', 'deploy', 'ci/cd'], 'rocket'],
-			// Database
-			[['database', 'sql', 'db'], 'database'],
-			// API
-			[['api', 'endpoint', 'rest'], 'symbol-method'],
-			// UI/UX
-			[['ui/ux', 'user interface', 'user experience'], 'symbol-interface'],
-			// Error handling
-			[['error', 'exception'], 'error'],
-			// TypeScript
-			[['typescript', 'type safety'], 'symbol-class'],
-			// Project specific
-			[['specific rules', 'project specific'], 'folder-library'],
-			// React
-			[['react', 'component'], 'symbol-component'],
-			// Node.js
-			[['node.js', 'server'], 'server'],
-			// Git
-			[['git', 'version control'], 'source-control'],
-			// Configuration
-			[['configuration', 'settings', 'config'], 'settings-gear'],
-			// VS Code Extension
-			[['vscode', 'extension', 'vs code'], 'extensions'],
-			// Always rules
-			[['always'], 'star'],
-			// Auto rules
-			[['auto'], 'wrench'],
-			// Agent rules
-			[['agent'], 'symbol-function'],
-			// Manual rules
-			[['manual'], 'symbol-keyword']
-		];
-
-		// Check filename first for priority
-		for (const [keywords, icon] of filenameIconMappings) {
-			if (keywords.some(keyword => fileName.includes(keyword))) {
-				return icon;
-			}
-		}
-
-		// Then check description for additional matches
-		for (const [keywords, icon] of iconMappings) {
-			if (keywords.some(keyword => description.includes(keyword))) {
-				return icon;
-			}
-		}
-
-		// Project-specific icon adjustments for non-default projects
-		if (project && !project.active) {
-			// For inactive projects, use a slightly different icon to indicate they're not the active project
-			// This helps distinguish rules from different projects
-			if (fileName.includes('project-specific') || description.includes('project specific')) {
-				return 'folder-library';
-			}
-			// Add a subtle indicator for non-active project rules
-			return 'file-text';
-		}
-
-		// Default fallback icon
-		return 'file-text';
 	}
 
 	private groupRulesByDirectory(rules: Rule[]): Record<string, Rule[]> {

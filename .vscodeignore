@@ -1,10 +1,33 @@
+# Development files
 .vscode/**
 .vscode-test/**
+.plans/**
 src/**
+test/**
+out/test/**
+specs/**
+schemas/**
+*.vsix
 .gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/.eslintrc.json
-**/*.map
-**/*.ts
+.eslintrc.json
+.mocharc.json
+tsconfig.json
+vite.config.ts
+vite.config.mcp.ts
+vite.config.js
+vite.config.js.map
+eslint.config.js
+AGENTS.md
+
+# Exclude all node_modules (everything is bundled)
+node_modules/**
+
+# Keep runtime files
+!dist/**
+!out/mcp/**
+!ace.png
+!README.md
+!CHANGELOG.md
+!LICENSE
+!package.json
+!package-lock.json

@@ -21,6 +21,14 @@ interface CommandInfo {
 	location: 'workspace' | 'global';
 }
 
+interface SkillInfo {
+	name: string;
+	title?: string;
+	overview?: string;
+	path: string;
+	location: 'workspace' | 'global';
+}
+
 interface SpecInfo {
 	domain: string;
 	path: string;
@@ -226,6 +234,52 @@ async function scanCommands(workspacePath: string): Promise<CommandInfo[]> {
 	}
 
 	return commands;
+}
+
+async function scanSkills(workspacePath: string): Promise<SkillInfo[]> {
+	const skillsDir = workspacePath + '/.cursor/skills';
+	const skills: SkillInfo[] = [];
+
+	try {
+		const entries = await mockFs.readdir(skillsDir);
+
+		for (const entry of entries) {
+			if (entry.isDirectory) {
+				const skillPath = skillsDir + '/' + entry.name + '/SKILL.md';
+				try {
+					const content = await mockFs.readFile(skillPath);
+
+					// Extract title and overview
+					let title: string | undefined;
+					let overview: string | undefined;
+
+					const titleMatch = content.match(/^#\s+(.+)$/m);
+					if (titleMatch) {
+						title = titleMatch[1].trim();
+					}
+
+					const overviewMatch = content.match(/## Overview\s*\n+([^\n#]+)/);
+					if (overviewMatch) {
+						overview = overviewMatch[1].trim();
+					}
+
+					skills.push({
+						name: entry.name,
+						title: title || entry.name,
+						overview,
+						path: skillPath,
+						location: 'workspace'
+					});
+				} catch {
+					// SKILL.md doesn't exist
+				}
+			}
+		}
+	} catch {
+		// Directory doesn't exist
+	}
+
+	return skills;
 }
 
 async function scanAgentsMd(workspacePath: string): Promise<AgentsMdResult> {
@@ -468,6 +522,81 @@ This is the description without Overview section.
 		});
 	});
 
+	describe('scanSkills', () => {
+		it('should scan skills from .cursor/skills/*/SKILL.md directories', async () => {
+			mockFs.addDirectory(workspacePath);
+			mockFs.addDirectory(workspacePath + '/.cursor');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills/create-plan');
+			mockFs.addFile(workspacePath + '/.cursor/skills/create-plan/SKILL.md', `# Create Plan
+
+## Overview
+
+Create a living specification or implementation plan for a feature.
+
+## Steps
+
+1. Analyze story
+2. Review codebase`);
+
+			const skills = await scanSkills(workspacePath);
+
+			assert.strictEqual(skills.length, 1);
+			assert.strictEqual(skills[0].name, 'create-plan');
+			assert.strictEqual(skills[0].title, 'Create Plan');
+			assert.strictEqual(skills[0].overview, 'Create a living specification or implementation plan for a feature.');
+			assert.strictEqual(skills[0].location, 'workspace');
+		});
+
+		it('should extract title from first heading', async () => {
+			mockFs.addDirectory(workspacePath);
+			mockFs.addDirectory(workspacePath + '/.cursor');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills/test-skill');
+			mockFs.addFile(workspacePath + '/.cursor/skills/test-skill/SKILL.md', `# Test Skill Title
+
+Content without overview.`);
+
+			const skills = await scanSkills(workspacePath);
+
+			assert.strictEqual(skills[0].title, 'Test Skill Title');
+			assert.strictEqual(skills[0].overview, undefined);
+		});
+
+		it('should handle skills without title or overview', async () => {
+			mockFs.addDirectory(workspacePath);
+			mockFs.addDirectory(workspacePath + '/.cursor');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills/minimal-skill');
+			mockFs.addFile(workspacePath + '/.cursor/skills/minimal-skill/SKILL.md', `Just content.`);
+
+			const skills = await scanSkills(workspacePath);
+
+			assert.strictEqual(skills[0].name, 'minimal-skill');
+			assert.strictEqual(skills[0].title, 'minimal-skill'); // Fallback to directory name
+		});
+
+		it('should return empty array when skills directory does not exist', async () => {
+			mockFs.addDirectory(workspacePath);
+
+			const skills = await scanSkills(workspacePath);
+
+			assert.deepStrictEqual(skills, []);
+		});
+
+		it('should skip directories without SKILL.md', async () => {
+			mockFs.addDirectory(workspacePath);
+			mockFs.addDirectory(workspacePath + '/.cursor');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills/empty-skill');
+			// No SKILL.md file added
+
+			const skills = await scanSkills(workspacePath);
+
+			assert.deepStrictEqual(skills, []);
+		});
+	});
+
 	describe('scanAgentsMd', () => {
 		it('should detect AGENTS.md when present', async () => {
 			mockFs.addDirectory(workspacePath);
@@ -613,6 +742,8 @@ Architecture only.`);
 			mockFs.addDirectory(workspacePath + '/.cursor');
 			mockFs.addDirectory(workspacePath + '/.cursor/rules');
 			mockFs.addDirectory(workspacePath + '/.cursor/commands');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills');
+			mockFs.addDirectory(workspacePath + '/.cursor/skills/start-task');
 			mockFs.addDirectory(workspacePath + '/specs');
 			mockFs.addDirectory(workspacePath + '/specs/auth');
 			mockFs.addDirectory(workspacePath + '/schemas');
@@ -621,13 +752,15 @@ Architecture only.`);
 			mockFs.addFile(workspacePath + '/AGENTS.md', '# AGENTS.md\n\nProject constitution.');
 			mockFs.addFile(workspacePath + '/.cursor/rules/security.mdc', '---\ndescription: Security rules\nalwaysApply: true\n---\n\nContent');
 			mockFs.addFile(workspacePath + '/.cursor/commands/deploy.md', '# Deploy\n\n## Overview\n\nDeploy the app.');
+			mockFs.addFile(workspacePath + '/.cursor/skills/start-task/SKILL.md', '# Start Task\n\n## Overview\n\nBegin development.');
 			mockFs.addFile(workspacePath + '/specs/auth/spec.md', '# Auth\n\n## Blueprint\n\nDesign.\n\n## Contract\n\nTests.');
 			mockFs.addFile(workspacePath + '/schemas/user.json', '{"$id": "user", "type": "object"}');
 
 			// Scan all
-			const [rules, commands, agentsMd, specs, schemas] = await Promise.all([
+			const [rules, commands, skills, agentsMd, specs, schemas] = await Promise.all([
 				scanRules(workspacePath),
 				scanCommands(workspacePath),
+				scanSkills(workspacePath),
 				scanAgentsMd(workspacePath),
 				scanSpecs(workspacePath),
 				scanSchemas(workspacePath)
@@ -635,11 +768,13 @@ Architecture only.`);
 
 			assert.strictEqual(rules.length, 1);
 			assert.strictEqual(commands.length, 1);
+			assert.strictEqual(skills.length, 1);
 			assert.strictEqual(agentsMd.exists, true);
 			assert.strictEqual(specs.length, 1);
 			assert.strictEqual(schemas.length, 1);
 
 			assert.strictEqual(rules[0].type, 'always');
+			assert.strictEqual(skills[0].name, 'start-task');
 			assert.strictEqual(specs[0].hasBlueprint, true);
 			assert.strictEqual(specs[0].hasContract, true);
 		});
@@ -647,9 +782,10 @@ Architecture only.`);
 		it('should handle empty project gracefully', async () => {
 			mockFs.addDirectory(workspacePath);
 
-			const [rules, commands, agentsMd, specs, schemas] = await Promise.all([
+			const [rules, commands, skills, agentsMd, specs, schemas] = await Promise.all([
 				scanRules(workspacePath),
 				scanCommands(workspacePath),
+				scanSkills(workspacePath),
 				scanAgentsMd(workspacePath),
 				scanSpecs(workspacePath),
 				scanSchemas(workspacePath)
@@ -657,6 +793,7 @@ Architecture only.`);
 
 			assert.deepStrictEqual(rules, []);
 			assert.deepStrictEqual(commands, []);
+			assert.deepStrictEqual(skills, []);
 			assert.strictEqual(agentsMd.exists, false);
 			assert.deepStrictEqual(specs, []);
 			assert.deepStrictEqual(schemas, []);

@@ -3,22 +3,28 @@
 import * as vscode from 'vscode';
 import { RulesScanner } from '../scanner/rulesScanner';
 import { CommandsScanner } from '../scanner/commandsScanner';
+import { SkillsScanner } from '../scanner/skillsScanner';
 import { AsdlcArtifactScanner } from '../scanner/asdlcArtifactScanner';
 import {
 	RuleInfo,
 	RuleContent,
 	CommandInfo,
 	CommandContent,
+	SkillInfo,
+	SkillContent,
 	ProjectContext,
 	ProjectScopedInput,
 	GetRuleInput,
 	GetCommandInput,
+	GetSkillInput,
 	AsdlcArtifacts,
 	SpecFile,
 	toRuleInfo,
 	toRuleContent,
 	toCommandInfo,
-	toCommandContent
+	toCommandContent,
+	toSkillInfo,
+	toSkillContent
 } from './types';
 
 /**
@@ -141,6 +147,60 @@ export class McpTools {
 	}
 
 	// =========================================================================
+	// Skills Tools
+	// =========================================================================
+
+	/**
+	 * list_skills - List all Cursor skills with metadata
+	 */
+	static async listSkills(input: ProjectScopedInput = {}): Promise<SkillInfo[]> {
+		const workspaceUri = this.getWorkspaceUri(input.projectPath);
+		this.validateWorkspace(workspaceUri);
+
+		const scanner = new SkillsScanner(workspaceUri);
+
+		// Get both workspace and global skills
+		const [workspaceSkills, globalSkills] = await Promise.all([
+			scanner.scanWorkspaceSkills(),
+			scanner.scanGlobalSkills()
+		]);
+
+		const allSkills = [...workspaceSkills, ...globalSkills];
+		return allSkills.map(toSkillInfo);
+	}
+
+	/**
+	 * get_skill - Get skill content by name or path
+	 */
+	static async getSkill(input: GetSkillInput): Promise<SkillContent | null> {
+		const workspaceUri = this.getWorkspaceUri(input.projectPath);
+		this.validateWorkspace(workspaceUri);
+
+		const scanner = new SkillsScanner(workspaceUri);
+
+		// Get both workspace and global skills
+		const [workspaceSkills, globalSkills] = await Promise.all([
+			scanner.scanWorkspaceSkills(),
+			scanner.scanGlobalSkills()
+		]);
+
+		const allSkills = [...workspaceSkills, ...globalSkills];
+
+		// Find skill by name (case-insensitive, matches directory name)
+		const normalizedName = input.name.toLowerCase();
+		const skill = allSkills.find(s => {
+			const skillName = s.fileName.toLowerCase();
+			return skillName === normalizedName || s.uri.fsPath.toLowerCase().includes(input.name.toLowerCase());
+		});
+
+		if (!skill) {
+			return null;
+		}
+
+		return toSkillContent(skill);
+	}
+
+	// =========================================================================
 	// ASDLC Tools
 	// =========================================================================
 
@@ -173,16 +233,17 @@ export class McpTools {
 	// =========================================================================
 
 	/**
-	 * get_project_context - Complete project context (rules, commands, artifacts)
+	 * get_project_context - Complete project context (rules, commands, skills, artifacts)
 	 */
 	static async getProjectContext(input: ProjectScopedInput = {}): Promise<ProjectContext> {
 		const workspaceUri = this.getWorkspaceUri(input.projectPath);
 		this.validateWorkspace(workspaceUri);
 
 		// Run all scans in parallel for performance
-		const [rules, commands, asdlcArtifacts] = await Promise.all([
+		const [rules, commands, skills, asdlcArtifacts] = await Promise.all([
 			this.listRules(input),
 			this.listCommands(input),
+			this.listSkills(input),
 			this.getAsdlcArtifacts(input)
 		]);
 
@@ -191,6 +252,7 @@ export class McpTools {
 			projectPath: workspaceUri.fsPath,
 			rules,
 			commands,
+			skills,
 			asdlcArtifacts
 		};
 	}

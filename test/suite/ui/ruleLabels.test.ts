@@ -4,6 +4,8 @@ import * as vscode from 'vscode';
 import { ProjectTreeProvider, ProjectTreeItem } from '../../../src/providers/projectTreeProvider';
 import { Rule } from '../../../src/scanner/rulesScanner';
 import { ProjectState } from '../../../src/scanner/stateScanner';
+import { Skill } from '../../../src/scanner/skillsScanner';
+import { AsdlcArtifacts } from '../../../src/scanner/types';
 import { ProjectDefinition } from '../../../src/types/project';
 
 // Mock vscode module
@@ -54,7 +56,15 @@ describe('Rule Labels Removal', () => {
 	let provider: ProjectTreeProvider;
 	let mockProject: ProjectDefinition;
 	let mockRule: Rule;
-	let mockProjectData: Map<string, { rules: Rule[], state: ProjectState, commands: any[], globalCommands: any[] }>;
+	let mockProjectData: Map<string, {
+		rules: Rule[],
+		state: ProjectState,
+		commands: any[],
+		globalCommands: any[],
+		skills: Skill[],
+		globalSkills: Skill[],
+		asdlcArtifacts: AsdlcArtifacts
+	}>;
 
 	beforeEach(() => {
 		mockProject = {
@@ -87,16 +97,24 @@ describe('Rule Labels Removal', () => {
 				buildTools: ['webpack'],
 				testing: ['jest'],
 				codeQuality: ['eslint'],
-				developmentTools: ['vscode'],
-				architecture: ['component-based'],
-				configuration: ['tsconfig.json'],
-				documentation: ['README.md']
-			},
-			commands: [],
-			globalCommands: []
-		});
+			developmentTools: ['vscode'],
+			architecture: ['component-based'],
+			configuration: ['tsconfig.json'],
+			documentation: ['README.md']
+		},
+		commands: [],
+		globalCommands: [],
+		skills: [],
+		globalSkills: [],
+		asdlcArtifacts: {
+			agentsMd: { exists: false, sections: [] },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: false
+		}
+	});
 
-		provider = new ProjectTreeProvider(mockProjectData, [mockProject], mockProject);
+	provider = new ProjectTreeProvider(mockProjectData, [mockProject], mockProject);
 	});
 
 	describe('Individual Rule Display', () => {
@@ -178,13 +196,21 @@ describe('Rule Labels Removal', () => {
 				content: 'Auto rule content'
 			};
 
-			// Update project data with multiple rules
-			mockProjectData.set('test-project', {
-				rules: [mockRule, alwaysRule, autoRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [],
-				globalCommands: []
-			});
+		// Update project data with multiple rules
+		mockProjectData.set('test-project', {
+			rules: [mockRule, alwaysRule, autoRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [],
+			globalCommands: [],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
 
@@ -286,19 +312,27 @@ describe('Rule Labels Removal', () => {
 				location: 'global' as const
 			};
 
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [workspaceCommand],
-				globalCommands: [globalCommand]
-			});
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [workspaceCommand],
+			globalCommands: [globalCommand],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
-			provider.updateData(mockProjectData, [mockProject], mockProject);
+		provider.updateData(mockProjectData, [mockProject], mockProject);
 
-			// Get project items
-			const projectItems = await provider.getChildren();
-			const sections = await provider.getChildren(projectItems[0]);
-			const commandsSection = sections.find(item => item.category === 'commands');
+		// Get project items
+		const projectItems = await provider.getChildren();
+		const sections = await provider.getChildren(projectItems[0]);
+		const commandsSection = sections.find(item => item.category === 'commands');
 
 			assert.ok(commandsSection, 'Commands section should exist');
 
@@ -315,20 +349,28 @@ describe('Rule Labels Removal', () => {
 			assert.strictEqual(globalSubSection!.label, 'Global Commands');
 		});
 
-		it('should display workspace commands under Workspace Commands sub-section', async () => {
-			const workspaceCommand = {
-				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
-				fileName: 'create-plan.md',
-				content: '# Create Plan\n\nCreate a detailed implementation plan.',
-				location: 'workspace' as const
-			};
+	it('should display workspace commands under Workspace Commands sub-section', async () => {
+		const workspaceCommand = {
+			uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+			fileName: 'create-plan.md',
+			content: '# Create Plan\n\nCreate a detailed implementation plan.',
+			location: 'workspace' as const
+		};
 
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [workspaceCommand],
-				globalCommands: []
-			});
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [workspaceCommand],
+			globalCommands: [],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
 
@@ -348,22 +390,30 @@ describe('Rule Labels Removal', () => {
 			assert.strictEqual(workspaceIcon, 'terminal');
 		});
 
-		it('should display global commands under Global Commands sub-section', async () => {
-			const globalCommand = {
-				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
-				fileName: 'global-command.md',
-				content: '# Global Command\n\nThis is a global command.',
-				location: 'global' as const
-			};
+	it('should display global commands under Global Commands sub-section', async () => {
+		const globalCommand = {
+			uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+			fileName: 'global-command.md',
+			content: '# Global Command\n\nThis is a global command.',
+			location: 'global' as const
+		};
 
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [],
-				globalCommands: [globalCommand]
-			});
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [],
+			globalCommands: [globalCommand],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
-			provider.updateData(mockProjectData, [mockProject], mockProject);
+		provider.updateData(mockProjectData, [mockProject], mockProject);
 
 			// Navigate to global commands
 			const projectItems = await provider.getChildren();
@@ -381,35 +431,51 @@ describe('Rule Labels Removal', () => {
 			assert.strictEqual(globalIcon, 'terminal');
 		});
 
-		it('should show empty state for workspace commands when none exist', async () => {
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [],
-				globalCommands: []
-			});
-
-			provider.updateData(mockProjectData, [mockProject], mockProject);
-
-			// Navigate to workspace commands
-			const projectItems = await provider.getChildren();
-			const sections = await provider.getChildren(projectItems[0]);
-			const commandsSection = sections.find(item => item.category === 'commands');
-			const commandSubSections = await provider.getChildren(commandsSection!);
-			const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
-			const workspaceCommands = await provider.getChildren(workspaceSubSection!);
-
-			assert.strictEqual(workspaceCommands.length, 1);
-			assert.strictEqual(workspaceCommands[0].label, 'No workspace commands found');
+	it('should show empty state for workspace commands when none exist', async () => {
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [],
+			globalCommands: [],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
 		});
 
-		it('should show empty state for global commands when none exist', async () => {
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [],
-				globalCommands: []
-			});
+		provider.updateData(mockProjectData, [mockProject], mockProject);
+
+		// Navigate to workspace commands
+		const projectItems = await provider.getChildren();
+		const sections = await provider.getChildren(projectItems[0]);
+		const commandsSection = sections.find(item => item.category === 'commands');
+		const commandSubSections = await provider.getChildren(commandsSection!);
+		const workspaceSubSection = commandSubSections.find(item => item.category === 'commands-workspace');
+		const workspaceCommands = await provider.getChildren(workspaceSubSection!);
+
+		assert.strictEqual(workspaceCommands.length, 1);
+		assert.strictEqual(workspaceCommands[0].label, 'No workspace commands found');
+	});
+
+	it('should show empty state for global commands when none exist', async () => {
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [],
+			globalCommands: [],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
 
@@ -425,26 +491,34 @@ describe('Rule Labels Removal', () => {
 			assert.strictEqual(globalCommands[0].label, 'No global commands found');
 		});
 
-		it('should include location in command tooltips', async () => {
-			const workspaceCommand = {
-				uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
-				fileName: 'create-plan.md',
-				content: '# Create Plan\n\nCreate a detailed implementation plan.',
-				location: 'workspace' as const
-			};
-			const globalCommand = {
-				uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
-				fileName: 'global-command.md',
-				content: '# Global Command\n\nThis is a global command.',
-				location: 'global' as const
-			};
+	it('should include location in command tooltips', async () => {
+		const workspaceCommand = {
+			uri: vscode.Uri.file('/test/path/.cursor/commands/create-plan.md'),
+			fileName: 'create-plan.md',
+			content: '# Create Plan\n\nCreate a detailed implementation plan.',
+			location: 'workspace' as const
+		};
+		const globalCommand = {
+			uri: vscode.Uri.file('/home/user/.cursor/commands/global-command.md'),
+			fileName: 'global-command.md',
+			content: '# Global Command\n\nThis is a global command.',
+			location: 'global' as const
+		};
 
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [workspaceCommand],
-				globalCommands: [globalCommand]
-			});
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [workspaceCommand],
+			globalCommands: [globalCommand],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
 			provider.updateData(mockProjectData, [mockProject], mockProject);
 
@@ -486,18 +560,26 @@ describe('Rule Labels Removal', () => {
 				location: 'global' as const
 			};
 
-			mockProjectData.set('test-project', {
-				rules: [mockRule],
-				state: mockProjectData.get('test-project')!.state,
-				commands: [workspaceCommand1, workspaceCommand2],
-				globalCommands: [globalCommand]
-			});
+		mockProjectData.set('test-project', {
+			rules: [mockRule],
+			state: mockProjectData.get('test-project')!.state,
+			commands: [workspaceCommand1, workspaceCommand2],
+			globalCommands: [globalCommand],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
+			}
+		});
 
-			provider.updateData(mockProjectData, [mockProject], mockProject);
+		provider.updateData(mockProjectData, [mockProject], mockProject);
 
-			// Get sub-sections
-			const projectItems = await provider.getChildren();
-			const sections = await provider.getChildren(projectItems[0]);
+		// Get sub-sections
+		const projectItems = await provider.getChildren();
+		const sections = await provider.getChildren(projectItems[0]);
 			const commandsSection = sections.find(item => item.category === 'commands');
 			const commandSubSections = await provider.getChildren(commandsSection!);
 

@@ -45,29 +45,47 @@ class XxxScanner {
 | Scanner | Artifacts | Location | Purpose |
 |---------|-----------|----------|---------|
 | `RulesScanner` | `.mdc`, `.md` files | `.cursor/rules/` | Cursor rules with YAML frontmatter |
-| `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/`, `.cursor/skills/*/SKILL.md` | Workspace and global commands/skills |
+| `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/` | Workspace and global commands |
+| `SkillsScanner` | `SKILL.md` files | `.cursor/skills/*/`, `~/.cursor/skills/*/` | Workspace and global skills (structured workflows) |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
 
 #### Dependency Direction
 
-```
-extension.ts
-    │
-    ├── ProjectTreeProvider
-    │       │
-    │       ├── RulesScanner
-    │       ├── CommandsScanner
-    │       └── AsdlcArtifactScanner (replaces StateScanner)
-    │
-    ├── StateCommands
-    │       │
-    │       └── (view state sections)
-    │
-    └── McpTools (MCP server)
-            │
-            ├── RulesScanner
-            ├── CommandsScanner
-            └── AsdlcArtifactScanner
+```mermaid
+graph TB
+    Extension["extension.ts"]
+    TreeProvider["ProjectTreeProvider"]
+    StateCommands["StateCommands"]
+    McpTools["McpTools (MCP server)"]
+    
+    RulesScanner["RulesScanner"]
+    CommandsScanner["CommandsScanner"]
+    SkillsScanner["SkillsScanner"]
+    AsdlcScanner["AsdlcArtifactScanner"]
+    
+    Extension --> TreeProvider
+    Extension --> StateCommands
+    Extension --> McpTools
+    
+    TreeProvider --> RulesScanner
+    TreeProvider --> CommandsScanner
+    TreeProvider --> SkillsScanner
+    TreeProvider --> AsdlcScanner
+    
+    StateCommands -.-> |view state sections| StateCommands
+    
+    McpTools --> RulesScanner
+    McpTools --> CommandsScanner
+    McpTools --> SkillsScanner
+    McpTools --> AsdlcScanner
+    
+    style Extension fill:#e1f5ff
+    style TreeProvider fill:#fff4e1
+    style McpTools fill:#f3e5f5
+    style RulesScanner fill:#e8f5e9
+    style CommandsScanner fill:#e8f5e9
+    style SkillsScanner fill:#e8f5e9
+    style AsdlcScanner fill:#e8f5e9
 ```
 
 Scanners are instantiated by providers, commands, and MCP tools. Scanners have no dependencies on each other.
@@ -145,6 +163,16 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 - **When**: Both `scanWorkspaceCommands()` and `scanGlobalCommands()` are called
 - **Then**: Returns commands with correct `location` property ('workspace' or 'global')
 
+**Scenario: Skills scanning workspace and global**
+- **Given**: Workspace has `.cursor/skills/*/SKILL.md` and user has `~/.cursor/skills/*/SKILL.md`
+- **When**: Both `scanWorkspaceSkills()` and `scanGlobalSkills()` are called
+- **Then**: Returns skills with parsed metadata (title, overview, prerequisites, steps) and correct `location` property
+
+**Scenario: Skills scanning with YAML frontmatter**
+- **Given**: `SKILL.md` file has YAML frontmatter with title, overview, and other metadata
+- **When**: `SkillsScanner.scanWorkspaceSkills()` is called
+- **Then**: Returns `Skill` objects with parsed frontmatter in `metadata` property
+
 **Scenario: ASDLC artifact scanning with AGENTS.md**
 - **Given**: Workspace has `AGENTS.md` at project root
 - **When**: `AsdlcArtifactScanner.scanAgentsMd()` is called
@@ -170,6 +198,7 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 |-----------|----------|
 | RulesScanner | `src/scanner/rulesScanner.ts` |
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
+| SkillsScanner | `src/scanner/skillsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
 | StateScanner (deprecated) | `src/scanner/stateScanner.ts` |
 | Scanner types | `src/scanner/types.ts` |
@@ -181,8 +210,10 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 |---------|-----------|
 | RulesScanner | `test/suite/scanner/rulesScanner.test.ts` |
 | CommandsScanner | `test/suite/unit/commandsScanner.test.ts` |
+| SkillsScanner | `test/suite/unit/skillsScanner.test.ts` (planned) |
 | AsdlcArtifactScanner | `test/suite/unit/asdlcArtifactScanner.test.ts` |
 | StateScanner | `test/suite/scanner/stateScanner.test.ts` |
+| MCP Server Scanners | `test/suite/unit/mcpServer.test.ts` |
 
 ---
 
