@@ -41,6 +41,7 @@ shared-workspaces-extension/package-lock.json
 
 # Test coverage output
 .nyc_output/
+coverage/
 
 # IDE
 .vscode/

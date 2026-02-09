@@ -48,11 +48,17 @@ const mockVscode = {
 	}
 };
 
+// Empty project state (StateScanner removed)
+const EMPTY_STATE = {
+	languages: [], frameworks: [], dependencies: [],
+	buildTools: [], testing: [], codeQuality: [], developmentTools: [],
+	architecture: [], configuration: [], documentation: []
+};
+
 // Mock integrated system for testing
 class MockIntegratedSystem {
 	private projectManager: any;
 	private rulesScanner: any;
-	private stateScanner: any;
 	private treeProvider: any;
 	private fileWatcher: any;
 	private isActive: boolean = false;
@@ -60,7 +66,6 @@ class MockIntegratedSystem {
 	constructor() {
 		this.projectManager = new MockProjectManager();
 		this.rulesScanner = new MockRulesScanner();
-		this.stateScanner = new MockStateScanner();
 		this.treeProvider = new MockProjectTreeProvider(this.projectManager);
 		this.fileWatcher = new MockFileWatcher();
 	}
@@ -71,7 +76,6 @@ class MockIntegratedSystem {
 		// Initialize all components
 		await this.projectManager.initialize();
 		await this.rulesScanner.initialize();
-		await this.stateScanner.initialize();
 		this.treeProvider.initialize();
 		this.fileWatcher.startWatching();
 
@@ -84,7 +88,6 @@ class MockIntegratedSystem {
 		// Dispose all components
 		this.fileWatcher.stopWatching();
 		this.treeProvider.dispose();
-		this.stateScanner.dispose();
 		this.rulesScanner.dispose();
 		this.projectManager.dispose();
 
@@ -116,10 +119,9 @@ class MockIntegratedSystem {
 
 	async scanProjectState(projectId: string): Promise<any> {
 		const project = await this.projectManager.getProject(projectId);
-		const state = await this.stateScanner.scanProject(project.path);
-		await this.projectManager.updateProject(projectId, { state });
+		await this.projectManager.updateProject(projectId, { state: EMPTY_STATE });
 		await this.refreshTree();
-		return state;
+		return EMPTY_STATE;
 	}
 
 	async refreshTree(): Promise<void> {
@@ -133,7 +135,6 @@ class MockIntegratedSystem {
 			isActive: this.isActive,
 			hasProjectManager: !!this.projectManager,
 			hasRulesScanner: !!this.rulesScanner,
-			hasStateScanner: !!this.stateScanner,
 			hasTreeProvider: !!this.treeProvider,
 			hasFileWatcher: !!this.fileWatcher
 		};
@@ -223,31 +224,6 @@ class MockRulesScanner {
 	}
 }
 
-class MockStateScanner {
-	async initialize(): Promise<void> {
-		// Mock initialization
-	}
-
-	async scanProject(path: string): Promise<any> {
-		return {
-			languages: ['JavaScript', 'TypeScript'],
-			frameworks: ['Node.js', 'React'],
-			dependencies: ['typescript', 'eslint'],
-			buildTools: ['Webpack', 'Babel'],
-			testing: ['Jest', 'Cypress'],
-			codeQuality: ['ESLint', 'Prettier'],
-			architecture: ['Component-based', 'MVC'],
-			configuration: ['.gitignore', 'package.json'],
-			developmentTools: ['Git', 'Docker'],
-			documentation: ['README.md', 'CHANGELOG.md']
-		};
-	}
-
-	dispose(): void {
-		// Mock disposal
-	}
-}
-
 class MockProjectTreeProvider {
 	constructor(private projectManager: any) {}
 
@@ -293,7 +269,6 @@ describe('Integration Tests', () => {
 			assert.equal(status.isActive, true);
 			assert.ok(status.hasProjectManager);
 			assert.ok(status.hasRulesScanner);
-			assert.ok(status.hasStateScanner);
 			assert.ok(status.hasTreeProvider);
 			assert.ok(status.hasFileWatcher);
 		});
@@ -440,8 +415,8 @@ describe('Integration Tests', () => {
 		});
 	});
 
-	describe('State Scanning Integration', () => {
-		it('should scan project state', async () => {
+	describe('Project State (legacy)', () => {
+		it('should return empty state for scanProjectState', async () => {
 			await system.activate();
 
 			const project = await system.createProject('Test Project', '/test/path');
@@ -451,28 +426,7 @@ describe('Integration Tests', () => {
 			assert.ok(Array.isArray(state.languages));
 			assert.ok(Array.isArray(state.frameworks));
 			assert.ok(Array.isArray(state.dependencies));
-		});
-
-		it('should handle state scanning errors', async () => {
-			await system.activate();
-
-			// Mock state scanning failure
-			const originalScanProject = system['stateScanner'].scanProject;
-			system['stateScanner'].scanProject = async () => {
-				throw new Error('State scanning failed');
-			};
-
-			try {
-				const project = await system.createProject('Test Project', '/test/path');
-				await system.scanProjectState(project.id);
-				assert.fail('Should have thrown an error');
-			} catch (error) {
-				assert.ok(error instanceof Error);
-				assert.ok(error.message.includes('State scanning failed'));
-			}
-
-			// Restore original function
-			system['stateScanner'].scanProject = originalScanProject;
+			assert.equal(state.languages.length, 0);
 		});
 	});
 

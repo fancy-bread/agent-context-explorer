@@ -200,8 +200,9 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
 | SkillsScanner | `src/scanner/skillsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
-| StateScanner (deprecated) | `src/scanner/stateScanner.ts` |
 | Scanner types | `src/scanner/types.ts` |
+| ASDLC parsing (AGENTS.md) | `src/scanner/asdlcParsing.ts` |
+| Skill parsing (SKILL.md) | `src/scanner/skillParsing.ts` |
 | MDC parser utility | `src/utils/mdcParser.ts` |
 
 ### Tests
@@ -210,9 +211,8 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 |---------|-----------|
 | RulesScanner | `test/suite/scanner/rulesScanner.test.ts` |
 | CommandsScanner | `test/suite/unit/commandsScanner.test.ts` |
-| SkillsScanner | `test/suite/unit/skillsScanner.test.ts` (planned) |
+| SkillsScanner | `test/suite/unit/skillsScanner.test.ts` |
 | AsdlcArtifactScanner | `test/suite/unit/asdlcArtifactScanner.test.ts` |
-| StateScanner | `test/suite/scanner/stateScanner.test.ts` |
 | MCP Server Scanners | `test/suite/unit/mcpServer.test.ts` |
 
 ---
@@ -227,16 +227,9 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 
 **Migration path**: Removed entirely. Projects needing compliance validation should implement it externally as a custom command or separate tool.
 
-### StateScanner (Deprecated)
+### StateScanner (Removed)
 
-`StateScanner` uses optimistic inference to detect project characteristics (databases, frameworks, cloud SDKs) from dependency patterns. This approach is unreliable and being replaced by `AsdlcArtifactScanner`.
-
-**Migration path**:
-1. FB-54: Create `AsdlcArtifactScanner` for explicit artifact scanning
-2. Phase 3: Update tree view to use ASDLC artifacts
-3. Phase 5: Remove `StateScanner` after all consumers migrated
-
-**Do not add new features to StateScanner.**
+`StateScanner` used optimistic inference to detect project characteristics from dependency patterns. It was **removed** in FB-59 Phase 4. `ProjectState` and `EMPTY_PROJECT_STATE` remain in `src/scanner/types.ts` for tree provider compatibility. Project context now comes from explicit artifacts via `AsdlcArtifactScanner` (AGENTS.md, specs/, schemas/).
 
 ---
 

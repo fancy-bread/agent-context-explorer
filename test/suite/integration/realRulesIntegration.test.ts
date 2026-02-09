@@ -125,6 +125,16 @@ describe('Real Rules Integration Tests', () => {
 				architecture: ['extension-based'],
 				configuration: ['package.json', 'tsconfig.json'],
 				documentation: ['README.md']
+			},
+			commands: [],
+			globalCommands: [],
+			skills: [],
+			globalSkills: [],
+			asdlcArtifacts: {
+				agentsMd: { exists: false, sections: [] },
+				specs: { exists: false, specs: [] },
+				schemas: { exists: false, schemas: [] },
+				hasAnyArtifacts: false
 			}
 		});
 

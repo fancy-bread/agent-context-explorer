@@ -5,7 +5,6 @@ import * as path from 'path';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
 import { StateSectionContentProvider } from './providers/stateSectionContentProvider';
 import { RulesScanner } from './scanner/rulesScanner';
-import { StateScanner } from './scanner/stateScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
 import { SkillsScanner } from './scanner/skillsScanner';
 import { AsdlcArtifactScanner } from './scanner/asdlcArtifactScanner';
@@ -14,15 +13,14 @@ import { ProjectCommands } from './commands/projectCommands';
 import { ProjectManager } from './services/projectManager';
 import { ProjectDefinition } from './types/project';
 import { Rule } from './scanner/rulesScanner';
-import { ProjectState } from './scanner/stateScanner';
 import { Command } from './scanner/commandsScanner';
+import { EMPTY_PROJECT_STATE, ProjectState } from './scanner/types';
 import { Skill } from './scanner/skillsScanner';
 import { AsdlcArtifacts } from './scanner/types';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 
 let treeProvider: ProjectTreeProvider;
 let rulesScanner: RulesScanner;
-let stateScanner: StateScanner;
 let commandsScanner: CommandsScanner;
 let skillsScanner: SkillsScanner;
 let asdlcArtifactScanner: AsdlcArtifactScanner;
@@ -55,7 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
 	if (workspaceRoot) {
 		outputChannel.appendLine(`Workspace root found: ${workspaceRoot.fsPath}`);
 		rulesScanner = new RulesScanner(workspaceRoot);
-		stateScanner = new StateScanner(workspaceRoot);
 		commandsScanner = new CommandsScanner(workspaceRoot);
 		skillsScanner = new SkillsScanner(workspaceRoot);
 		asdlcArtifactScanner = new AsdlcArtifactScanner(workspaceRoot);
@@ -188,9 +185,8 @@ async function refreshData() {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
 			// Scan current workspace rules, state, commands, skills, and ASDLC artifacts
-			const [currentRules, currentState, currentCommands, currentSkills, currentAsdlcArtifacts] = await Promise.all([
+			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
-				stateScanner?.scanState() || Promise.resolve({ languages: [], frameworks: [], dependencies: [], buildTools: [], testing: [], codeQuality: [], developmentTools: [], architecture: [], configuration: [], documentation: [] }),
 				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
 				skillsScanner?.scanWorkspaceSkills() || Promise.resolve([]),
 				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false })
@@ -200,7 +196,7 @@ async function refreshData() {
 			const workspaceKey = 'current-workspace';
 			projectData.set(workspaceKey, {
 				rules: currentRules,
-				state: currentState,
+				state: EMPTY_PROJECT_STATE,
 				commands: currentCommands,
 				globalCommands,
 				skills: currentSkills,
@@ -228,15 +224,13 @@ async function refreshData() {
 			try {
 				const projectUri = vscode.Uri.file(project.path);
 				const projectRulesScanner = new RulesScanner(projectUri);
-				const projectStateScanner = new StateScanner(projectUri);
 				const projectCommandsScanner = new CommandsScanner(projectUri);
 				const projectSkillsScanner = new SkillsScanner(projectUri);
 				const projectAsdlcScanner = new AsdlcArtifactScanner(projectUri);
 
-				// Scan rules, state, commands, skills, and ASDLC artifacts for this project
-				const [rules, state, commands, skills, asdlcArtifacts] = await Promise.all([
+				// Scan rules, commands, skills, and ASDLC artifacts for this project
+				const [rules, commands, skills, asdlcArtifacts] = await Promise.all([
 					projectRulesScanner.scanRules(),
-					projectStateScanner.scanState(),
 					projectCommandsScanner.scanWorkspaceCommands(),
 					projectSkillsScanner.scanWorkspaceSkills(),
 					projectAsdlcScanner.scanAll()
@@ -244,7 +238,7 @@ async function refreshData() {
 
 				projectData.set(project.id, {
 					rules,
-					state,
+					state: EMPTY_PROJECT_STATE,
 					commands,
 					globalCommands,
 					skills,
@@ -259,23 +253,7 @@ async function refreshData() {
 				// Add empty data for failed projects
 				projectData.set(project.id, {
 					rules: [],
-					state: {
-						// Technology Stack
-						languages: [],
-						frameworks: [],
-						dependencies: [],
-
-						// Development Environment
-						buildTools: [],
-						testing: [],
-						codeQuality: [],
-						developmentTools: [],
-
-						// Project Structure
-						architecture: [],
-						configuration: [],
-						documentation: []
-					},
+					state: EMPTY_PROJECT_STATE,
 					commands: [],
 					globalCommands: globalCommands,
 					skills: [],
