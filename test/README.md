@@ -42,7 +42,6 @@ test/suite/
 **Run with**: `npm test` (VS Code test environment)
 **Files**:
 - `rulesScanner.test.ts` - Rule file scanning and MDC format validation
-- `stateScanner.test.ts` - Project state detection and analysis
 - `mdcParser.test.ts` - MDC (Markdown with YAML frontmatter) parsing and generation
 
 ### Parser Tests (`test/suite/parser/`)
@@ -71,14 +70,13 @@ test/suite/
 - `fileWatcher.test.ts` - File system watching and change detection
 
 ### Enhanced State Tests (`test/suite/enhanced/`)
-**Purpose**: Tests enhanced project state detection features
+**Purpose**: Tests enhanced project state detection features (parsers used by other components)
 **Run with**: `npm test` (VS Code test environment)
 **Files**:
 - `agentGuidanceGenerator.test.ts` - Agent guidance generation (also in unit/)
 - `architectureDetector.test.ts` - Architecture pattern detection
 - `capabilityExtractor.test.ts` - Project capability extraction
 - `dependencyPurposeMapper.test.ts` - Dependency purpose mapping
-- `enhancedStateIntegration.test.ts` - Enhanced state integration scenarios
 - `maturityDetector.test.ts` - Project maturity detection
 - `projectTypeDetector.test.ts` - Project type detection
 - `vscodeAnalyzer.test.ts` - VS Code-specific analysis
@@ -113,7 +111,6 @@ The comprehensive test suite covers:
 
 ### ✅ **Core Functionality**
 - MDC parsing and generation
-- Project state detection and analysis
 - Rule file scanning and management
 - File system operations and watching
 - Array and dependency deduplication
@@ -139,7 +136,6 @@ The comprehensive test suite covers:
 ### ✅ **Integration Workflows**
 - Complete project setup workflows
 - Rule management workflows
-- State scanning and analysis
 - File system integration
 
 ### ✅ **Language Support**

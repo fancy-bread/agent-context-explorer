@@ -81,6 +81,37 @@ export interface TechnologyStack {
 }
 
 /**
+ * Project state shape (minimal - state scanning deprecated).
+ * Used by projectData for tree provider compatibility.
+ */
+export interface ProjectState {
+	languages: string[];
+	frameworks: string[];
+	dependencies: string[];
+	buildTools: string[];
+	testing: string[];
+	codeQuality: string[];
+	developmentTools: string[];
+	architecture: string[];
+	configuration: string[];
+	documentation: string[];
+}
+
+/** Empty project state (StateScanner removed, use for all projects). */
+export const EMPTY_PROJECT_STATE: ProjectState = {
+	languages: [],
+	frameworks: [],
+	dependencies: [],
+	buildTools: [],
+	testing: [],
+	codeQuality: [],
+	developmentTools: [],
+	architecture: [],
+	configuration: [],
+	documentation: []
+};
+
+/**
  * Parser result base interface
  */
 export interface ParserResult<T> {

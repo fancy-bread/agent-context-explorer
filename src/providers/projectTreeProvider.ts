@@ -1,7 +1,7 @@
 // Tree Provider for Rules and State visualization
 import * as vscode from 'vscode';
 import { Rule } from '../scanner/rulesScanner';
-import { ProjectState } from '../scanner/stateScanner';
+import { ProjectState } from '../scanner/types';
 import { Command } from '../scanner/commandsScanner';
 import { Skill } from '../scanner/skillsScanner';
 import { ProjectDefinition } from '../types/project';

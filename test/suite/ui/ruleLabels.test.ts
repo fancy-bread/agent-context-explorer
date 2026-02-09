@@ -3,7 +3,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { ProjectTreeProvider, ProjectTreeItem } from '../../../src/providers/projectTreeProvider';
 import { Rule } from '../../../src/scanner/rulesScanner';
-import { ProjectState } from '../../../src/scanner/stateScanner';
+import { ProjectState } from '../../../src/scanner/types';
 import { Skill } from '../../../src/scanner/skillsScanner';
 import { AsdlcArtifacts } from '../../../src/scanner/types';
 import { ProjectDefinition } from '../../../src/types/project';
