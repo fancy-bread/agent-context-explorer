@@ -6,7 +6,7 @@ export class FileWatcher {
 
 	watchRules(workspaceRoot: vscode.Uri, callback: () => void): void {
 		// TODO: Implement file watching logic
-		const pattern = new vscode.RelativePattern(workspaceRoot, '**/.cursor/rules/**/*.mdc');
+		const pattern = new vscode.RelativePattern(workspaceRoot, '.cursor/rules/**/*.mdc');
 		const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
 		watcher.onDidCreate(() => callback());

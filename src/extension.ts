@@ -301,8 +301,8 @@ function setupFileWatcher() {
 	const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
 	if (!workspaceRoot) {return;}
 
-	// Watch for changes in .cursor/rules directories
-	const rulesPattern = new vscode.RelativePattern(workspaceRoot, '**/.cursor/rules/**/*.{mdc,md}');
+	// Watch for changes in project .cursor/rules only (not **/.cursor/ - excludes test/fixtures)
+	const rulesPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/rules/**/*.{mdc,md}');
 	const rulesWatcher = vscode.workspace.createFileSystemWatcher(rulesPattern);
 
 	// Watch for changes in .cursor/commands directory (flat structure)

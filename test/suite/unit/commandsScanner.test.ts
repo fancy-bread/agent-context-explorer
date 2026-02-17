@@ -12,6 +12,7 @@ describe('Commands Scanner Tests', () => {
 		scanner = new CommandsScanner(workspaceRoot as any);
 		vscodeStub.__overrides.findFiles = null;
 		vscodeStub.__overrides.stat = null;
+		vscodeStub.__overrides.readDirectory = null;
 	});
 
 	describe('Command Scanning', () => {
@@ -23,7 +24,7 @@ describe('Commands Scanner Tests', () => {
 
 		it('should read commands as plain Markdown (no YAML parsing)', async () => {
 			const commands = await scanner.scanWorkspaceCommands();
-			const validCommand = commands.find((cmd: any) => cmd.fileName === 'valid-command.md');
+			const validCommand = commands.find((cmd: any) => cmd.fileName === 'valid-command');
 
 			assert.ok(validCommand);
 			assert.ok(validCommand.content.startsWith('# Code Review Checklist'));
@@ -42,8 +43,8 @@ describe('Commands Scanner Tests', () => {
 			const commands = await scanner.scanWorkspaceCommands();
 			const fileNames = commands.map((cmd: any) => cmd.fileName);
 
-			assert.ok(fileNames.includes('valid-command.md'));
-			assert.ok(fileNames.includes('security-audit.md'));
+			assert.ok(fileNames.includes('valid-command'));
+			assert.ok(fileNames.includes('security-audit'));
 		});
 
 		it('should include URI for each command', async () => {
@@ -56,7 +57,7 @@ describe('Commands Scanner Tests', () => {
 		});
 
 		it('should return empty array when no commands found', async () => {
-			vscodeStub.__overrides.findFiles = async () => [];
+			vscodeStub.__overrides.readDirectory = async () => [];
 			const commands = await scanner.scanWorkspaceCommands();
 			assert.equal(commands.length, 0);
 		});
@@ -65,7 +66,7 @@ describe('Commands Scanner Tests', () => {
 	describe('Error Handling', () => {
 		it('should handle file read errors gracefully', async () => {
 			const commands = await scanner.scanWorkspaceCommands();
-			const errorCommand = commands.find((cmd: any) => cmd.fileName === 'error-command.md');
+			const errorCommand = commands.find((cmd: any) => cmd.fileName === 'error-command');
 
 			assert.ok(errorCommand);
 			assert.equal(errorCommand.content, 'Error reading file content');
@@ -73,7 +74,7 @@ describe('Commands Scanner Tests', () => {
 		});
 
 		it('should handle missing .cursor/commands directory gracefully', async () => {
-			vscodeStub.__overrides.findFiles = async () => {
+			vscodeStub.__overrides.readDirectory = async () => {
 				throw new Error('Directory not found');
 			};
 
@@ -82,7 +83,7 @@ describe('Commands Scanner Tests', () => {
 		});
 
 		it('should return empty array on scanning errors', async () => {
-			vscodeStub.__overrides.findFiles = async () => {
+			vscodeStub.__overrides.readDirectory = async () => {
 				throw new Error('Scanning failed');
 			};
 
@@ -108,7 +109,7 @@ describe('Commands Scanner Tests', () => {
 	describe('Command Content', () => {
 		it('should preserve full Markdown content', async () => {
 			const commands = await scanner.scanWorkspaceCommands();
-			const validCommand = commands.find((cmd: any) => cmd.fileName === 'valid-command.md');
+			const validCommand = commands.find((cmd: any) => cmd.fileName === 'valid-command');
 
 			assert.ok(validCommand);
 			assert.ok(validCommand.content.length > 0);
@@ -118,7 +119,7 @@ describe('Commands Scanner Tests', () => {
 
 		it('should handle commands with different content structures', async () => {
 			const commands = await scanner.scanWorkspaceCommands();
-			const securityCommand = commands.find((cmd: any) => cmd.fileName === 'security-audit.md');
+			const securityCommand = commands.find((cmd: any) => cmd.fileName === 'security-audit');
 
 			assert.ok(securityCommand);
 			assert.ok(securityCommand.content.includes('# Security Audit'));
@@ -176,7 +177,7 @@ describe('Commands Scanner Tests', () => {
 
 		it('should read global commands from ~/.cursor/commands directory', async () => {
 			const commands = await scanner.scanGlobalCommands();
-			const globalCommand = commands.find((cmd: any) => cmd.fileName === 'global-command.md');
+			const globalCommand = commands.find((cmd: any) => cmd.fileName === 'global-command');
 
 			assert.ok(globalCommand);
 			assert.ok(globalCommand.content.startsWith('# Global Command'));
@@ -184,8 +185,17 @@ describe('Commands Scanner Tests', () => {
 		});
 
 		it('should return empty array when global commands directory does not exist', async () => {
-			vscodeStub.__overrides.stat = async () => {
-				throw new Error('Directory not found');
+			const os = require('os');
+			const home = os.homedir();
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.startsWith(home) && uri.fsPath.includes('.cursor/commands')) {
+					throw new Error('Directory not found');
+				}
+				// Workspace: return default so scan runs; only global path throws
+				if (uri.fsPath.includes('/workspace') && uri.fsPath.includes('.cursor/commands')) {
+					return [['valid-command.md', 1], ['security-audit.md', 1], ['error-command.md', 1]];
+				}
+				return [];
 			};
 
 			const commands = await scanner.scanGlobalCommands();
@@ -202,7 +212,7 @@ describe('Commands Scanner Tests', () => {
 		});
 
 		it('should return empty array on global scanning errors', async () => {
-			vscodeStub.__overrides.findFiles = async () => {
+			vscodeStub.__overrides.readDirectory = async () => {
 				throw new Error('Scanning failed');
 			};
 

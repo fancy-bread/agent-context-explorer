@@ -188,7 +188,7 @@ Automatic tree refresh when artifacts change:
 ```typescript
 // extension.ts
 const rulesWatcher = vscode.workspace.createFileSystemWatcher(
-  '**/.cursor/rules/**/*.{mdc,md}'
+  '.cursor/rules/**/*.{mdc,md}'
 );
 const commandsWatcher = vscode.workspace.createFileSystemWatcher(
   '.cursor/commands/*.md'
