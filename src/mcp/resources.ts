@@ -283,14 +283,14 @@ export class McpResources {
 	 */
 	private async getAgentsMdResource(): Promise<ResourceContent | null> {
 		const scanner = new AsdlcArtifactScanner(this.workspaceUri);
-		const agentsMd = await scanner.scanAgentsMd();
+		const artifacts = await scanner.scanAll();
 
-		if (!agentsMd.exists || !agentsMd.path) {
+		if (!artifacts.agentsMd.exists || !artifacts.agentsMd.path) {
 			return null;
 		}
 
 		try {
-			const fileUri = vscode.Uri.file(agentsMd.path);
+			const fileUri = vscode.Uri.file(artifacts.agentsMd.path);
 			const fileData = await vscode.workspace.fs.readFile(fileUri);
 			const content = Buffer.from(fileData).toString('utf8');
 

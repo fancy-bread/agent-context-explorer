@@ -2,7 +2,7 @@
 
 > **ASDLC Pattern**: [The Spec](https://asdlc.io/patterns/the-spec/)
 > **Status**: Active
-> **Last Updated**: 2026-02-01
+> **Last Updated**: 2026-02-07
 
 ---
 
@@ -49,22 +49,44 @@ class XxxScanner {
 | `SkillsScanner` | `SKILL.md` files | `.cursor/skills/*/`, `~/.cursor/skills/*/` | Workspace and global skills (structured workflows) |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
 
+#### Unified Scanning (FB-75)
+
+Extension and MCP standalone share a **scanner core** behind a filesystem abstraction:
+
+| Component | Purpose |
+|-----------|---------|
+| `IFileSystem` | Interface: `readFile`, `readDirectory`, `stat` (no vscode) |
+| `VSCodeFsAdapter` | Implements IFileSystem via `vscode.workspace.fs` (extension) |
+| `NodeFsAdapter` | Implements IFileSystem via Node `fs/promises` (MCP standalone) |
+| `scanRulesCore`, `scanCommandsCore`, `scanSkillsCore`, `scanAsdlcCore` | Shared scan functions in `src/scanner/core/` |
+
+**Scan roots** (recursion limits):
+- Rules: `{projectRoot}/.cursor/rules/` only (recursive within rules/)
+- Commands: `{projectRoot}/.cursor/commands/` and `~/.cursor/commands/` (flat)
+- Skills: `{projectRoot}/.cursor/skills/` and `~/.cursor/skills/` (one level)
+- ASDLC: `{projectRoot}/AGENTS.md`, `specs/`, `schemas/`
+
+**Exclusions**: Paths under `test/fixtures/` or outside project/user `.cursor` are never scanned.
+
 #### Dependency Direction
 
 ```mermaid
 graph TB
     Extension["extension.ts"]
     TreeProvider["ProjectTreeProvider"]
-    StateCommands["StateCommands"]
-    McpTools["McpTools (MCP server)"]
+    McpTools["McpTools (extension mode)"]
+    McpStandalone["MCP server.ts (standalone)"]
     
     RulesScanner["RulesScanner"]
     CommandsScanner["CommandsScanner"]
     SkillsScanner["SkillsScanner"]
     AsdlcScanner["AsdlcArtifactScanner"]
     
+    Core["scanRulesCore, scanCommandsCore, etc."]
+    VSCodeAdapter["VSCodeFsAdapter"]
+    NodeAdapter["NodeFsAdapter"]
+    
     Extension --> TreeProvider
-    Extension --> StateCommands
     Extension --> McpTools
     
     TreeProvider --> RulesScanner
@@ -72,23 +94,28 @@ graph TB
     TreeProvider --> SkillsScanner
     TreeProvider --> AsdlcScanner
     
-    StateCommands -.-> |view state sections| StateCommands
-    
     McpTools --> RulesScanner
     McpTools --> CommandsScanner
     McpTools --> SkillsScanner
     McpTools --> AsdlcScanner
     
+    RulesScanner --> VSCodeAdapter
+    RulesScanner --> Core
+    CommandsScanner --> VSCodeAdapter
+    CommandsScanner --> Core
+    SkillsScanner --> VSCodeAdapter
+    SkillsScanner --> Core
+    AsdlcScanner --> VSCodeAdapter
+    AsdlcScanner --> Core
+    
+    McpStandalone --> NodeAdapter
+    McpStandalone --> Core
+    
     style Extension fill:#e1f5ff
-    style TreeProvider fill:#fff4e1
-    style McpTools fill:#f3e5f5
-    style RulesScanner fill:#e8f5e9
-    style CommandsScanner fill:#e8f5e9
-    style SkillsScanner fill:#e8f5e9
-    style AsdlcScanner fill:#e8f5e9
+    style Core fill:#e8f5e9
 ```
 
-Scanners are instantiated by providers, commands, and MCP tools. Scanners have no dependencies on each other.
+Scanners (extension) and MCP standalone both use the shared core. Extension uses VSCodeFsAdapter; MCP standalone uses NodeFsAdapter.
 
 #### Data Flow
 
@@ -138,7 +165,7 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 
 1. **Empty result, not error**: Scanners MUST return valid typed result when artifacts are missing. Never throw for missing files.
 
-2. **VS Code filesystem API**: All file operations MUST use `vscode.workspace.fs`. Never use Node.js `fs` module.
+2. **Extension filesystem**: Extension scanners MUST use `vscode.workspace.fs` (via VSCodeFsAdapter). Node.js `fs` is only used in MCP standalone, which runs outside the extension host.
 
 3. **Typed returns**: Scanner methods MUST return strongly-typed results, not `any` or untyped objects.
 
@@ -158,6 +185,11 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 - **When**: `RulesScanner.scanRules()` is called
 - **Then**: Returns empty array (not error)
 
+**Scenario: Test fixtures excluded**
+- **Given**: Workspace has `test/fixtures/.cursor/rules/` with rule files
+- **When**: `RulesScanner.scanRules()` is called with project root at repo root
+- **Then**: Returns only rules from `{projectRoot}/.cursor/rules/`, not from test/fixtures
+
 **Scenario: Commands scanning workspace and global**
 - **Given**: Workspace has `.cursor/commands/` and user has `~/.cursor/commands/`
 - **When**: Both `scanWorkspaceCommands()` and `scanGlobalCommands()` are called
@@ -175,8 +207,8 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 
 **Scenario: ASDLC artifact scanning with AGENTS.md**
 - **Given**: Workspace has `AGENTS.md` at project root
-- **When**: `AsdlcArtifactScanner.scanAgentsMd()` is called
-- **Then**: Returns `AgentsMdInfo` with `exists: true`, parsed sections, and extracted metadata
+- **When**: `AsdlcArtifactScanner.scanAll()` is called
+- **Then**: Returns `AsdlcArtifacts` with `agentsMd.exists: true`, parsed sections, and extracted metadata
 
 **Scenario: ASDLC artifact scanning with no artifacts**
 - **Given**: Workspace has no AGENTS.md, no specs/, no schemas/
@@ -200,6 +232,9 @@ Scanners are instantiated by providers, commands, and MCP tools. Scanners have n
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
 | SkillsScanner | `src/scanner/skillsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
+| Scanner core | `src/scanner/core/` (types, listFiles, scanRulesCore, etc.) |
+| VSCodeFsAdapter | `src/scanner/adapters/vscodeFsAdapter.ts` |
+| NodeFsAdapter | `src/scanner/adapters/nodeFsAdapter.ts` |
 | Scanner types | `src/scanner/types.ts` |
 | ASDLC parsing (AGENTS.md) | `src/scanner/asdlcParsing.ts` |
 | Skill parsing (SKILL.md) | `src/scanner/skillParsing.ts` |

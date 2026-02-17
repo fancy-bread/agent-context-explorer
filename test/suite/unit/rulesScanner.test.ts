@@ -11,6 +11,7 @@ describe('Rules Scanner Tests (real RulesScanner + vscode stub)', () => {
 		scanner = new RulesScanner(workspaceRoot as any);
 		vscodeStub.__overrides.findFiles = null;
 		vscodeStub.__overrides.stat = null;
+		vscodeStub.__overrides.readDirectory = null;
 	});
 
 	describe('scanRules', () => {
@@ -50,13 +51,13 @@ describe('Rules Scanner Tests (real RulesScanner + vscode stub)', () => {
 		});
 
 		it('should return empty array when no rules found', async () => {
-			vscodeStub.__overrides.findFiles = async () => [];
+			vscodeStub.__overrides.readDirectory = async () => [];
 			const rules = await scanner.scanRules();
 			assert.strictEqual(rules.length, 0);
 		});
 
 		it('should return empty array on findFiles error', async () => {
-			vscodeStub.__overrides.findFiles = async () => {
+			vscodeStub.__overrides.readDirectory = async () => {
 				throw new Error('Scan failed');
 			};
 			const rules = await scanner.scanRules();
@@ -133,12 +134,9 @@ describe('Rules Scanner Tests (real RulesScanner + vscode stub)', () => {
 
 	describe('parse error path', () => {
 		it('should add placeholder rule when parseMDC returns error', async () => {
-			vscodeStub.__overrides.findFiles = async (pattern: any) => {
-				if (pattern.pattern?.includes('.cursor/rules') && pattern.pattern?.endsWith('*.mdc')) {
-					const base = (pattern.workspaceRoot?.fsPath || '/workspace') + '/.cursor/rules';
-					return [
-						{ fsPath: `${base}/read-error.mdc`, path: `${base}/read-error.mdc` }
-					];
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.includes('.cursor/rules')) {
+					return [['read-error.mdc', 1]];
 				}
 				return [];
 			};

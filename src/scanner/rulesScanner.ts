@@ -1,6 +1,10 @@
 // Rules Scanner - Scan for .cursor/rules/*.mdc files in workspace
+// Uses shared scanRulesCore with VSCodeFsAdapter (recursion limited to project .cursor/)
 import * as vscode from 'vscode';
 import { MDCParser } from '../utils/mdcParser';
+import { VSCodeFsAdapter } from './adapters/vscodeFsAdapter';
+import { scanRulesCore } from './core/scanRulesCore';
+import * as os from 'os';
 
 export interface RuleMetadata {
 	description: string;
@@ -19,64 +23,31 @@ export class RulesScanner {
 	constructor(private workspaceRoot: vscode.Uri) {}
 
 	async scanRules(): Promise<Rule[]> {
-		const rules: Rule[] = [];
-
 		try {
-			// Find all .mdc files in .cursor/rules directories
-			const pattern = new vscode.RelativePattern(this.workspaceRoot, '**/.cursor/rules/**/*.mdc');
-			const files = await vscode.workspace.findFiles(pattern);
+			const fs = new VSCodeFsAdapter();
+			const projectRoot = this.workspaceRoot.fsPath;
+			const userRoot = os.homedir();
+			const coreRules = await scanRulesCore(fs, projectRoot, userRoot);
 
-			// Also check for .md files (fallback for non-MDC format)
-			const mdPattern = new vscode.RelativePattern(this.workspaceRoot, '**/.cursor/rules/**/*.md');
-			const mdFiles = await vscode.workspace.findFiles(mdPattern);
-
-			// Combine and deduplicate files
-			const allFiles = [...files, ...mdFiles].filter((file, index, self) =>
-				index === self.findIndex(f => f.fsPath === file.fsPath)
-			);
-
-			// Parse each file
-			for (const file of allFiles) {
-				try {
-					const { metadata, content } = await MDCParser.parseMDC(file);
-					const fileName = file.path.split('/').pop() || 'unknown';
-
-					rules.push({
-						uri: file,
-						metadata,
-						content,
-						fileName
-					});
-				} catch (error) {
-				// Add a placeholder rule for files that can't be parsed
-				const fileName = file.path.split('/').pop() || 'unknown';
-				rules.push({
-					uri: file,
-					metadata: {
-						description: 'Error parsing file'
-					},
-					content: 'Error reading file content',
-					fileName
-				});
-				}
-			}
-
-			return rules;
-		} catch (error) {
+			return coreRules.map((r) => ({
+				uri: vscode.Uri.file(r.path),
+				metadata: r.metadata,
+				content: r.content,
+				fileName: r.fileName
+			}));
+		} catch {
 			return [];
 		}
 	}
 
 	async watchRules(): Promise<vscode.FileSystemWatcher> {
-		// Create watcher for .mdc files
-		const mdcPattern = new vscode.RelativePattern(this.workspaceRoot, '**/.cursor/rules/**/*.mdc');
+		// Limit to project root .cursor/ only (not **/.cursor/ - excludes test/fixtures)
+		const mdcPattern = new vscode.RelativePattern(this.workspaceRoot, '.cursor/rules/**/*.mdc');
 		const mdcWatcher = vscode.workspace.createFileSystemWatcher(mdcPattern);
 
-		// Create watcher for .md files
-		const mdPattern = new vscode.RelativePattern(this.workspaceRoot, '**/.cursor/rules/**/*.md');
+		const mdPattern = new vscode.RelativePattern(this.workspaceRoot, '.cursor/rules/**/*.md');
 		const mdWatcher = vscode.workspace.createFileSystemWatcher(mdPattern);
 
-		// Return a combined watcher (we'll handle both in the extension)
 		return {
 			...mdcWatcher,
 			dispose: () => {

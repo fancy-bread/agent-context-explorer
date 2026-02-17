@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.9.6",
+	"version": "0.9.7",
 	"publisher": "fancybread-com",
 	"icon": "ace.png",
 	"repository": {
