@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 suite('Extension Test Suite', () => {
 	test('Extension should be present', () => {
-		const extension = vscode.extensions.getExtension('fancybread-com.agent-context-explorer');
+		const extension = vscode.extensions.getExtension('fancy-bread.agent-context-explorer');
 		assert.ok(extension);
 	});
 
@@ -21,7 +21,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	test('Extension should activate without errors', async () => {
-		const extension = vscode.extensions.getExtension('fancybread-com.agent-context-explorer');
+		const extension = vscode.extensions.getExtension('fancy-bread.agent-context-explorer');
 		if (extension) {
 			await extension.activate();
 			assert.ok(extension.isActive);
@@ -29,11 +29,11 @@ suite('Extension Test Suite', () => {
 	});
 
 	test('Extension should have correct metadata', () => {
-		const extension = vscode.extensions.getExtension('fancybread-com.agent-context-explorer');
+		const extension = vscode.extensions.getExtension('fancy-bread.agent-context-explorer');
 		if (extension) {
 			const packageJSON = extension.packageJSON;
 			assert.equal(packageJSON.name, 'agent-context-explorer');
-			assert.equal(packageJSON.publisher, 'fancybread-com');
+			assert.equal(packageJSON.publisher, 'fancy-bread');
 			assert.ok(packageJSON.version);
 		}
 	});
