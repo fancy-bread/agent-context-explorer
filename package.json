@@ -3,11 +3,11 @@
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
 	"version": "0.9.7",
-	"publisher": "fancybread-com",
+	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/fancybread-com/agent-context-explorer"
+		"url": "https://github.com/fancy-bread/agent-context-explorer"
 	},
 	"engines": {
 		"vscode": "^1.105.0"

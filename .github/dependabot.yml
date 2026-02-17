@@ -9,9 +9,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "fancybread-com"
+      - "fancy-bread"
     assignees:
-      - "fancybread-com"
+      - "fancy-bread"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
