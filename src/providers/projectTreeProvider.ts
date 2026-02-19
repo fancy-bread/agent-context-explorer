@@ -26,6 +26,10 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 	private _onDidChangeTreeData = new vscode.EventEmitter<void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+	private isDataLoaded = false;
+	private isLoading = false;
+	private onDemandLoad?: () => Promise<void>;
+
 	constructor(
 		private projectData: Map<string, {
 			rules: Rule[],
@@ -37,8 +41,19 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			asdlcArtifacts: AsdlcArtifacts
 		}> = new Map(),
 		private projects: ProjectDefinition[] = [],
-		private currentProject: ProjectDefinition | null = null
-	) {}
+		private currentProject: ProjectDefinition | null = null,
+		onDemandLoad?: () => Promise<void>
+	) {
+		this.onDemandLoad = onDemandLoad;
+	}
+
+	setDataLoaded(value: boolean): void {
+		this.isDataLoaded = value;
+	}
+
+	setLoading(value: boolean): void {
+		this.isLoading = value;
+	}
 
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
@@ -73,6 +88,22 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 	async getChildren(element?: ProjectTreeItem): Promise<ProjectTreeItem[]> {
 		try {
 			if (!element) {
+				// Root level: lazy load on first request
+				if (!this.isDataLoaded) {
+					if (this.onDemandLoad && !this.isLoading) {
+						this.isLoading = true;
+						this.onDemandLoad().catch(() => {
+							this.isLoading = false;
+							this._onDidChangeTreeData.fire();
+						});
+					}
+					return [{
+						label: 'Loading...',
+						collapsibleState: vscode.TreeItemCollapsibleState.None,
+						iconPath: new vscode.ThemeIcon('loading~spin')
+					} as ProjectTreeItem];
+				}
+
 				// Root level: show all projects
 				if (this.projects.length === 0) {
 					return [{

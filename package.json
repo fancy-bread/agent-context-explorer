@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.9.7",
+	"version": "0.9.8",
 	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
@@ -25,7 +25,7 @@
 		"mcp"
 	],
 	"activationEvents": [
-		"onStartupFinished"
+		"onView:aceExplorer"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {

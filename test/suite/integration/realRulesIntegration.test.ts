@@ -139,6 +139,7 @@ describe('Real Rules Integration Tests', () => {
 		});
 
 		provider = new ProjectTreeProvider(projectData, [mockProject], mockProject);
+		provider.setDataLoaded(true);
 	});
 
 	describe('Real Rule Icon Detection', () => {

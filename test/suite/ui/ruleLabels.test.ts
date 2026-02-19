@@ -114,7 +114,8 @@ describe('Rule Labels Removal', () => {
 		}
 	});
 
-	provider = new ProjectTreeProvider(mockProjectData, [mockProject], mockProject);
+		provider = new ProjectTreeProvider(mockProjectData, [mockProject], mockProject);
+		provider.setDataLoaded(true);
 	});
 
 	describe('Individual Rule Display', () => {
