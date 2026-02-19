@@ -175,28 +175,26 @@ Categories define tree node types and determine children resolution:
 
 ### Data Flow
 
-1. **Extension activates** → `ProjectTreeProvider` instantiated
-2. **Scanner results updated** → Provider's `updateData()` called with new `projectData`
-3. **Provider fires change event** → VS Code calls `getChildren()` to rebuild tree
-4. **User expands node** → `getChildren(element)` returns children for that node
-5. **User clicks item** → Item's `command` property executed (open file, view details)
+1. **Extension activates** (onView:aceExplorer) → `ProjectTreeProvider` instantiated with `onDemandLoad` callback; no initial scan, no file watchers
+2. **User opens ACE view** → `getChildren(undefined)` called → if `!isDataLoaded`, provider calls `onDemandLoad()`, returns loading item
+3. **onDemandLoad** → runs `refreshData()`; on success, `updateData()`, `setDataLoaded(true)`, `refresh()`; file watchers registered (first load only)
+4. **Provider fires change event** → VS Code calls `getChildren()` to rebuild tree
+5. **User expands node** → `getChildren(element)` returns children for that node
+6. **User clicks item** → Item's `command` property executed (open file, view details)
+
+### Lazy Scanning (FB-76)
+
+- **Activation:** `onView:aceExplorer` — extension activates only when user opens ACE sidebar view (not at startup)
+- **Initial scan:** Deferred until tree view requests data (first `getChildren(undefined)` call)
+- **Loading indicator:** Tree shows "Loading..." with spinner until first scan completes
+- **File watchers:** Registered only after first successful scan (workspace + global rules, commands, skills)
 
 ### File Watchers
 
-Automatic tree refresh when artifacts change:
+Automatic tree refresh when artifacts change. Watchers are registered **after first successful scan** (lazy setup):
 
 ```typescript
-// extension.ts
-const rulesWatcher = vscode.workspace.createFileSystemWatcher(
-  '.cursor/rules/**/*.{mdc,md}'
-);
-const commandsWatcher = vscode.workspace.createFileSystemWatcher(
-  '.cursor/commands/*.md'
-);
-const skillsWatcher = vscode.workspace.createFileSystemWatcher(
-  '.cursor/skills/*/SKILL.md'
-);
-
+// extension.ts - setup deferred until first refreshData() success
 rulesWatcher.onDidChange(() => refreshData());
 commandsWatcher.onDidChange(() => refreshData());
 skillsWatcher.onDidChange(() => refreshData());

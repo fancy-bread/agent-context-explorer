@@ -29,6 +29,8 @@ let fileWatcher: vscode.FileSystemWatcher | undefined;
 let outputChannel: vscode.OutputChannel;
 let mcpServerProvider: McpServerProvider | undefined;
 let isActivated = false;
+let watchersInitialized = false;
+let extensionContext: vscode.ExtensionContext | undefined;
 
 // This method is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
@@ -60,9 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
 		outputChannel.appendLine('No workspace root found');
 	}
 
-	// Initialize tree provider
+	// Store context for deferred watcher setup
+	extensionContext = context;
+
+	// Initialize tree provider with on-demand load (no initial scan)
 	outputChannel.appendLine('Initializing tree provider...');
-	treeProvider = new ProjectTreeProvider(new Map(), [], null);
+	treeProvider = new ProjectTreeProvider(new Map(), [], null, () => ensureDataLoaded());
 
 	// Register tree data provider
 	const treeProviderRegistration = vscode.window.createTreeView('aceExplorer', {
@@ -89,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register refresh command
 	const refreshCommand = vscode.commands.registerCommand('ace.refresh', async () => {
 		outputChannel.appendLine('Manual refresh triggered');
-		await refreshData();
+		await ensureDataLoaded();
 	});
 
 	// Register MCP server provider
@@ -102,51 +107,48 @@ export function activate(context: vscode.ExtensionContext) {
 		// Continue without MCP - extension still functions
 	}
 
-	// Set up file watcher (only if we have a workspace)
-	if (workspaceRoot) {
-		outputChannel.appendLine('Setting up file watcher...');
-		setupFileWatcher();
-	}
-
-	// Always set up global commands watcher (workspace-independent)
-	outputChannel.appendLine('Setting up global commands file watcher...');
-	const globalCommandsWatcher = setupGlobalCommandsWatcher();
-	if (globalCommandsWatcher) {
-		context.subscriptions.push(globalCommandsWatcher);
-	}
-
-	// Always set up global skills watcher (workspace-independent)
-	outputChannel.appendLine('Setting up global skills file watcher...');
-	const globalSkillsWatcher = setupGlobalSkillsWatcher();
-	if (globalSkillsWatcher) {
-		context.subscriptions.push(globalSkillsWatcher);
-	}
-
-	// Initial data load (non-blocking)
-	outputChannel.appendLine('Starting initial data load...');
-	refreshData().then(() => {
-		outputChannel.appendLine('Initial data load completed successfully');
-	}).catch(error => {
-		outputChannel.appendLine(`Error during initial data load: ${error}`);
-	});
+	// Lazy scanning: no initial data load, no file watchers at activation.
+	// Watchers and first scan happen when tree view requests data (getChildren).
 
 	// Add subscriptions
 	context.subscriptions.push(
 		treeProviderRegistration,
 		refreshCommand,
-		fileWatcher!,
 		outputChannel
 	);
 
 	outputChannel.appendLine('Agent Context Explorer extension setup complete');
 }
 
+async function ensureDataLoaded(): Promise<void> {
+	await refreshData();
+	if (!extensionContext) {return;}
+	if (!watchersInitialized) {
+		watchersInitialized = true;
+		const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+		if (workspaceRoot) {
+			setupFileWatcher();
+			if (fileWatcher) {
+				extensionContext.subscriptions.push(fileWatcher);
+			}
+		}
+		const globalCommandsWatcher = setupGlobalCommandsWatcher();
+		if (globalCommandsWatcher) {
+			extensionContext.subscriptions.push(globalCommandsWatcher);
+		}
+		const globalSkillsWatcher = setupGlobalSkillsWatcher();
+		if (globalSkillsWatcher) {
+			extensionContext.subscriptions.push(globalSkillsWatcher);
+		}
+		outputChannel.appendLine('File watchers registered (lazy setup)');
+	}
+}
+
 // This method is called when your extension is deactivated
 export function deactivate() {
 	isActivated = false;
-	if (fileWatcher) {
-		fileWatcher.dispose();
-	}
+	// fileWatcher and global watchers are in context.subscriptions (when setup)
+	// and are disposed automatically; no explicit dispose needed here
 	if (outputChannel) {
 		outputChannel.dispose();
 	}
@@ -160,7 +162,8 @@ export function deactivate() {
 
 async function refreshData() {
 	try {
-		outputChannel.appendLine('Refreshing project rules and state...');
+		treeProvider.setLoading(true);
+		outputChannel.appendLine('Refreshing ACE workspaces...');
 
 		// Always scan the current workspace first
 		const currentWorkspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -284,6 +287,8 @@ async function refreshData() {
 
 		const finalCurrentProject = allProjects.find(p => p.active) || allProjects[0] || null;
 		treeProvider.updateData(projectData, allProjects, finalCurrentProject);
+		treeProvider.setDataLoaded(true);
+		treeProvider.setLoading(false);
 
 		// Refresh the tree view
 		treeProvider.refresh();
@@ -291,6 +296,7 @@ async function refreshData() {
 		const successMessage = `Refreshed ${allProjects.length} projects (including current workspace)`;
 		outputChannel.appendLine(successMessage);
 	} catch (error) {
+		treeProvider.setLoading(false);
 		const errorMessage = `Error refreshing data: ${error}`;
 		outputChannel.appendLine(errorMessage);
 		vscode.window.showErrorMessage(`Failed to refresh data: ${error instanceof Error ? error.message : 'Unknown error'}`);

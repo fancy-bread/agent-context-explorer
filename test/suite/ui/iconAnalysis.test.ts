@@ -31,6 +31,7 @@ describe('Icon Analysis for Real Rules', () => {
 
 	beforeEach(() => {
 		provider = new ProjectTreeProvider(new Map(), [], null);
+		provider.setDataLoaded(true);
 	});
 
 	it('should show what icon each rule gets', () => {
