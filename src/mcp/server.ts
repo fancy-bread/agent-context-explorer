@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// ACE MCP Server - Standalone MCP server for Agent Context Explorer
-// This script runs as a subprocess started by VS Code/Cursor
-// Uses shared scanner core with NodeFsAdapter (NO vscode)
+// ACE MCP Server - Standalone or bridge to extension
+// When ACE_EXTENSION_PORT is set: thin bridge; extension owns project resolution and scanning.
+// Otherwise: standalone with NodeFsAdapter (no vscode).
 
-import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import * as fs from 'fs/promises';
+import * as net from 'net';
 import * as os from 'os';
+import * as path from 'path';
 import { NodeFsAdapter } from '../scanner/adapters/nodeFsAdapter';
 import {
 	scanRulesCore,
@@ -133,10 +136,27 @@ async function getAsdlcArtifacts(workspacePath: string) {
 // Server Setup
 // =============================================================================
 
+/** Project entry for list_projects and resolution */
+interface ProjectEntry {
+	projectKey: string;
+	path: string;
+	label: string;
+}
+
+/** Extract projectKey from tool args; clients may send flat (projectKey) or nested (arguments.projectKey) or snake_case (project_key). */
+function getProjectKeyArg(args: unknown): string | undefined {
+	if (!args || typeof args !== 'object') return undefined;
+	const o = args as Record<string, unknown>;
+	const v = o.projectKey ?? o.project_key ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).projectKey) ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).project_key);
+	return typeof v === 'string' ? v : undefined;
+}
+
 /**
  * Create and configure the MCP server
+ * @param workspacePath - Primary workspace (used when ACE_PROJECT_PATHS not set)
+ * @param projects - When set (from ACE_PROJECT_PATHS), list_projects and resolve use this list
  */
-function createServer(workspacePath: string): McpServer {
+function createServer(workspacePath: string, projects?: ProjectEntry[]): McpServer {
 	const server = new McpServer(
 		{
 			name: 'ace-mcp',
@@ -150,21 +170,50 @@ function createServer(workspacePath: string): McpServer {
 		}
 	);
 
-	// =========================================================================
-	// Register Tools (using simple object schemas without Zod for type perf)
-	// =========================================================================
+	// Multi-project: use provided list (from extension) or single workspace (standalone).
+	const projectList: ProjectEntry[] = projects && projects.length > 0
+		? projects
+		: [{ projectKey: path.basename(workspacePath), path: workspacePath, label: path.basename(workspacePath) }];
+	const defaultPath = projectList[0].path;
+
+	function resolveProjectRoot(projectKeyArg?: string): { path: string } | { error: string } {
+		if (!projectKeyArg) {
+			return { path: defaultPath };
+		}
+		const entry = projectList.find(p => p.projectKey === projectKeyArg);
+		if (!entry) {
+			const keys = projectList.map(p => p.projectKey).join(', ');
+			return { error: `Unknown projectKey: ${projectKeyArg}. Known: ${keys}.` };
+		}
+		return { path: entry.path };
+	}
+
+	// list_projects - List registered ACE projects (workspace + added projects when run from extension)
+	server.tool('list_projects', 'List registered ACE projects', async () => {
+		return {
+			content: [{ type: 'text' as const, text: JSON.stringify(projectList, null, 2) }]
+		};
+	});
 
 	// list_rules - List all Cursor rules with metadata
-	server.tool('list_rules', 'List all Cursor rules with metadata', async () => {
-		const rules = await getRulesAsInfo(workspacePath);
+	server.tool('list_rules', 'List all Cursor rules with metadata', { projectKey: { type: 'string', description: 'Optional project key (omit for current workspace)' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const rules = await getRulesAsInfo(resolved.path);
 		return {
 			content: [{ type: 'text' as const, text: JSON.stringify(rules, null, 2) }]
 		};
 	});
 
 	// get_rule - Get rule content by name
-	server.tool('get_rule', 'Get rule content by name', { name: { type: 'string', description: 'Rule name (without extension)' } } as any, async (args: any) => {
-		const rules = await getRules(workspacePath);
+	server.tool('get_rule', 'Get rule content by name', { name: { type: 'string', description: 'Rule name (without extension)' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const rules = await getRules(resolved.path);
 		const normalizedName = args.name.toLowerCase().replace(/\.(mdc|md)$/, '');
 		const rule = rules.find(r => r.fileName.toLowerCase().replace(/\.(mdc|md)$/, '') === normalizedName);
 
@@ -178,16 +227,24 @@ function createServer(workspacePath: string): McpServer {
 	});
 
 	// list_commands - List all Cursor commands with metadata
-	server.tool('list_commands', 'List all Cursor commands with metadata', async () => {
-		const commands = await getCommandsAsInfo(workspacePath);
+	server.tool('list_commands', 'List all Cursor commands with metadata', { projectKey: { type: 'string', description: 'Optional project key (use list_projects to get keys)' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const commands = await getCommandsAsInfo(resolved.path);
 		return {
 			content: [{ type: 'text' as const, text: JSON.stringify(commands, null, 2) }]
 		};
 	});
 
 	// get_command - Get command content by name
-	server.tool('get_command', 'Get command content by name', { name: { type: 'string', description: 'Command name (without extension)' } } as any, async (args: any) => {
-		const commands = await getCommands(workspacePath);
+	server.tool('get_command', 'Get command content by name', { name: { type: 'string', description: 'Command name (without extension)' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const commands = await getCommands(resolved.path);
 		const normalizedName = args.name.toLowerCase().replace(/\.md$/, '');
 		const command = commands.find(c => c.fileName.toLowerCase() === normalizedName);
 
@@ -201,16 +258,24 @@ function createServer(workspacePath: string): McpServer {
 	});
 
 	// list_skills - List all Cursor skills with metadata
-	server.tool('list_skills', 'List all Cursor skills with metadata', async () => {
-		const skills = await getSkillsAsInfo(workspacePath);
+	server.tool('list_skills', 'List all Cursor skills with metadata', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const skills = await getSkillsAsInfo(resolved.path);
 		return {
 			content: [{ type: 'text' as const, text: JSON.stringify(skills, null, 2) }]
 		};
 	});
 
 	// get_skill - Get skill content by name
-	server.tool('get_skill', 'Get skill content by name', { name: { type: 'string', description: 'Skill directory name' } } as any, async (args: any) => {
-		const skills = await getSkills(workspacePath);
+	server.tool('get_skill', 'Get skill content by name', { name: { type: 'string', description: 'Skill directory name' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const skills = await getSkills(resolved.path);
 		const normalizedName = args.name.toLowerCase();
 		const skill = skills.find(s => s.fileName.toLowerCase() === normalizedName);
 
@@ -224,8 +289,12 @@ function createServer(workspacePath: string): McpServer {
 	});
 
 	// get_asdlc_artifacts - Get ASDLC artifacts (AGENTS.md, specs, schemas)
-	server.tool('get_asdlc_artifacts', 'Get ASDLC artifacts (AGENTS.md, specs, schemas)', async () => {
-		const asdlc = await getAsdlcArtifacts(workspacePath);
+	server.tool('get_asdlc_artifacts', 'Get ASDLC artifacts (AGENTS.md, specs, schemas)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const asdlc = await getAsdlcArtifacts(resolved.path);
 
 		const result = {
 			agentsMd: {
@@ -251,25 +320,36 @@ function createServer(workspacePath: string): McpServer {
 	});
 
 	// list_specs - List available specifications
-	server.tool('list_specs', 'List available specifications', async () => {
-		const asdlc = await getAsdlcArtifacts(workspacePath);
+	server.tool('list_specs', 'List available specifications', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const asdlc = await getAsdlcArtifacts(resolved.path);
 		return {
 			content: [{ type: 'text' as const, text: JSON.stringify(asdlc.specs.specs, null, 2) }]
 		};
 	});
 
 	// get_project_context - Complete project context
-	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, artifacts)', async () => {
+	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
 		const [rules, commands, skills, asdlc] = await Promise.all([
-			getRulesAsInfo(workspacePath),
-			getCommandsAsInfo(workspacePath),
-			getSkillsAsInfo(workspacePath),
-			getAsdlcArtifacts(workspacePath)
+			getRulesAsInfo(resolved.path),
+			getCommandsAsInfo(resolved.path),
+			getSkillsAsInfo(resolved.path),
+			getAsdlcArtifacts(resolved.path)
 		]);
+		const entry = projectList.find(p => p.path === resolved.path);
+		const projectKeyOut = entry?.projectKey ?? path.basename(resolved.path);
 
 		const context = {
 			timestamp: new Date().toISOString(),
-			projectPath: workspacePath,
+			projectKey: projectKeyOut,
+			projectPath: resolved.path,
 			rules,
 			commands,
 			skills,
@@ -286,223 +366,77 @@ function createServer(workspacePath: string): McpServer {
 		};
 	});
 
-	// =========================================================================
-	// Register Resources
-	// =========================================================================
+	return server;
+}
 
-	// ace://rules - List of all rules
-	server.resource('rules', 'ace://rules', { description: 'List of all Cursor rules', mimeType: 'application/json' }, async () => {
-		const rules = await getRulesAsInfo(workspacePath);
-		return {
-			contents: [{ uri: 'ace://rules', mimeType: 'application/json', text: JSON.stringify(rules, null, 2) }]
-		};
+// =============================================================================
+// Bridge mode: forward tool calls to extension (extension owns project resolution)
+// =============================================================================
+
+function bridgeCall(port: number, method: string, params: Record<string, unknown>): Promise<unknown> {
+	return new Promise((resolve, reject) => {
+		const id = Math.floor(Math.random() * 1e9);
+		const socket = net.connect(port, '127.0.0.1', () => {
+			socket.write(JSON.stringify({ id, method, params }) + '\n');
+		});
+		let buffer = '';
+		socket.setEncoding('utf8');
+		socket.on('data', (chunk) => {
+			buffer += chunk;
+			const idx = buffer.indexOf('\n');
+			if (idx === -1) return;
+			const line = buffer.slice(0, idx);
+			buffer = buffer.slice(idx + 1);
+			socket.destroy();
+			try {
+				const res = JSON.parse(line) as { id: number; result?: unknown; error?: string };
+				if (res.error) reject(new Error(res.error));
+				else resolve(res.result);
+			} catch (e) {
+				reject(e);
+			}
+		});
+		socket.on('error', reject);
+		socket.setTimeout(30000, () => { socket.destroy(); reject(new Error('Bridge timeout')); });
 	});
+}
 
-	// ace://rules/{name} - Individual rule content
-	server.resource(
-		'rule',
-		new ResourceTemplate('ace://rules/{name}', {
-			list: async () => {
-				const rules = await getRulesAsInfo(workspacePath);
-				return {
-					resources: rules.map(r => ({
-						uri: `ace://rules/${r.name}`,
-						name: r.name,
-						description: r.description,
-						mimeType: 'text/markdown'
-					}))
-				};
-			}
-		}),
-		{ description: 'Individual Cursor rule content', mimeType: 'text/markdown' },
-		async (uri, variables) => {
-			const ruleName = variables.name as string;
-			const rules = await getRules(workspacePath);
-			const rule = rules.find(r => r.fileName.replace(/\.(mdc|md)$/, '') === ruleName);
+const projectKeyShape = { projectKey: z.string().optional() };
+const nameAndProjectKeyShape = { name: z.string(), projectKey: z.string().optional() };
 
-			if (!rule) {
-				return { contents: [] };
-			}
+const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<string, z.ZodTypeAny> }[] = [
+	{ name: 'list_projects', description: 'List registered ACE projects', inputSchema: {} },
+	{ name: 'list_rules', description: 'List all Cursor rules with metadata', inputSchema: projectKeyShape },
+	{ name: 'get_rule', description: 'Get rule content by name', inputSchema: nameAndProjectKeyShape },
+	{ name: 'list_commands', description: 'List all Cursor commands with metadata', inputSchema: projectKeyShape },
+	{ name: 'get_command', description: 'Get command content by name', inputSchema: nameAndProjectKeyShape },
+	{ name: 'list_skills', description: 'List all Cursor skills with metadata', inputSchema: projectKeyShape },
+	{ name: 'get_skill', description: 'Get skill content by name', inputSchema: nameAndProjectKeyShape },
+	{ name: 'get_asdlc_artifacts', description: 'Get ASDLC artifacts', inputSchema: projectKeyShape },
+	{ name: 'list_specs', description: 'List available specifications', inputSchema: projectKeyShape },
+	{ name: 'get_project_context', description: 'Get complete project context', inputSchema: projectKeyShape }
+];
 
-			return {
-				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: rule.content }]
-			};
-		}
+/** Ensure params for backend: SDK passes validated args; coerce to flat object. */
+function toBackendParams(args: unknown): Record<string, unknown> {
+	if (args && typeof args === 'object' && !Array.isArray(args)) {
+		return args as Record<string, unknown>;
+	}
+	return {};
+}
+
+function createBridgeServer(port: number): McpServer {
+	const server = new McpServer(
+		{ name: 'ace-mcp', version: '1.0.0' },
+		{ capabilities: { tools: {}, resources: {} } }
 	);
-
-	// ace://commands - List of all commands
-	server.resource('commands', 'ace://commands', { description: 'List of all Cursor commands', mimeType: 'application/json' }, async () => {
-		const commands = await getCommandsAsInfo(workspacePath);
-		return {
-			contents: [{ uri: 'ace://commands', mimeType: 'application/json', text: JSON.stringify(commands, null, 2) }]
-		};
-	});
-
-	// ace://commands/{name} - Individual command content
-	server.resource(
-		'command',
-		new ResourceTemplate('ace://commands/{name}', {
-			list: async () => {
-				const commands = await getCommandsAsInfo(workspacePath);
-				return {
-					resources: commands.map(c => ({
-						uri: `ace://commands/${c.name}`,
-						name: c.name,
-						description: c.description,
-						mimeType: 'text/markdown'
-					}))
-				};
-			}
-		}),
-		{ description: 'Individual Cursor command content', mimeType: 'text/markdown' },
-		async (uri, variables) => {
-			const commandName = variables.name as string;
-			const commands = await getCommands(workspacePath);
-			const command = commands.find(c => c.fileName === commandName);
-
-			if (!command) {
-				return { contents: [] };
-			}
-
-			return {
-				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: command.content }]
-			};
-		}
-	);
-
-	// ace://skills - List of all skills
-	server.resource('skills', 'ace://skills', { description: 'List of all Cursor skills', mimeType: 'application/json' }, async () => {
-		const skills = await getSkillsAsInfo(workspacePath);
-		return {
-			contents: [{ uri: 'ace://skills', mimeType: 'application/json', text: JSON.stringify(skills, null, 2) }]
-		};
-	});
-
-	// ace://skills/{name} - Individual skill content
-	server.resource(
-		'skill',
-		new ResourceTemplate('ace://skills/{name}', {
-			list: async () => {
-				const skills = await getSkillsAsInfo(workspacePath);
-				return {
-					resources: skills.map(s => ({
-						uri: `ace://skills/${s.name}`,
-						name: s.name,
-						description: s.title || s.name,
-						mimeType: 'text/markdown'
-					}))
-				};
-			}
-		}),
-		{ description: 'Individual skill content', mimeType: 'text/markdown' },
-		async (uri, variables) => {
-			const name = variables.name as string;
-			const skills = await getSkills(workspacePath);
-			const skill = skills.find(s => s.fileName.toLowerCase() === name.toLowerCase());
-
-			if (!skill) {
-				return { contents: [] };
-			}
-
-			return {
-				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: skill.content }]
-			};
-		}
-	);
-
-	// ace://agents-md - AGENTS.md content
-	server.resource('agents-md', 'ace://agents-md', { description: 'Project AGENTS.md content', mimeType: 'text/markdown' }, async () => {
-		const asdlc = await getAsdlcArtifacts(workspacePath);
-		if (!asdlc.agentsMd.exists || !asdlc.agentsMd.content) {
-			return { contents: [] };
-		}
-		return {
-			contents: [{ uri: 'ace://agents-md', mimeType: 'text/markdown', text: asdlc.agentsMd.content }]
-		};
-	});
-
-	// ace://specs - List of all specs
-	server.resource('specs', 'ace://specs', { description: 'List of all specifications', mimeType: 'application/json' }, async () => {
-		const asdlc = await getAsdlcArtifacts(workspacePath);
-		return {
-			contents: [{ uri: 'ace://specs', mimeType: 'application/json', text: JSON.stringify(asdlc.specs.specs, null, 2) }]
-		};
-	});
-
-	// ace://specs/{domain} - Individual spec content
-	server.resource(
-		'spec',
-		new ResourceTemplate('ace://specs/{domain}', {
-			list: async () => {
-				const asdlc = await getAsdlcArtifacts(workspacePath);
-				return {
-					resources: asdlc.specs.specs.map((s: { domain: string }) => ({
-						uri: `ace://specs/${s.domain}`,
-						name: s.domain,
-						description: `Specification: ${s.domain}`,
-						mimeType: 'text/markdown'
-					}))
-				};
-			}
-		}),
-		{ description: 'Individual specification content', mimeType: 'text/markdown' },
-		async (uri, variables) => {
-			const domain = variables.domain as string;
-			const asdlc = await getAsdlcArtifacts(workspacePath);
-			const spec = asdlc.specs.specs.find((s: { domain: string }) => s.domain === domain);
-
-			if (!spec) {
-				return { contents: [] };
-			}
-
-			const content = await fs.readFile(spec.path, 'utf-8');
-			return {
-				contents: [{ uri: uri.toString(), mimeType: 'text/markdown', text: content }]
-			};
-		}
-	);
-
-	// ace://schemas - List of all schemas
-	server.resource('schemas', 'ace://schemas', { description: 'List of all JSON schemas', mimeType: 'application/json' }, async () => {
-		const asdlc = await getAsdlcArtifacts(workspacePath);
-		return {
-			contents: [{ uri: 'ace://schemas', mimeType: 'application/json', text: JSON.stringify(asdlc.schemas.schemas, null, 2) }]
-		};
-	});
-
-	// ace://schemas/{name} - Individual schema content
-	server.resource(
-		'schema',
-		new ResourceTemplate('ace://schemas/{name}', {
-			list: async () => {
-				const asdlc = await getAsdlcArtifacts(workspacePath);
-				return {
-					resources: asdlc.schemas.schemas.map(s => ({
-						uri: `ace://schemas/${s.name}`,
-						name: s.name,
-						description: s.schemaId || `Schema: ${s.name}`,
-						mimeType: 'application/json'
-					}))
-				};
-			}
-		}),
-		{ description: 'Individual JSON schema content', mimeType: 'application/json' },
-		async (uri, variables) => {
-			const schemaName = variables.name as string;
-			const asdlc = await getAsdlcArtifacts(workspacePath);
-			const schema = asdlc.schemas.schemas.find(s => s.name === schemaName);
-
-			if (!schema) {
-				return { contents: [] };
-			}
-
-			const content = await fs.readFile(schema.path, 'utf-8');
-			return {
-				contents: [{ uri: uri.toString(), mimeType: 'application/json', text: content }]
-			};
-		}
-	);
-
+	for (const t of BRIDGE_TOOLS) {
+		server.tool(t.name, t.description, t.inputSchema as any, async (args: any) => {
+			const params = toBackendParams(args);
+			const result = await bridgeCall(port, t.name, params);
+			return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+		});
+	}
 	return server;
 }
 
@@ -511,27 +445,42 @@ function createServer(workspacePath: string): McpServer {
 // =============================================================================
 
 async function main(): Promise<void> {
-	// Get workspace path from environment variable or command line arg
-	const workspacePath = process.env.ACE_WORKSPACE_PATH || process.argv[2] || process.cwd();
-
-	// Verify path exists
-	try {
-		await fs.access(workspacePath);
-	} catch {
-		console.error(`Workspace path does not exist: ${workspacePath}`);
-		process.exit(1);
+	const extensionPort = process.env.ACE_EXTENSION_PORT;
+	if (extensionPort) {
+		const port = parseInt(extensionPort, 10);
+		if (port > 0) {
+			const server = createBridgeServer(port);
+			const transport = new StdioServerTransport(process.stdin!, process.stdout!);
+			await server.connect(transport);
+			console.error(`ACE MCP Server (bridge mode) → extension port ${port}`);
+			return;
+		}
 	}
 
-	// Create and start server
-	// Pass stdin/stdout explicitly - ensures we use Node's process streams
-	// (avoids bundler issues with node:process in StdioServerTransport)
-	const server = createServer(workspacePath);
+	// Standalone mode
+	const workspacePath = process.env.ACE_WORKSPACE_PATH || process.argv[2] || process.cwd();
+	let projects: ProjectEntry[] | undefined;
+	const projectsJson = process.env.ACE_PROJECT_PATHS;
+	if (projectsJson) {
+		try {
+			projects = JSON.parse(projectsJson) as ProjectEntry[];
+			if (!Array.isArray(projects) || projects.length === 0) projects = undefined;
+		} catch {
+			// ignore
+		}
+	}
+	const primaryPath = projects?.[0]?.path ?? workspacePath;
+	try {
+		await fs.access(primaryPath);
+	} catch {
+		console.error(`Workspace path does not exist: ${primaryPath}`);
+		process.exit(1);
+	}
+	const server = createServer(workspacePath, projects);
 	const transport = new StdioServerTransport(process.stdin!, process.stdout!);
-
 	await server.connect(transport);
-
-	// Log to stderr (stdout is for MCP messages)
-	console.error(`ACE MCP Server started for workspace: ${workspacePath}`);
+	const projectCount = projects?.length ?? 1;
+	console.error(`ACE MCP Server started (${projectCount} project(s)): ${primaryPath}`);
 }
 
 // Run the server

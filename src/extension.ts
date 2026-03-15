@@ -97,10 +97,10 @@ export function activate(context: vscode.ExtensionContext) {
 		await ensureDataLoaded();
 	});
 
-	// Register MCP server provider
+	// Register MCP server provider (pass getProjects so list_projects includes added projects e.g. Agency)
 	outputChannel.appendLine('Registering MCP server provider...');
 	try {
-		mcpServerProvider = registerMcpServerProvider(context);
+		mcpServerProvider = registerMcpServerProvider(context, () => projectManager.getProjects(), outputChannel);
 		outputChannel.appendLine('MCP server provider registered successfully');
 	} catch (error) {
 		outputChannel.appendLine(`Warning: Failed to register MCP server provider: ${error}`);

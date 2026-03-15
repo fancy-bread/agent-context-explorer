@@ -14,6 +14,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# cursor
+.cursor/
+
+# speckit
+.specify/
+
 # Node.js / TypeScript / VS Code Extension
 node_modules/
 npm-debug.log*

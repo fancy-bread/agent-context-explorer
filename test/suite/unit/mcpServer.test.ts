@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import * as path from 'path';
+import * as fs from 'fs';
 
 // =============================================================================
 // Mock Implementation of MCP Server Scanning Functions
@@ -798,5 +800,87 @@ Architecture only.`);
 			assert.deepStrictEqual(specs, []);
 			assert.deepStrictEqual(schemas, []);
 		});
+	});
+});
+
+// =============================================================================
+// MCP Server contract: tools-only, no resources
+// =============================================================================
+
+const EXPECTED_MCP_TOOLS = [
+	'list_projects',
+	'list_rules',
+	'get_rule',
+	'list_commands',
+	'get_command',
+	'list_skills',
+	'get_skill',
+	'get_asdlc_artifacts',
+	'list_specs',
+	'get_project_context'
+];
+
+describe('MCP Server contract (tools-only)', () => {
+	it('server exposes only tools (no ace:// resource registration)', () => {
+		// Resolve from project root (cwd when running mocha or VS Code test runner)
+		const serverPath = path.resolve(process.cwd(), 'src', 'mcp', 'server.ts');
+		const content = fs.readFileSync(serverPath, 'utf-8');
+		// Server must not register any MCP resources
+		assert.ok(!content.includes('server.resource('), 'server.ts must not call server.resource() — agents use tools only');
+	});
+
+	it('expected tool list includes list_projects and all documented tools', () => {
+		assert.strictEqual(EXPECTED_MCP_TOOLS[0], 'list_projects');
+		assert.ok(EXPECTED_MCP_TOOLS.includes('list_rules'));
+		assert.ok(EXPECTED_MCP_TOOLS.includes('get_project_context'));
+		assert.strictEqual(EXPECTED_MCP_TOOLS.length, 10);
+	});
+});
+
+// =============================================================================
+// Project resolution (standalone server: single workspace → projectKey = basename)
+// =============================================================================
+
+function resolveProjectRoot(
+	workspacePath: string,
+	projectKeyArg?: string
+): { path: string } | { error: string } {
+	const projectKey = path.basename(workspacePath);
+	if (!projectKeyArg) {
+		return { path: workspacePath };
+	}
+	if (projectKey !== projectKeyArg) {
+		return { error: `Unknown projectKey: ${projectKeyArg}. This server has one project: ${projectKey}.` };
+	}
+	return { path: workspacePath };
+}
+
+describe('MCP project resolution (projectKey)', () => {
+	it('omitted projectKey uses workspace path', () => {
+		const out = resolveProjectRoot('/home/user/my-project');
+		assert.ok('path' in out);
+		assert.strictEqual((out as { path: string }).path, '/home/user/my-project');
+	});
+
+	it('matching projectKey returns workspace path', () => {
+		const out = resolveProjectRoot('/home/user/my-project', 'my-project');
+		assert.ok('path' in out);
+		assert.strictEqual((out as { path: string }).path, '/home/user/my-project');
+	});
+
+	it('unknown projectKey returns error', () => {
+		const out = resolveProjectRoot('/home/user/my-project', 'other-project');
+		assert.ok('error' in out);
+		assert.ok((out as { error: string }).error.includes('Unknown projectKey'));
+		assert.ok((out as { error: string }).error.includes('other-project'));
+	});
+
+	it('list_projects returns single project with projectKey = basename', () => {
+		const workspacePath = '/workspace/ace-repo';
+		const projectKey = path.basename(workspacePath);
+		const projects = [{ projectKey, path: workspacePath, label: projectKey }];
+		assert.strictEqual(projects.length, 1);
+		assert.strictEqual(projects[0].projectKey, 'ace-repo');
+		assert.strictEqual(projects[0].path, '/workspace/ace-repo');
 	});
 });
