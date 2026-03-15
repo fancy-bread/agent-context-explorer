@@ -3,7 +3,7 @@
 import { Rule } from '../scanner/rulesScanner';
 import { Command } from '../scanner/commandsScanner';
 import { Skill } from '../scanner/skillsScanner';
-import { AsdlcArtifacts, SpecFile } from '../scanner/types';
+import type { AsdlcArtifacts, SpecFile } from '../scanner/types';
 
 // =============================================================================
 // Rule Types (for MCP tools)

@@ -12,11 +12,15 @@ export default defineConfig({
 		rollupOptions: {
 			external: [
 				'vscode',
-				// External Node.js built-ins
+				// External Node.js built-ins (extension runs in Node); include node: prefix so dynamic import('node:net') is not stubbed
 				'path',
 				'fs',
+				'net',
+				'node:net',
 				'os',
+				'node:os',
 				'crypto',
+				'node:crypto',
 				'stream',
 				'util',
 				'events',

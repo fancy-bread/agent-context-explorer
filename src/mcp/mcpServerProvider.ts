@@ -1,7 +1,10 @@
 // MCP Server Provider - VS Code and Cursor integration for ACE MCP Server
+// Prefer extension backend (bridge mode); fall back to ACE_PROJECT_PATHS (standalone) if backend fails.
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import type { ProjectDefinition } from '../types/project';
+import { startExtensionBackend, buildProjectList } from './extensionBackend';
 
 /** Cursor MCP API - registerServer wires the server into Cursor's AI tools (see cursor.com/docs/context/mcp-extension-api) */
 const cursorMcp = (vscode as typeof vscode & { cursor?: { mcp?: { registerServer: (c: unknown) => void; unregisterServer: (name: string) => void } } }).cursor?.mcp;
@@ -9,58 +12,91 @@ const cursorMcp = (vscode as typeof vscode & { cursor?: { mcp?: { registerServer
 /**
  * MCP Server Definition Provider for Agent Context Explorer
  *
- * - VS Code: uses vscode.lm.registerMcpServerDefinitionProvider (host discovers server).
- * - Cursor: also uses vscode.cursor.mcp.registerServer() so the AI in chat gets ACE tools
- *   without the user editing mcp.json (see https://cursor.com/docs/context/mcp).
+ * Tries to start the extension backend (bridge mode). If that fails, passes ACE_PROJECT_PATHS
+ * so the stdio server runs in standalone mode. MCP is always exposed when the provider is registered.
  */
 export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	private _onDidChangeMcpServerDefinitions = new vscode.EventEmitter<void>();
-	/** Server names registered with Cursor's API (for unregister on dispose) */
 	private cursorServerNames: string[] = [];
+	private backendPort: number | undefined;
+	private backendDispose: (() => void) | undefined;
+	/** When backend is not used, we pass this to the server for standalone mode. */
+	private fallbackEnv: Record<string, string> = {};
 
-	/**
-	 * Event that fires when MCP server definitions change
-	 */
 	readonly onDidChangeMcpServerDefinitions = this._onDidChangeMcpServerDefinitions.event;
 
-	constructor(private context: vscode.ExtensionContext) {}
+	constructor(
+		private context: vscode.ExtensionContext,
+		private getProjects: () => Promise<ProjectDefinition[]>,
+		private outputChannel?: vscode.OutputChannel
+	) {}
 
 	/**
-	 * Provide MCP server definitions
-	 *
-	 * This is called by VS Code to get the list of MCP servers that this extension provides.
-	 * Each workspace folder gets its own server instance.
+	 * Try to start the extension backend. On success returns { port }; on failure builds fallback env (ACE_PROJECT_PATHS).
+	 */
+	private async ensureBackendOrFallback(): Promise<{ port?: number; env: Record<string, string> }> {
+		if (this.backendPort !== undefined) {
+			return { port: this.backendPort, env: { ACE_EXTENSION_PORT: String(this.backendPort) } };
+		}
+		try {
+			const logLine = this.outputChannel ? (line: string) => { this.outputChannel!.appendLine(line); } : undefined;
+			const { port, dispose } = await startExtensionBackend(this.getProjects, logLine);
+			this.backendPort = port;
+			this.backendDispose = dispose;
+			this.context.subscriptions.push({ dispose: () => { this.backendDispose?.(); this.backendPort = undefined; } });
+			this.fallbackEnv = {};
+			this.outputChannel?.appendLine(`MCP: backend started (bridge mode) on port ${port}`);
+			return { port, env: { ACE_EXTENSION_PORT: String(port) } };
+		} catch (err) {
+			// Fallback: pass project list so stdio server runs in standalone mode; MCP still exposed
+			const projectList = await buildProjectList(this.getProjects, vscode.workspace.workspaceFolders);
+			this.fallbackEnv = projectList.length > 0 ? { ACE_PROJECT_PATHS: JSON.stringify(projectList) } : {};
+			this.outputChannel?.appendLine(`MCP: using standalone mode (backend failed: ${err instanceof Error ? err.message : String(err)})`);
+			return { env: this.fallbackEnv };
+		}
+	}
+
+	/**
+	 * Provide MCP server definitions.
+	 * Uses bridge mode when backend started; otherwise standalone with ACE_PROJECT_PATHS.
+	 * On any failure, returns a minimal definition so the MCP server is still exposed.
 	 */
 	async provideMcpServerDefinitions(): Promise<vscode.McpServerDefinition[]> {
-		const definitions: vscode.McpServerDefinition[] = [];
-
-		// Get the server script path from the extension
 		const serverScript = path.join(this.context.extensionPath, 'out', 'mcp', 'server.js');
-
-		// Create a server definition for each workspace folder
 		const workspaceFolders = vscode.workspace.workspaceFolders || [];
+		let envBase: Record<string, string> = {};
+		try {
+			const result = await this.ensureBackendOrFallback();
+			envBase = result.env;
+			const mode = result.port !== undefined ? 'bridge' : 'standalone';
+			this.outputChannel?.appendLine(`MCP: provideMcpServerDefinitions -> ${mode} (${workspaceFolders.length} folder(s))`);
+		} catch (e) {
+			this.outputChannel?.appendLine(`MCP: provideMcpServerDefinitions error: ${e instanceof Error ? e.message : String(e)}`);
+			envBase = {};
+		}
 
+		const definitions: vscode.McpServerDefinition[] = [];
 		for (const folder of workspaceFolders) {
+			const env: Record<string, string> = { ACE_WORKSPACE_PATH: folder.uri.fsPath, ...envBase };
 			definitions.push(
 				new vscode.McpStdioServerDefinition(
-					`ACE: ${folder.name}`,  // label
-					'node',                  // command
-					[serverScript, folder.uri.fsPath],  // args
-					{ ACE_WORKSPACE_PATH: folder.uri.fsPath },  // env
-					'1.0.0'  // version
+					`ACE: ${folder.name}`,
+					'node',
+					[serverScript, folder.uri.fsPath],
+					env,
+					'1.0.0'
 				)
 			);
 		}
 
-		// If no workspace folders, provide a generic definition that uses cwd
 		if (definitions.length === 0 && vscode.workspace.workspaceFolders === undefined) {
 			definitions.push(
 				new vscode.McpStdioServerDefinition(
-					'Agent Context Explorer',  // label
-					'node',                    // command
-					[serverScript],            // args
-					{},                        // env
-					'1.0.0'                    // version
+					'Agent Context Explorer',
+					'node',
+					[serverScript],
+					envBase,
+					'1.0.0'
 				)
 			);
 		}
@@ -102,48 +138,52 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	 * without the user editing mcp.json. No-op if not in Cursor or API unavailable.
 	 * Call once at activation and on workspace folder changes (refresh).
 	 */
-	syncCursorRegistration(): void {
+	async syncCursorRegistration(): Promise<void> {
 		if (!cursorMcp?.registerServer) {
 			return;
 		}
-		const serverScript = path.join(this.context.extensionPath, 'out', 'mcp', 'server.js');
-		const folders = vscode.workspace.workspaceFolders ?? [];
+		try {
+			const serverScript = path.join(this.context.extensionPath, 'out', 'mcp', 'server.js');
+			const folders = vscode.workspace.workspaceFolders ?? [];
+			const { env: envBase } = await this.ensureBackendOrFallback();
 
-		// Unregister previous Cursor registrations so we don't accumulate
-		for (const name of this.cursorServerNames) {
-			try {
-				cursorMcp.unregisterServer(name);
-			} catch {
-				// ignore
+			for (const name of this.cursorServerNames) {
+				try {
+					cursorMcp.unregisterServer(name);
+				} catch {
+					// ignore
+				}
 			}
-		}
-		this.cursorServerNames = [];
+			this.cursorServerNames = [];
 
-		if (folders.length === 0) {
-			// No workspace: register one server using cwd
-			cursorMcp.registerServer({
-				name: 'ace',
-				server: {
-					command: 'node',
-					args: [serverScript],
-					env: {}
-				}
-			});
-			this.cursorServerNames.push('ace');
-			return;
-		}
+			if (folders.length === 0) {
+				cursorMcp.registerServer({
+					name: 'ace',
+					server: {
+						command: 'node',
+						args: [serverScript],
+						env: envBase
+					}
+				});
+				this.cursorServerNames.push('ace');
+				return;
+			}
 
-		for (const folder of folders) {
-			const name = folders.length === 1 ? 'ace' : `ace-${folder.name}`;
-			cursorMcp.registerServer({
-				name,
-				server: {
-					command: 'node',
-					args: [serverScript, folder.uri.fsPath],
-					env: { ACE_WORKSPACE_PATH: folder.uri.fsPath }
-				}
-			});
-			this.cursorServerNames.push(name);
+			for (const folder of folders) {
+				const name = folders.length === 1 ? 'ace' : `ace-${folder.name}`;
+				const env: Record<string, string> = { ACE_WORKSPACE_PATH: folder.uri.fsPath, ...envBase };
+				cursorMcp.registerServer({
+					name,
+					server: {
+						command: 'node',
+						args: [serverScript, folder.uri.fsPath],
+						env
+					}
+				});
+				this.cursorServerNames.push(name);
+			}
+		} catch (err) {
+			console.warn('ACE MCP: syncCursorRegistration failed', err);
 		}
 	}
 
@@ -152,7 +192,7 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	 * Call this when workspaces change or server configuration updates
 	 */
 	refresh(): void {
-		this.syncCursorRegistration();
+		void this.syncCursorRegistration();
 		this._onDidChangeMcpServerDefinitions.fire();
 	}
 
@@ -178,23 +218,24 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
  * Register the MCP server provider with VS Code
  *
  * @param context Extension context
+ * @param getProjects Callback that returns current workspace + added projects (for list_projects)
+ * @param outputChannel Optional output channel for MCP tool call logging (one line per call)
  * @returns The registered provider (for potential cleanup)
  */
 export function registerMcpServerProvider(
-	context: vscode.ExtensionContext
+	context: vscode.ExtensionContext,
+	getProjects: () => Promise<ProjectDefinition[]>,
+	outputChannel?: vscode.OutputChannel
 ): McpServerProvider {
-	const provider = new McpServerProvider(context);
+	const provider = new McpServerProvider(context, getProjects, outputChannel);
 
-	// Register the provider with VS Code
-	// Note: This API requires VS Code 1.105+
 	if (typeof vscode.lm?.registerMcpServerDefinitionProvider === 'function') {
 		context.subscriptions.push(
 			vscode.lm.registerMcpServerDefinitionProvider('ace-mcp', provider)
 		);
 
-		// Cursor: register via Cursor's API so the chat AI gets ACE tools without mcp.json
-		// See https://cursor.com/docs/context/mcp-extension-api
-		provider.syncCursorRegistration();
+		// Cursor: register so the chat AI gets ACE tools; pass full project list
+		void provider.syncCursorRegistration();
 
 		// Listen for workspace folder changes and refresh
 		context.subscriptions.push(

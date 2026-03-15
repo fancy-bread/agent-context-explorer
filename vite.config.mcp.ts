@@ -14,7 +14,7 @@ export default defineConfig({
 				// Externalize Node.js built-ins (both 'x' and 'node:x' forms)
 				if (id === 'process' || id === 'node:process') return true;
 				if (id.startsWith('node:')) return true;
-				return ['path', 'fs', 'fs/promises', 'os', 'crypto', 'stream', 'util', 'events', 'buffer', 'child_process', 'url'].includes(id);
+				return ['path', 'fs', 'fs/promises', 'net', 'os', 'crypto', 'stream', 'util', 'events', 'buffer', 'child_process', 'url'].includes(id);
 			},
 			output: {
 				entryFileNames: 'server.js'
