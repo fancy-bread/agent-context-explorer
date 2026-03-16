@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.9.10",
+	"version": "0.9.11",
 	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
@@ -25,7 +25,8 @@
 		"mcp"
 	],
 	"activationEvents": [
-		"onView:aceExplorer"
+  		"onView:aceProjects",
+  		"onView:aceAgents"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -47,9 +48,13 @@
 		"views": {
 			"ace": [
 				{
-					"id": "aceExplorer",
-					"name": "ACE Workspaces",
+					"id": "aceProjects",
+					"name": "Workspaces",
 					"when": "workspaceFolderCount > 0"
+				},
+				{
+					"id": "aceAgents",
+					"name": "Agents"
 				}
 			]
 		},
@@ -89,24 +94,29 @@
 			"view/title": [
 				{
 					"command": "ace.refresh",
-					"when": "view == aceExplorer",
+					"when": "view == aceProjects",
+					"group": "navigation"
+				},
+				{
+					"command": "ace.refresh",
+					"when": "view == aceAgents",
 					"group": "navigation"
 				},
 				{
 					"command": "ace.addProject",
-					"when": "view == aceExplorer",
+					"when": "view == aceProjects",
 					"group": "navigation"
 				}
 			],
 			"view/item/context": [
 				{
 					"command": "ace.editProject",
-					"when": "view == aceExplorer && viewItem == activeProject",
+					"when": "view == aceProjects && viewItem == activeProject",
 					"group": "inline"
 				},
 				{
 					"command": "ace.removeProject",
-					"when": "view == aceExplorer && viewItem == activeProject",
+					"when": "view == aceProjects && viewItem == activeProject",
 					"group": "inline"
 				}
 			]

@@ -73,7 +73,7 @@ export interface VSCodeContext {
 	extensionType: string;     // "productivity", "language-support", "theme"
 	category: string;          // "Other", "Programming Languages", etc.
 	minVersion: string;        // "^1.74.0"
-	activation: string[];      // ["onView:aceExplorer"]
+	activation: string[];      // ["onView:aceProjects"]
 	contributes: {
 		commands: number;
 		views: number;

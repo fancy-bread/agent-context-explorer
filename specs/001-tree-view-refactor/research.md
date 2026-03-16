@@ -8,7 +8,7 @@ Resolves technical choices for implementing two sidebar views (Workspaces + Agen
 
 ## 1. Two views in the same VS Code view container
 
-**Decision**: Add a second view entry under the existing `views.ace` array in `package.json`. Use distinct view IDs (e.g. `aceExplorer` for Workspaces, `aceAgents` for Agents). Register a separate `TreeDataProvider` for the Agents view (or a single provider that branches on view ID). Use `when` clauses on commands so "Add Project" and "Refresh" show only in the Workspace view title, and "Refresh" only in the Agents view title.
+**Decision**: Add a second view entry under the existing `views.ace` array in `package.json`. Use distinct view IDs (e.g. `aceProjects` for Workspaces, `aceAgents` for Agents). Register a separate `TreeDataProvider` for the Agents view (or a single provider that branches on view ID). Use `when` clauses on commands so "Add Project" and "Refresh" show only in the Workspace view title, and "Refresh" only in the Agents view title.
 
 **Rationale**: VS Code allows multiple views in one container; each view has its own `id` and `when`. Toolbar commands are bound with `view == <viewId>`. No new view container is required; both views live under "Agent Context Explorer" in the activity bar.
 

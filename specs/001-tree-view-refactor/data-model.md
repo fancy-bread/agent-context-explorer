@@ -10,7 +10,7 @@ Entities and relationships used by the workspace and agents tree views. No new p
 
 | Entity       | Purpose |
 |-------------|---------|
-| **Workspaces view** | View id: `aceExplorer` (or keep current). Root = project list. Toolbar: Add, Refresh. |
+| **Workspaces view** | View id: `aceProjects`. Root = project list. Toolbar: Add, Refresh. |
 | **Agents view**         | View id: `aceAgents`. Root = agent roots (Cursor, Claude, Global). Toolbar: Refresh only. |
 
 Not persisted; defined in `package.json` and registered in `extension.ts`.

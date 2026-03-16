@@ -63,11 +63,11 @@ The current branch holds the *spec*; main receives it first. Implementation (cod
 
 **Independent Test**: Open sidebar; see two views (Workspaces, Agents). Workspaces root = project list (no wrapper node). Agents view exists with Refresh only in toolbar.
 
-- [ ] T002 [P] Add second view entry in `package.json`: under `contributes.views.ace` add view with `id: "aceAgents"`, `name: "Agents"` per `specs/001-tree-view-refactor/contracts/view-contributions.md`
-- [ ] T003 [P] Create `src/providers/agentsTreeProvider.ts`: class `AgentsTreeProvider` implementing `TreeDataProvider`, `getChildren(undefined)` returns empty array or placeholder nodes; constructor accepts data source for agent roots (e.g. callback or shared state)
-- [ ] T004 Refactor `src/providers/projectTreeProvider.ts`: change `getChildren(undefined)` to return project list directly (remove `workspaces-pane` and `global-pane` root nodes); this provider serves only the Workspaces view
-- [ ] T005 In `src/extension.ts`: instantiate `AgentsTreeProvider`, register second tree with `vscode.window.createTreeView('aceAgents', { treeDataProvider: agentsTreeProvider })`, add to subscriptions
-- [ ] T006 Update `package.json` view/title menus: `ace.addProject` and `ace.refresh` when `view == aceExplorer`; add second `ace.refresh` when `view == aceAgents` so Refresh shows in both views (Add only in Workspaces)
+- [x] T002 [P] Add second view entry in `package.json`: under `contributes.views.ace` add views with `id: "aceProjects"` (Workspaces) and `id: "aceAgents"` (Agents) per `specs/001-tree-view-refactor/contracts/view-contributions.md`
+- [x] T003 [P] Create `src/providers/agentsTreeProvider.ts`: class `AgentsTreeProvider` implementing `TreeDataProvider`, `getChildren(undefined)` returns empty array or placeholder nodes; constructor accepts data source for agent roots (e.g. callback or shared state)
+- [x] T004 Refactor `src/providers/projectTreeProvider.ts`: change `getChildren(undefined)` to return project list directly (remove `workspaces-pane` and `global-pane` root nodes); this provider serves only the Workspaces view
+- [x] T005 In `src/extension.ts`: instantiate `AgentsTreeProvider`, register second tree with `vscode.window.createTreeView('aceAgents', { treeDataProvider: agentsTreeProvider })`, add to subscriptions
+- [x] T006 Update `package.json` view/title menus: `ace.addProject` and `ace.refresh` when `view == aceExplorer`; add second `ace.refresh` when `view == aceAgents` so Refresh shows in both views (Add only in Workspaces)
 
 **Checkpoint**: Two views visible; Workspaces root = project list; Agents view shows placeholder/empty; toolbar correct per view.
 
@@ -107,9 +107,9 @@ The current branch holds the *spec*; main receives it first. Implementation (cod
 
 **Goal**: Add appears only in Workspaces view; Refresh works in both views and refreshes the correct data; view/item context menus (edit/remove project) only in Workspaces view.
 
-**Independent Test**: In Workspaces view toolbar: Add and Refresh. In Agents view toolbar: Refresh only. Edit/Remove project on project node only in Workspaces view.
+**Independent Test**: In Workspaces view toolbar: Add and Refresh (for `aceProjects`). In Agents view toolbar: Refresh only. Edit/Remove project on project node only in Workspaces view.
 
-- [ ] T015 [US3] Verify and fix `package.json` menus: `view/title` has `ace.addProject` only when `view == aceExplorer`; `ace.refresh` when `view == aceExplorer` or `view == aceAgents`; `view/item/context` for `ace.editProject` and `ace.removeProject` only when `view == aceExplorer && viewItem == activeProject` per `specs/001-tree-view-refactor/contracts/view-contributions.md`
+- [ ] T015 [US3] Verify and fix `package.json` menus: `view/title` has `ace.addProject` only when `view == aceProjects`; `ace.refresh` when `view == aceProjects` or `view == aceAgents`; `view/item/context` for `ace.editProject` and `ace.removeProject` only when `view == aceProjects && viewItem == activeProject` per `specs/001-tree-view-refactor/contracts/view-contributions.md`
 - [ ] T016 [US3] Ensure Refresh command in `src/extension.ts` (or command handler) refreshes workspace data when invoked from Workspaces view and agent data when invoked from Agents view (e.g. pass view id or call both providers’ refresh as needed)
 
 **Checkpoint**: Toolbar and context menus match contract; Refresh behavior correct per view.
