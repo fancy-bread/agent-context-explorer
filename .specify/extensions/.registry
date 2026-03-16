@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "jira": {
+      "version": "2.1.0",
+      "source": "local",
+      "manifest_hash": "sha256:5d5bdc26ee4af105f1734c29dde9fe0f432e9125a42314201ff04c75ca349bf9",
+      "enabled": true,
+      "registered_commands": {
+        "copilot": [
+          "speckit.jira.specstoissues",
+          "speckit.specstoissues",
+          "speckit.jira.discover-fields",
+          "speckit.jira.sync-status"
+        ],
+        "cursor": [
+          "speckit.jira.specstoissues",
+          "speckit.specstoissues",
+          "speckit.jira.discover-fields",
+          "speckit.jira.sync-status"
+        ]
+      },
+      "installed_at": "2026-03-16T00:58:57.211745+00:00"
+    }
+  }
+}
