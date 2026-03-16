@@ -1,0 +1,83 @@
+{
+  "created_at": "2026-03-12T00:00:00Z",
+  "updated_at": "2026-03-12T00:00:00Z",
+  "spec": "001-tree-view-refactor",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "epic": {
+    "key": "FB-97",
+    "summary": "Tree View (Two Views — Workspaces + Agents)",
+    "url": "https://fancybread.atlassian.net/browse/FB-97"
+  },
+  "stories": [
+    {
+      "key": "FB-98",
+      "summary": "Phase 1: Setup",
+      "url": "https://fancybread.atlassian.net/browse/FB-98",
+      "embedded_tasks": [
+        { "id": "T001", "summary": "Verify extension builds and existing tests run", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-99",
+      "summary": "Phase 2: Foundational (Two Views and Providers)",
+      "url": "https://fancybread.atlassian.net/browse/FB-99",
+      "embedded_tasks": [
+        { "id": "T002", "summary": "Add second view entry in package.json", "status": "pending" },
+        { "id": "T003", "summary": "Create agentsTreeProvider.ts", "status": "pending" },
+        { "id": "T004", "summary": "Refactor projectTreeProvider root = project list", "status": "pending" },
+        { "id": "T005", "summary": "Register Agents view in extension.ts", "status": "pending" },
+        { "id": "T006", "summary": "Update package.json view/title menus", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-102",
+      "summary": "Phase 3: User Story 1 — Workspace view content (P1 MVP)",
+      "url": "https://fancybread.atlassian.net/browse/FB-102",
+      "embedded_tasks": [
+        { "id": "T007", "summary": "Cursor: single Commands/Skills lists only", "status": "pending" },
+        { "id": "T008", "summary": "Rename Agents section to Specs + ASDLC", "status": "pending" },
+        { "id": "T009", "summary": "Speckit: constitution only, remove Open folder", "status": "pending" },
+        { "id": "T010", "summary": "Empty state when no projects", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-103",
+      "summary": "Phase 4: User Story 2 — Agents view content (P2)",
+      "url": "https://fancybread.atlassian.net/browse/FB-103",
+      "embedded_tasks": [
+        { "id": "T011", "summary": "Agent roots resolution", "status": "pending" },
+        { "id": "T012", "summary": "AgentsTreeProvider getChildren Cursor/Claude/Global", "status": "pending" },
+        { "id": "T013", "summary": "Extend scanning for ~/.claude", "status": "pending" },
+        { "id": "T014", "summary": "Refresh from Agents view refreshes agent data only", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-100",
+      "summary": "Phase 5: User Story 3 — Toolbar and view-specific behavior (P3)",
+      "url": "https://fancybread.atlassian.net/browse/FB-100",
+      "embedded_tasks": [
+        { "id": "T015", "summary": "Verify package.json menus", "status": "pending" },
+        { "id": "T016", "summary": "Refresh command refreshes correct data per view", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-101",
+      "summary": "Phase 6: Polish & Cross-Cutting",
+      "url": "https://fancybread.atlassian.net/browse/FB-101",
+      "embedded_tasks": [
+        { "id": "T017", "summary": "Update projectTreeProvider.test.ts", "status": "pending" },
+        { "id": "T018", "summary": "Update ruleLabels.test.ts", "status": "pending" },
+        { "id": "T019", "summary": "Update realRulesIntegration.test.ts", "status": "pending" },
+        { "id": "T020", "summary": "Run quickstart.md validation", "status": "pending" }
+      ]
+    }
+  ],
+  "summary": {
+    "total_stories": 6,
+    "total_embedded_tasks": 20,
+    "completed_tasks": 0,
+    "pending_tasks": 20
+  }
+}
