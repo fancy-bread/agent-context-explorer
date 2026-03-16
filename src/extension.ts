@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
+import { AgentsTreeProvider } from './providers/agentsTreeProvider';
 import { StateSectionContentProvider } from './providers/stateSectionContentProvider';
 import { RulesScanner } from './scanner/rulesScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
@@ -20,6 +21,7 @@ import { AsdlcArtifacts } from './scanner/types';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 
 let treeProvider: ProjectTreeProvider;
+let agentsTreeProvider: AgentsTreeProvider | undefined;
 let rulesScanner: RulesScanner;
 let commandsScanner: CommandsScanner;
 let skillsScanner: SkillsScanner;
@@ -65,13 +67,18 @@ export function activate(context: vscode.ExtensionContext) {
 	// Store context for deferred watcher setup
 	extensionContext = context;
 
-	// Initialize tree provider with on-demand load (no initial scan)
-	outputChannel.appendLine('Initializing tree provider...');
+	// Initialize tree providers with on-demand load (no initial scan)
+	outputChannel.appendLine('Initializing tree providers...');
 	treeProvider = new ProjectTreeProvider(new Map(), [], null, () => ensureDataLoaded());
+	agentsTreeProvider = new AgentsTreeProvider();
 
-	// Register tree data provider
-	const treeProviderRegistration = vscode.window.createTreeView('aceExplorer', {
+	// Register tree data providers
+	const workspacesTreeView = vscode.window.createTreeView('aceProjects', {
 		treeDataProvider: treeProvider
+	});
+
+	const agentsTreeView = vscode.window.createTreeView('aceAgents', {
+		treeDataProvider: agentsTreeProvider
 	});
 
 	// Register state section content provider (for read-only views)
@@ -112,7 +119,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Add subscriptions
 	context.subscriptions.push(
-		treeProviderRegistration,
+		workspacesTreeView,
+		agentsTreeView,
 		refreshCommand,
 		outputChannel
 	);

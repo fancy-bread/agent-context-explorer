@@ -65,7 +65,7 @@ class MockExtension {
 			this.treeProvider = new MockProjectTreeProvider(this.projectManager);
 
 			// Create tree view
-			this.treeView = mockVscode.window.createTreeView('aceExplorer', {
+			this.treeView = mockVscode.window.createTreeView('aceProjects', {
 				treeDataProvider: this.treeProvider
 			});
 
@@ -507,7 +507,7 @@ describe('Extension Lifecycle Tests', () => {
 				if (callCount === 1) {
 					throw new Error('Tree view creation failed');
 				}
-				return originalCreateTreeView('aceExplorer', { treeDataProvider: {} });
+				return originalCreateTreeView('aceProjects', { treeDataProvider: {} });
 			};
 
 			try {

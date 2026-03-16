@@ -175,7 +175,7 @@ Categories define tree node types and determine children resolution:
 
 ### Data Flow
 
-1. **Extension activates** (onView:aceExplorer) → `ProjectTreeProvider` instantiated with `onDemandLoad` callback; no initial scan, no file watchers
+1. **Extension activates** (onView:aceProjects) → `ProjectTreeProvider` instantiated with `onDemandLoad` callback; no initial scan, no file watchers
 2. **User opens ACE view** → `getChildren(undefined)` called → if `!isDataLoaded`, provider calls `onDemandLoad()`, returns loading item
 3. **onDemandLoad** → runs `refreshData()`; on success, `updateData()`, `setDataLoaded(true)`, `refresh()`; file watchers registered (first load only)
 4. **Provider fires change event** → VS Code calls `getChildren()` to rebuild tree
@@ -184,7 +184,7 @@ Categories define tree node types and determine children resolution:
 
 ### Lazy Scanning (FB-76)
 
-- **Activation:** `onView:aceExplorer` — extension activates only when user opens ACE sidebar view (not at startup)
+- **Activation:** `onView:aceProjects` — extension activates only when user opens ACE sidebar view (not at startup)
 - **Initial scan:** Deferred until tree view requests data (first `getChildren(undefined)` call)
 - **Loading indicator:** Tree shows "Loading..." with spinner until first scan completes
 - **File watchers:** Registered only after first successful scan (workspace + global rules, commands, skills)
@@ -306,7 +306,7 @@ skillsWatcher.onDidChange(() => refreshData());
 // src/extension.ts
 const treeDataProvider = new ProjectTreeProvider(projectData, projects, currentProject);
 
-const treeView = vscode.window.createTreeView('aceExplorer', {
+const treeView = vscode.window.createTreeView('aceProjects', {
   treeDataProvider,
   showCollapseAll: true
 });
