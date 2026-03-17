@@ -18,6 +18,10 @@ import { Command } from './scanner/commandsScanner';
 import { EMPTY_PROJECT_STATE, ProjectState } from './scanner/types';
 import { Skill } from './scanner/skillsScanner';
 import { AsdlcArtifacts } from './scanner/types';
+import { VSCodeFsAdapter } from './scanner/adapters/vscodeFsAdapter';
+import { scanAgentCommandsCore } from './scanner/core/scanCommandsCore';
+import { scanAgentSkillsCore } from './scanner/core/scanSkillsCore';
+import type { AgentRootDefinition } from './providers/agentsTreeProvider';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 
 let treeProvider: ProjectTreeProvider;
@@ -298,17 +302,114 @@ async function refreshData() {
 		treeProvider.setDataLoaded(true);
 		treeProvider.setLoading(false);
 
-		// Refresh the tree view
+		// Refresh the Workspaces tree view
 		treeProvider.refresh();
 
 		const successMessage = `Refreshed ${allProjects.length} projects (including current workspace)`;
 		outputChannel.appendLine(successMessage);
+
+		// Resolve agent roots (Cursor, Claude, Global) and populate Agents view data
+		if (agentsTreeProvider) {
+			try {
+				const agentRoots = await resolveAgentRootsWithData();
+				agentsTreeProvider.setAgentRoots(agentRoots);
+				outputChannel.appendLine(
+					`Updated Agents view roots: ${agentRoots.map(r => r.label).join(', ') || 'none'}`
+				);
+			} catch (agentError) {
+				outputChannel.appendLine(`Error resolving agent roots: ${agentError}`);
+			}
+		}
 	} catch (error) {
 		treeProvider.setLoading(false);
 		const errorMessage = `Error refreshing data: ${error}`;
 		outputChannel.appendLine(errorMessage);
 		vscode.window.showErrorMessage(`Failed to refresh data: ${error instanceof Error ? error.message : 'Unknown error'}`);
 	}
+}
+
+async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
+	const roots: AgentRootDefinition[] = [];
+	const homeDir = os.homedir();
+	const fsAdapter = new VSCodeFsAdapter();
+
+	const candidates: Array<{
+		id: string;
+		label: string;
+		dir: string;
+		icon: string;
+	}> = [
+		{
+			id: 'cursor',
+			label: 'Cursor',
+			dir: path.join(homeDir, '.cursor'),
+			icon: 'symbol-namespace'
+		},
+		{
+			id: 'claude',
+			label: 'Claude',
+			dir: path.join(homeDir, '.claude'),
+			icon: 'symbol-namespace'
+		},
+		{
+			id: 'global',
+			label: 'Global',
+			dir: path.join(homeDir, '.agents'),
+			icon: 'globe'
+		}
+	];
+
+	for (const candidate of candidates) {
+		try {
+			const uri = vscode.Uri.file(candidate.dir);
+			const stat = await vscode.workspace.fs.stat(uri);
+			if (stat.type !== vscode.FileType.Directory) {
+				continue;
+			}
+
+			// Scan commands and skills for this agent root
+			const [coreCommands, coreSkills] = await Promise.all([
+				sampleScanAgentCommands(fsAdapter, candidate.dir),
+				sampleScanAgentSkills(fsAdapter, candidate.dir)
+			]);
+
+			const commands: Command[] = coreCommands.map(c => ({
+				uri: vscode.Uri.file(c.path),
+				content: c.content,
+				fileName: c.fileName,
+				location: 'global'
+			}));
+
+			const skills: Skill[] = coreSkills.map(s => ({
+				uri: vscode.Uri.file(s.path),
+				content: s.content,
+				fileName: s.fileName,
+				location: 'global',
+				metadata: s.metadata
+			}));
+
+			roots.push({
+				id: candidate.id,
+				label: candidate.label,
+				description: candidate.dir,
+				icon: candidate.icon,
+				commands,
+				skills
+			});
+		} catch {
+			// Directory missing or not accessible; skip this root
+		}
+	}
+
+	return roots;
+}
+
+async function sampleScanAgentCommands(fs: VSCodeFsAdapter, agentRoot: string) {
+	return scanAgentCommandsCore(fs, agentRoot);
+}
+
+async function sampleScanAgentSkills(fs: VSCodeFsAdapter, agentRoot: string) {
+	return scanAgentSkillsCore(fs, agentRoot);
 }
 
 function setupFileWatcher() {

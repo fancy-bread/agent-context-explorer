@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { scanSkillsCore } from '../../../src/scanner/core/scanSkillsCore';
+import { scanSkillsCore, scanAgentSkillsCore } from '../../../src/scanner/core/scanSkillsCore';
 import type { IFileSystem } from '../../../src/scanner/core/types';
 import { FileType, type FileTypeValue } from '../../../src/scanner/core/types';
 
@@ -93,5 +93,24 @@ describe('scanner/core/scanSkillsCore', () => {
 		assert.strictEqual(out.length, 1);
 		assert.strictEqual(out[0].fileName, 'broken');
 		assert.strictEqual(out[0].content, 'Error reading file content');
+	});
+
+	it('scanAgentSkillsCore scans skills from an agent root', async () => {
+		const agentRoot = '/agents/root';
+		const skillsDir = path.join(agentRoot, 'skills');
+		const skillPath = path.join(skillsDir, 'agent-skill', 'SKILL.md');
+		const files = new Map<string, Buffer>([
+			[skillPath, Buffer.from('# Agent Skill')]
+		]);
+		const dirs = new Map<string, [string, FileTypeValue][]>([
+			[skillsDir, [['agent-skill', FileType.Directory]]]
+		]);
+		const fs = createMockFs(files, dirs);
+
+		const out = await scanAgentSkillsCore(fs, agentRoot);
+
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].fileName, 'agent-skill');
+		assert.strictEqual(out[0].location, 'global');
 	});
 });
