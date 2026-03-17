@@ -55,8 +55,9 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 					vscode.TreeItemCollapsibleState.Collapsed
 				) as ProjectTreeItem;
 				item.description = root.description;
-				// Match Cursor section icon from Workspace view
-				item.iconPath = new vscode.ThemeIcon('device-desktop');
+				// Use Cursor icon for agent-specific roots, globe for Global (~/.agents)
+				const iconId = root.id === 'global' ? 'globe' : 'device-desktop';
+				item.iconPath = new vscode.ThemeIcon(iconId);
 				item.contextValue = 'agent-root';
 				item.agentRootId = root.id;
 				return item;
