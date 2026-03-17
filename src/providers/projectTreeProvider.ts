@@ -18,6 +18,8 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 		| 'agents-md' | 'specs' | 'schemas';
 	directory?: string;
 	project?: ProjectDefinition;
+	agentRootId?: string;
+	agentSection?: 'commands' | 'skills';
 }
 
 export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {

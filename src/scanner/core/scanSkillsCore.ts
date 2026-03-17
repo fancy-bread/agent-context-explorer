@@ -20,7 +20,7 @@ export async function scanSkillsCore(
 	const projectSkillsDir = path.join(projectRoot, '.cursor', 'skills');
 	await scanSkillsInDir(fs, projectSkillsDir, 'workspace', skills);
 
-	// User/global skills
+	// User/global skills (from ~/.cursor)
 	const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
 	await scanSkillsInDir(fs, userSkillsDir, 'global', skills);
 
@@ -71,4 +71,18 @@ async function scanSkillsInDir(
 	} catch {
 		// Directory doesn't exist or can't be read
 	}
+}
+
+/**
+ * Scan skills for an agent root (e.g. ~/.cursor, ~/.claude, ~/.agents).
+ * Looks for SKILL.md in immediate subdirectories of <agentRoot>/skills.
+ */
+export async function scanAgentSkillsCore(
+	fs: IFileSystem,
+	agentRoot: string
+): Promise<CoreSkill[]> {
+	const skills: CoreSkill[] = [];
+	const skillsDir = path.join(agentRoot, 'skills');
+	await scanSkillsInDir(fs, skillsDir, 'global', skills);
+	return skills;
 }

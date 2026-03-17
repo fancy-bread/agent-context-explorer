@@ -39,11 +39,46 @@ export async function scanCommandsCore(
 		}
 	}
 
-	// User/global commands
+	// User/global commands (from ~/.cursor)
 	const userCommandsDir = path.join(userRoot, '.cursor', 'commands');
 	const userFiles = await listFilesFlat(fs, userCommandsDir, ['.md'], ['README.md']);
 
 	for (const filePath of userFiles) {
+		try {
+			const content = await fs.readFile(filePath);
+			const text = content.toString('utf8');
+			commands.push({
+				path: filePath,
+				content: text,
+				fileName: path.basename(filePath, '.md'),
+				location: 'global'
+			});
+		} catch {
+			commands.push({
+				path: filePath,
+				content: 'Error reading file content',
+				fileName: path.basename(filePath, '.md'),
+				location: 'global'
+			});
+		}
+	}
+
+	return commands;
+}
+
+/**
+ * Scan commands for an agent root (e.g. ~/.cursor, ~/.claude, ~/.agents).
+ * Looks for flat Markdown files in <agentRoot>/commands.
+ */
+export async function scanAgentCommandsCore(
+	fs: IFileSystem,
+	agentRoot: string
+): Promise<CoreCommand[]> {
+	const commands: CoreCommand[] = [];
+	const commandsDir = path.join(agentRoot, 'commands');
+	const files = await listFilesFlat(fs, commandsDir, ['.md'], ['README.md']);
+
+	for (const filePath of files) {
 		try {
 			const content = await fs.readFile(filePath);
 			const text = content.toString('utf8');

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { scanCommandsCore } from '../../../src/scanner/core/scanCommandsCore';
+import { scanCommandsCore, scanAgentCommandsCore } from '../../../src/scanner/core/scanCommandsCore';
 import type { IFileSystem, FileTypeValue } from '../../../src/scanner/core/types';
 import { FileType } from '../../../src/scanner/core/types';
 
@@ -139,6 +139,34 @@ describe('scanCommandsCore', () => {
 			assert.ok(gl);
 			assert.strictEqual(ws!.fileName, 'ws-cmd');
 			assert.strictEqual(gl!.fileName, 'gl-cmd');
+		});
+	});
+
+	describe('scanAgentCommandsCore', () => {
+		it('returns commands from an agent root commands directory', async () => {
+			const agentRoot = '/agents/root';
+			const commandsDir = path.join(agentRoot, 'commands');
+			const fs: IFileSystem = {
+				async readDirectory(dirPath: string): Promise<[string, FileTypeValue][]> {
+					const normalized = dirPath.replace(/\\/g, '/');
+					if (normalized === commandsDir) {
+						return [['agent-cmd.md', FileType.File]];
+					}
+					return [];
+				},
+				async readFile(filePath: string): Promise<Buffer> {
+					return Buffer.from(`# Agent Command\n\n${filePath}`);
+				},
+				async stat(): Promise<{ type: FileTypeValue; mtime?: number }> {
+					return { type: FileType.File };
+				}
+			};
+
+			const commands = await scanAgentCommandsCore(fs, agentRoot);
+
+			assert.strictEqual(commands.length, 1);
+			assert.strictEqual(commands[0].fileName, 'agent-cmd');
+			assert.strictEqual(commands[0].location, 'global');
 		});
 	});
 });
