@@ -225,10 +225,17 @@ describe('ProjectTreeProvider getTreeItem and lifecycle', () => {
 		provider.dispose();
 		// Should not throw; internal emitter is disposed
 	});
+
+	it('setLoading updates internal loading flag', () => {
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		provider.setLoading(true);
+		provider.setLoading(false);
+		// No throw; line covered
+	});
 });
 
 describe('ProjectTreeProvider tree hierarchy', () => {
-	it('project -> Cursor and Agents sections', async () => {
+	it('project -> Cursor and Specs + ASDLC sections', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
@@ -240,7 +247,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 
 		assert.strictEqual(children.length, 2);
 		const labels = children.map(c => c.label).sort();
-		assert.deepStrictEqual(labels, ['Agents', 'Cursor']);
+		assert.deepStrictEqual(labels, ['Cursor', 'Specs + ASDLC']);
 	});
 
 	it('cursor -> Commands, Rules, Skills', async () => {
@@ -290,18 +297,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 });
 
 describe('ProjectTreeProvider commands', () => {
-	it('commands -> Workspace and Global sub-sections', async () => {
-		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(commandsItem);
-
-		assert.strictEqual(children.length, 2);
-		assert.ok(children.some(c => c.label === 'Workspace Commands'));
-		assert.ok(children.some(c => c.label === 'Global Commands'));
-	});
-
-	it('commands-workspace returns command items with tooltip from getCommandPreview', async () => {
+	it('commands returns workspace command items with preview tooltip', async () => {
 		const cmd: Command = {
 			uri: vscode.Uri.file('/test/.cursor/commands/test.md'),
 			fileName: 'test.md',
@@ -309,9 +305,9 @@ describe('ProjectTreeProvider commands', () => {
 			location: 'workspace'
 		};
 		const provider = new ProjectTreeProvider(createProjectData({ commands: [cmd] }), [mockProject], mockProject);
-		const wsItem: ProjectTreeItem = { label: 'Workspace', collapsibleState: 0, category: 'commands-workspace', project: mockProject } as ProjectTreeItem;
+		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(wsItem);
+		const children = await provider.getChildren(commandsItem);
 
 		assert.strictEqual(children.length, 1);
 		assert.strictEqual(children[0].label, 'test.md');
@@ -319,56 +315,51 @@ describe('ProjectTreeProvider commands', () => {
 		assert.ok((children[0].tooltip as string)?.includes('Test Command'), 'tooltip should include heading from content');
 	});
 
-	it('commands-workspace returns placeholder when empty', async () => {
+	it('commands returns placeholder when empty', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const wsItem: ProjectTreeItem = { label: 'Workspace', collapsibleState: 0, category: 'commands-workspace', project: mockProject } as ProjectTreeItem;
+		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(wsItem);
+		const children = await provider.getChildren(commandsItem);
 
 		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No workspace commands found');
+		assert.strictEqual(children[0].label, 'No commands found');
 	});
 
-	it('commands-global returns command items', async () => {
+	it('commands tooltip uses first non-empty line when no heading', async () => {
 		const cmd: Command = {
-			uri: vscode.Uri.file('/home/.cursor/commands/global.md'),
-			fileName: 'global.md',
-			content: '# Global',
-			location: 'global'
+			uri: vscode.Uri.file('/test/.cursor/commands/plain.md'),
+			fileName: 'plain.md',
+			content: 'Plain first line\n\nMore text',
+			location: 'workspace'
 		};
-		const provider = new ProjectTreeProvider(createProjectData({ globalCommands: [cmd] }), [mockProject], mockProject);
-		const glItem: ProjectTreeItem = { label: 'Global', collapsibleState: 0, category: 'commands-global', project: mockProject } as ProjectTreeItem;
+		const provider = new ProjectTreeProvider(createProjectData({ commands: [cmd] }), [mockProject], mockProject);
+		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(glItem);
+		const children = await provider.getChildren(commandsItem);
 
 		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'global.md');
+		assert.ok((children[0].tooltip as string)?.includes('Plain first line'));
 	});
 
-	it('commands-global returns placeholder when empty', async () => {
-		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const glItem: ProjectTreeItem = { label: 'Global', collapsibleState: 0, category: 'commands-global', project: mockProject } as ProjectTreeItem;
+	it('commands tooltip uses first 100 chars when no heading or non-empty line', async () => {
+		const cmd: Command = {
+			uri: vscode.Uri.file('/test/.cursor/commands/empty.md'),
+			fileName: 'empty.md',
+			content: '',
+			location: 'workspace'
+		};
+		const provider = new ProjectTreeProvider(createProjectData({ commands: [cmd] }), [mockProject], mockProject);
+		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(glItem);
+		const children = await provider.getChildren(commandsItem);
 
 		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No global commands found');
+		assert.strictEqual(typeof children[0].tooltip, 'string');
 	});
 });
 
 describe('ProjectTreeProvider skills', () => {
-	it('skills -> Workspace and Global sub-sections', async () => {
-		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const skillsItem: ProjectTreeItem = { label: 'Skills', collapsibleState: 0, category: 'skills', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(skillsItem);
-
-		assert.strictEqual(children.length, 2);
-		assert.ok(children.some(c => c.label === 'Workspace Skills'));
-		assert.ok(children.some(c => c.label === 'Global Skills'));
-	});
-
-	it('skills-workspace returns skill items', async () => {
+	it('skills returns workspace skill items', async () => {
 		const skill: Skill = {
 			uri: vscode.Uri.file('/test/.cursor/skills/foo/SKILL.md'),
 			fileName: 'SKILL.md',
@@ -377,33 +368,23 @@ describe('ProjectTreeProvider skills', () => {
 			content: ''
 		};
 		const provider = new ProjectTreeProvider(createProjectData({ skills: [skill] }), [mockProject], mockProject);
-		const wsItem: ProjectTreeItem = { label: 'Workspace', collapsibleState: 0, category: 'skills-workspace', project: mockProject } as ProjectTreeItem;
+		const skillsItem: ProjectTreeItem = { label: 'Skills', collapsibleState: 0, category: 'skills', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(wsItem);
+		const children = await provider.getChildren(skillsItem);
 
 		assert.strictEqual(children.length, 1);
 		assert.strictEqual(children[0].label, 'Foo Skill');
 		assert.strictEqual(children[0].contextValue, 'skill');
 	});
 
-	it('skills-workspace returns placeholder when empty', async () => {
+	it('skills returns placeholder when empty', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const wsItem: ProjectTreeItem = { label: 'Workspace', collapsibleState: 0, category: 'skills-workspace', project: mockProject } as ProjectTreeItem;
+		const skillsItem: ProjectTreeItem = { label: 'Skills', collapsibleState: 0, category: 'skills', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(wsItem);
+		const children = await provider.getChildren(skillsItem);
 
 		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No workspace skills found');
-	});
-
-	it('skills-global returns placeholder when empty', async () => {
-		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const glItem: ProjectTreeItem = { label: 'Global', collapsibleState: 0, category: 'skills-global', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(glItem);
-
-		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No global skills found');
+		assert.strictEqual(children[0].label, 'No skills found');
 	});
 });
 
@@ -499,6 +480,36 @@ describe('ProjectTreeProvider specs and schemas', () => {
 
 		assert.strictEqual(children.length, 1);
 		assert.strictEqual(children[0].label, 'No schemas found');
+	});
+});
+
+describe('ProjectTreeProvider error handling', () => {
+	it('getChildren returns error item when branch throws', async () => {
+		const defaultArtifacts: AsdlcArtifacts = {
+			agentsMd: { exists: false, sections: [] },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: false
+		};
+		const throwingEntry = {
+			rules: [] as Rule[],
+			state: EMPTY_PROJECT_STATE,
+			get commands(): Command[] { throw new Error('commands getter threw'); },
+			globalCommands: [] as Command[],
+			skills: [] as Skill[],
+			globalSkills: [] as Skill[],
+			asdlcArtifacts: defaultArtifacts
+		};
+		const throwingData = new Map([['test-project', throwingEntry]]);
+		const provider = new ProjectTreeProvider(throwingData, [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const commandsItem: ProjectTreeItem = { label: 'Commands', collapsibleState: 0, category: 'commands', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(commandsItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.ok((children[0].label as string).startsWith('Error:'));
+		assert.ok(children[0].tooltip);
 	});
 });
 

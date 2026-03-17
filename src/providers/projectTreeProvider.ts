@@ -13,11 +13,9 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 	skillData?: Skill; // Skill data
 	stateItem?: any;
 	ruleType?: any;
-	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands' | 'commands-workspace' | 'commands-global'
-		| 'cursor' | 'agents' | 'skills' | 'skills-workspace' | 'skills-global'
+	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands'
+		| 'cursor' | 'agents' | 'skills'
 		| 'agents-md' | 'specs' | 'schemas';
-	commandLocation?: 'workspace' | 'global'; // For sub-section grouping
-	skillLocation?: 'workspace' | 'global'; // For skills sub-section grouping
 	directory?: string;
 	project?: ProjectDefinition;
 }
@@ -134,7 +132,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					return item;
 				});
 		} else if (element.category === 'projects' && element.project) {
-			// Project level: show Cursor and Agents sections
+			// Project level: show Cursor and Specs + ASDLC sections
 			const project = element.project;
 			const currentProjectData = this.projectData.get(project.id);
 
@@ -148,8 +146,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			const skillsCount = workspaceSkillsCount + globalSkillsCount;
 
 			const sections = [
-				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts' },
-				{ name: 'Agents', id: 'agents', icon: 'organization', description: 'ASDLC artifacts' }
+				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
+				{ name: 'Specs + ASDLC', id: 'agents', icon: 'organization', description: 'AGENTS.md, specs, schemas, constitution' }
 			];
 
 			const items = sections.map((section) => {
@@ -163,15 +161,11 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			return items;
 		} else if (element.category === 'cursor' && element.project) {
-			// Cursor section: show Commands, Rules, Skills, Subagents
+			// Cursor section: show workspace Commands, Rules, Skills
 			const projectData = this.projectData.get(element.project.id);
 			const rulesCount = projectData?.rules.length || 0;
-			const workspaceCommandsCount = projectData?.commands.length || 0;
-			const globalCommandsCount = projectData?.globalCommands.length || 0;
-			const commandsCount = workspaceCommandsCount + globalCommandsCount;
-			const workspaceSkillsCount = projectData?.skills.length || 0;
-			const globalSkillsCount = projectData?.globalSkills.length || 0;
-			const skillsCount = workspaceSkillsCount + globalSkillsCount;
+			const commandsCount = projectData?.commands.length || 0;
+			const skillsCount = projectData?.skills.length || 0;
 
 			const sections = [
 				{ name: 'Commands', id: 'commands', icon: 'terminal', description: `${commandsCount} commands` },
@@ -240,48 +234,13 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			return items;
 		} else if (element.category === 'commands' && element.project) {
-			// Commands section for specific project - show Workspace Commands and Global Commands sub-sections
-			const projectData = this.projectData.get(element.project.id);
-			const workspaceCommands = projectData?.commands || [];
-			const globalCommands = projectData?.globalCommands || [];
-
-			const subSections = [
-				{
-					name: 'Workspace Commands',
-					id: 'commands-workspace',
-					icon: 'folder',
-					commands: workspaceCommands,
-					location: 'workspace' as const
-				},
-				{
-					name: 'Global Commands',
-					id: 'commands-global',
-					icon: 'globe',
-					commands: globalCommands,
-					location: 'global' as const
-				}
-			];
-
-			return subSections.map((section) => {
-				const item = new vscode.TreeItem(
-					section.name,
-					vscode.TreeItemCollapsibleState.Collapsed
-				) as ProjectTreeItem;
-				item.category = section.id as 'commands-workspace' | 'commands-global';
-				item.project = element.project;
-				item.commandLocation = section.location;
-				item.description = `${section.commands.length} ${section.location} command${section.commands.length !== 1 ? 's' : ''}`;
-				item.iconPath = new vscode.ThemeIcon(section.icon);
-				return item;
-			});
-		} else if (element.category === 'commands-workspace' && element.project) {
-			// Workspace Commands sub-section
+			// Commands section for specific project - single workspace-only list
 			const projectData = this.projectData.get(element.project.id);
 			const commands = projectData?.commands || [];
 
 			if (commands.length === 0) {
 				return [{
-					label: 'No workspace commands found',
+					label: 'No commands found',
 					collapsibleState: vscode.TreeItemCollapsibleState.None,
 					description: 'Add commands to .cursor/commands directory'
 				} as ProjectTreeItem];
@@ -293,41 +252,9 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					vscode.TreeItemCollapsibleState.None
 				) as ProjectTreeItem;
 				item.commandData = cmd;
-				item.category = 'commands-workspace';
+				item.category = 'commands';
 				item.project = element.project;
-				item.tooltip = `${this.getCommandPreview(cmd.content)} (Workspace)`;
-				item.contextValue = 'command';
-				item.iconPath = new vscode.ThemeIcon('terminal');
-
-				item.command = {
-					command: 'vscode.open',
-					title: 'Open Command',
-					arguments: [cmd.uri]
-				};
-				return item;
-			});
-		} else if (element.category === 'commands-global' && element.project) {
-			// Global Commands sub-section
-			const projectData = this.projectData.get(element.project.id);
-			const commands = projectData?.globalCommands || [];
-
-			if (commands.length === 0) {
-				return [{
-					label: 'No global commands found',
-					collapsibleState: vscode.TreeItemCollapsibleState.None,
-					description: 'Add commands to ~/.cursor/commands directory'
-				} as ProjectTreeItem];
-			}
-
-			return commands.map((cmd: Command) => {
-				const item = new vscode.TreeItem(
-					cmd.fileName,
-					vscode.TreeItemCollapsibleState.None
-				) as ProjectTreeItem;
-				item.commandData = cmd;
-				item.category = 'commands-global';
-				item.project = element.project;
-				item.tooltip = `${this.getCommandPreview(cmd.content)} (Global)`;
+				item.tooltip = this.getCommandPreview(cmd.content);
 				item.contextValue = 'command';
 				item.iconPath = new vscode.ThemeIcon('terminal');
 
@@ -339,48 +266,13 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				return item;
 			});
 		} else if (element.category === 'skills' && element.project) {
-			// Skills section: show Workspace Skills and Global Skills sub-sections
-			const projectData = this.projectData.get(element.project.id);
-			const workspaceSkills = projectData?.skills || [];
-			const globalSkills = projectData?.globalSkills || [];
-
-			const subSections = [
-				{
-					name: 'Workspace Skills',
-					id: 'skills-workspace',
-					icon: 'target',
-					skills: workspaceSkills,
-					location: 'workspace' as const
-				},
-				{
-					name: 'Global Skills',
-					id: 'skills-global',
-					icon: 'globe',
-					skills: globalSkills,
-					location: 'global' as const
-				}
-			];
-
-			return subSections.map((section) => {
-				const item = new vscode.TreeItem(
-					section.name,
-					vscode.TreeItemCollapsibleState.Collapsed
-				) as ProjectTreeItem;
-				item.category = section.id as 'skills-workspace' | 'skills-global';
-				item.project = element.project;
-				item.skillLocation = section.location;
-				item.description = `${section.skills.length} ${section.location} skill${section.skills.length !== 1 ? 's' : ''}`;
-				item.iconPath = new vscode.ThemeIcon(section.icon);
-				return item;
-			});
-		} else if (element.category === 'skills-workspace' && element.project) {
-			// Workspace Skills sub-section
+			// Skills section: single workspace-only list
 			const projectData = this.projectData.get(element.project.id);
 			const skills = projectData?.skills || [];
 
 			if (skills.length === 0) {
 				return [{
-					label: 'No workspace skills found',
+					label: 'No skills found',
 					collapsibleState: vscode.TreeItemCollapsibleState.None,
 					description: 'Add skills to .cursor/skills directory'
 				} as ProjectTreeItem];
@@ -392,41 +284,9 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					vscode.TreeItemCollapsibleState.None
 				) as ProjectTreeItem;
 				item.skillData = skill;
-				item.category = 'skills-workspace';
+				item.category = 'skills';
 				item.project = element.project;
-				item.tooltip = skill.metadata?.overview || `${skill.fileName} (Workspace)`;
-				item.contextValue = 'skill';
-				item.iconPath = new vscode.ThemeIcon('play-circle');
-
-				item.command = {
-					command: 'vscode.open',
-					title: 'Open Skill',
-					arguments: [skill.uri]
-				};
-				return item;
-			});
-		} else if (element.category === 'skills-global' && element.project) {
-			// Global Skills sub-section
-			const projectData = this.projectData.get(element.project.id);
-			const skills = projectData?.globalSkills || [];
-
-			if (skills.length === 0) {
-				return [{
-					label: 'No global skills found',
-					collapsibleState: vscode.TreeItemCollapsibleState.None,
-					description: 'Add skills to ~/.cursor/skills directory'
-				} as ProjectTreeItem];
-			}
-
-			return skills.map((skill: Skill) => {
-				const item = new vscode.TreeItem(
-					skill.metadata?.title || skill.fileName,
-					vscode.TreeItemCollapsibleState.None
-				) as ProjectTreeItem;
-				item.skillData = skill;
-				item.category = 'skills-global';
-				item.project = element.project;
-				item.tooltip = skill.metadata?.overview || `${skill.fileName} (Global)`;
+				item.tooltip = skill.metadata?.overview || skill.fileName;
 				item.contextValue = 'skill';
 				item.iconPath = new vscode.ThemeIcon('play-circle');
 
@@ -548,66 +408,6 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			errorItem.tooltip = error instanceof Error ? error.stack : String(error);
 			return [errorItem];
 		}
-	}
-
-	/**
-	 * Format enhanced dependencies for display
-	 */
-	private formatEnhancedDependencies(deps: any): string[] {
-		const items: string[] = [];
-
-		// Show critical path
-		if (deps.criticalPath?.length > 0) {
-			items.push(`🔴 Critical Path: ${deps.criticalPath.join(', ')}`);
-			items.push('');
-		}
-
-		// Show by purpose
-		if (deps.byPurpose) {
-			const categories = [
-				{ key: 'parsing', label: 'Parsing' },
-				{ key: 'testing', label: 'Testing' },
-				{ key: 'build', label: 'Build' },
-				{ key: 'platform', label: 'Platform' },
-				{ key: 'code-quality', label: 'Code Quality' },
-				{ key: 'utility', label: 'Utility' },
-				{ key: 'http', label: 'HTTP' },
-				{ key: 'framework', label: 'Framework' }
-			];
-
-			for (const cat of categories) {
-				const categoryDeps = deps.byPurpose[cat.key];
-				if (categoryDeps && categoryDeps.length > 0) {
-					items.push(`${cat.label}:`);
-					for (const dep of categoryDeps) {
-						const critical = dep.critical ? ' 🔴' : '';
-						items.push(`  • ${dep.name} (${dep.version})${critical} - ${dep.purpose}`);
-					}
-					items.push('');
-				}
-			}
-		}
-
-		return items;
-	}
-
-	private groupRulesByDirectory(rules: Rule[]): Record<string, Rule[]> {
-		const groups: Record<string, Rule[]> = {};
-
-		for (const rule of rules) {
-			// Extract directory from URI path relative to workspace
-			const relativePath = vscode.workspace.asRelativePath(rule.uri);
-			const directory = relativePath.includes('/')
-				? relativePath.substring(0, relativePath.lastIndexOf('/'))
-				: '';
-
-			if (!groups[directory]) {
-				groups[directory] = [];
-			}
-			groups[directory].push(rule);
-		}
-
-		return groups;
 	}
 
 	/**
