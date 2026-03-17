@@ -55,7 +55,8 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 					vscode.TreeItemCollapsibleState.Collapsed
 				) as ProjectTreeItem;
 				item.description = root.description;
-				item.iconPath = new vscode.ThemeIcon(root.icon ?? 'organization');
+				// Match Cursor section icon from Workspace view
+				item.iconPath = new vscode.ThemeIcon('device-desktop');
 				item.contextValue = 'agent-root';
 				item.agentRootId = root.id;
 				return item;
@@ -85,7 +86,8 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 			skillsNode.contextValue = 'agent-skills';
 			skillsNode.agentRootId = root.id;
 			skillsNode.agentSection = 'skills';
-			skillsNode.iconPath = new vscode.ThemeIcon('wand');
+			// Match Skills folder icon from Workspace view
+			skillsNode.iconPath = new vscode.ThemeIcon('lightbulb');
 
 			return [commandsNode, skillsNode];
 		}
@@ -146,7 +148,8 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 				) as ProjectTreeItem;
 				item.skillData = skill;
 				item.contextValue = 'skill';
-				item.iconPath = new vscode.ThemeIcon('wand');
+				// Use play icon for individual skills, consistent with Workspace view
+				item.iconPath = new vscode.ThemeIcon('play-circle');
 				item.tooltip = skill.metadata?.overview ?? '';
 				item.command = {
 					command: 'vscode.open',
