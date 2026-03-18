@@ -4,12 +4,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
 import { AgentsTreeProvider } from './providers/agentsTreeProvider';
-import { StateSectionContentProvider } from './providers/stateSectionContentProvider';
 import { RulesScanner } from './scanner/rulesScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
 import { SkillsScanner } from './scanner/skillsScanner';
 import { AsdlcArtifactScanner } from './scanner/asdlcArtifactScanner';
-import { StateCommands } from './commands/stateCommands';
 import { ProjectCommands } from './commands/projectCommands';
 import { ProjectManager } from './services/projectManager';
 import { ProjectDefinition } from './types/project';
@@ -85,16 +83,9 @@ export function activate(context: vscode.ExtensionContext) {
 		treeDataProvider: agentsTreeProvider
 	});
 
-	// Register state section content provider (for read-only views)
-	outputChannel.appendLine('Registering state section content provider...');
-	const stateSectionContentProvider = StateSectionContentProvider.register(context);
-	outputChannel.appendLine('State section content provider registered');
-
 	// Register commands
 	outputChannel.appendLine('Registering commands...');
 	try {
-		StateCommands.registerCommands(context, stateSectionContentProvider);
-		outputChannel.appendLine('StateCommands registered');
 		ProjectCommands.registerCommands(context);
 		outputChannel.appendLine('ProjectCommands registered');
 		outputChannel.appendLine('All commands registered successfully');
