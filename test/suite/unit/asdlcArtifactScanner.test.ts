@@ -1,6 +1,8 @@
 import * as assert from 'assert';
+import * as vscode from 'vscode';
+import { AsdlcArtifactScanner } from '../../../src/scanner/asdlcArtifactScanner';
 
-// Mock VS Code API for testing
+// Mock VS Code API for testing (used by MockAsdlcArtifactScanner below)
 const mockVscode = {
 	workspace: {
 		fs: {
@@ -498,6 +500,20 @@ class MockAsdlcArtifactScanner {
 		return { exists: false, schemas: [] };
 	}
 }
+
+describe('AsdlcArtifactScanner wrapper', () => {
+	it('scanAll executes and returns AsdlcArtifacts for a workspace', async () => {
+		const workspaceRoot = vscode.Uri.file('/test/workspace');
+		const scanner = new AsdlcArtifactScanner(workspaceRoot);
+
+		const artifacts = await scanner.scanAll();
+
+		assert.ok(artifacts);
+		assert.ok('agentsMd' in artifacts);
+		assert.ok('specs' in artifacts);
+		assert.ok('schemas' in artifacts);
+	});
+});
 
 // Test Suite
 describe('ASDLC Artifact Scanner Tests', () => {

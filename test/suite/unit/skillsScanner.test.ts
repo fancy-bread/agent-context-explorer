@@ -1,5 +1,7 @@
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import { parseSKILLMetadata } from '../../../src/scanner/skillParsing';
+import { SkillsScanner } from '../../../src/scanner/skillsScanner';
 
 describe('SkillsScanner / skillParsing', () => {
 	describe('parseSKILLMetadata', () => {
@@ -118,6 +120,26 @@ guidance:
 			assert.ok(metadata!.guidance);
 			assert.strictEqual(metadata!.guidance!.role, 'developer');
 			assert.strictEqual(metadata!.guidance!.instruction, 'Do the thing');
+		});
+	});
+
+	describe('SkillsScanner wrapper', () => {
+		const workspaceRoot = vscode.Uri.file('/test/workspace');
+
+		it('scanWorkspaceSkills returns array (wrapper executes without error)', async () => {
+			const scanner = new SkillsScanner(workspaceRoot);
+
+			const skills = await scanner.scanWorkspaceSkills();
+
+			assert.ok(Array.isArray(skills));
+		});
+
+		it('scanGlobalSkills returns array (wrapper executes without error)', async () => {
+			const scanner = new SkillsScanner(workspaceRoot);
+
+			const skills = await scanner.scanGlobalSkills();
+
+			assert.ok(Array.isArray(skills));
 		});
 	});
 });
