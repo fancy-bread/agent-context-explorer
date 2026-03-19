@@ -9,6 +9,8 @@ alwaysApply: true
 Auto-generated from all feature plans. Last updated: 2026-03-15
 
 ## Active Technologies
+- TypeScript (strict) + VS Code Extension API, Mocha, NYC, ESLint, Vite bundling (002-test-coverage)
+- N/A (test and tooling changes only) (002-test-coverage)
 
 - TypeScript 5.x (strict) + VS Code Extension API, existing scanners (RulesScanner, CommandsScanner, SkillsScanner, AsdlcArtifactScanner), ProjectManager (001-tree-view-refactor)
 
@@ -28,6 +30,7 @@ npm test && npm run lint
 TypeScript 5.x (strict): Follow standard conventions
 
 ## Recent Changes
+- 002-test-coverage: Added TypeScript (strict) + VS Code Extension API, Mocha, NYC, ESLint, Vite bundling
 
 - 001-tree-view-refactor: Added TypeScript 5.x (strict) + VS Code Extension API, existing scanners (RulesScanner, CommandsScanner, SkillsScanner, AsdlcArtifactScanner), ProjectManager
 

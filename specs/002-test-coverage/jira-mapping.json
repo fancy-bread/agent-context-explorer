@@ -1,0 +1,30 @@
+{
+  "created_at": "2026-03-19T00:00:00Z",
+  "updated_at": "2026-03-19T00:00:00Z",
+  "spec": "002-test-coverage",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "epic": {
+    "key": "FB-105",
+    "summary": "Test Coverage — Complete Untested",
+    "url": "https://fancybread.atlassian.net/browse/FB-105"
+  },
+  "stories": [
+    {
+      "key": "FB-108",
+      "summary": "Story A (P1): MCP",
+      "url": "https://fancybread.atlassian.net/browse/FB-108"
+    },
+    {
+      "key": "FB-106",
+      "summary": "Story B (P2): Scanner",
+      "url": "https://fancybread.atlassian.net/browse/FB-106"
+    },
+    {
+      "key": "FB-107",
+      "summary": "Story C (P3): Commands, Extension, Services, Utils",
+      "url": "https://fancybread.atlassian.net/browse/FB-107"
+    }
+  ]
+}
