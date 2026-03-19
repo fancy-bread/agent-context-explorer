@@ -3,9 +3,11 @@ import {
 	resolveProjectKey,
 	normalizeParams,
 	buildProjectList,
+	startExtensionBackend,
 	type ProjectEntry
 } from '../../../src/mcp/extensionBackend';
 import type { ProjectDefinition } from '../../../src/types/project';
+import * as net from 'node:net';
 
 // =============================================================================
 // resolveProjectKey
@@ -141,5 +143,78 @@ describe('MCP extension backend: buildProjectList', () => {
 		const keys = list.map(p => p.projectKey);
 		assert.ok(keys.includes('ace'));
 		assert.ok(keys.includes('agency'));
+	});
+});
+
+describe('MCP extension backend: startExtensionBackend', () => {
+	it('starts server and handles list_projects requests', async () => {
+		// Ensure workspace folders exist in vscode stub
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws/one' }, name: 'One' }];
+
+		const getProjects = async (): Promise<ProjectDefinition[]> => [
+			{ id: 'p1', name: 'Proj1', path: '/ws/proj1', lastAccessed: new Date(), active: true }
+		];
+
+		const { port, dispose } = await startExtensionBackend(getProjects);
+		try {
+			const result = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					try {
+						resolve(JSON.parse(line));
+					} catch (e) {
+						reject(e);
+					}
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify({ id: 1, method: 'list_projects', params: {} }) + '\n');
+			});
+
+			assert.strictEqual(result.id, 1);
+			assert.ok(Array.isArray(result.result));
+			const keys = result.result.map((p: any) => p.projectKey);
+			assert.ok(keys.includes('one'));
+			assert.ok(keys.includes('proj1'));
+		} finally {
+			dispose();
+		}
+	});
+
+	it('returns error for invalid request shape', async () => {
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					resolve(JSON.parse(line));
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify({ id: 2, method: 'not_a_tool', params: {} }) + '\n');
+			});
+
+			assert.strictEqual(res.id, 2);
+			assert.ok(typeof res.error === 'string');
+		} finally {
+			dispose();
+		}
 	});
 });

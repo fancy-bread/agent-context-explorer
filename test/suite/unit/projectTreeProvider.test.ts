@@ -81,7 +81,7 @@ const mockProject: ProjectDefinition = {
 	lastAccessed: new Date()
 };
 
-describe('ProjectTreeProvider loading state (FB-76)', () => {
+describe('ProjectTreeProvider loading state', () => {
 	it('returns loading item when !isDataLoaded and onDemandLoad provided', async () => {
 		let onDemandLoadCalled = false;
 		const onDemandLoad = async () => {

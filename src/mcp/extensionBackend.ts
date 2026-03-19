@@ -45,17 +45,17 @@ export function resolveProjectKey(projectList: ProjectEntry[], projectKey?: stri
 		return projectList.length > 0 ? { path: projectList[0].path } : { error: 'No projects available.' };
 	}
 	const exact = projectList.find(p => p.projectKey === projectKey);
-	if (exact) return { path: exact.path };
+	if (exact) {return { path: exact.path };}
 	const lower = projectKey.toLowerCase();
 	const ci = projectList.find(p => p.projectKey.toLowerCase() === lower);
-	if (ci) return { path: ci.path };
+	if (ci) {return { path: ci.path };}
 	const keys = projectList.map(p => p.projectKey).join(', ');
 	return { error: `Unknown projectKey: ${projectKey}. Known: ${keys}.` };
 }
 
 /** Normalize tool params: MCP clients may send flat (projectKey) or nested (arguments: { projectKey, name, ... }). Exported for tests. */
 export function normalizeParams(params: Record<string, unknown>): Record<string, unknown> {
-	if (!params || typeof params !== 'object') return {};
+	if (!params || typeof params !== 'object') {return {};}
 	const o = params as Record<string, unknown>;
 	const nested = o.arguments && typeof o.arguments === 'object' ? (o.arguments as Record<string, unknown>) : {};
 	return { ...nested, ...o };
@@ -98,7 +98,7 @@ async function handleToolCall(
 			return McpTools.listRules({ projectPath });
 		case 'get_rule': {
 			const name = p?.name;
-			if (typeof name !== 'string') throw new Error('Missing name');
+			if (typeof name !== 'string') {throw new Error('Missing name');}
 			const out = await McpTools.getRule({ name, projectPath });
 			return out;
 		}
@@ -106,7 +106,7 @@ async function handleToolCall(
 			return McpTools.listCommands({ projectPath });
 		case 'get_command': {
 			const name = p?.name;
-			if (typeof name !== 'string') throw new Error('Missing name');
+			if (typeof name !== 'string') {throw new Error('Missing name');}
 			const out = await McpTools.getCommand({ name, projectPath });
 			return out;
 		}
@@ -114,7 +114,7 @@ async function handleToolCall(
 			return McpTools.listSkills({ projectPath });
 		case 'get_skill': {
 			const name = p?.name;
-			if (typeof name !== 'string') throw new Error('Missing name');
+			if (typeof name !== 'string') {throw new Error('Missing name');}
 			const out = await McpTools.getSkill({ name, projectPath });
 			return out;
 		}
@@ -151,9 +151,9 @@ interface BackendResponse {
  */
 /** Load Node net module (extension host is Node; use require so bundler keeps it external). */
 function loadNet(): typeof import('node:net') {
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
+	 
 	const mod = typeof require !== 'undefined' ? require('net') : undefined;
-	if (mod?.createServer) return mod as typeof import('node:net');
+	if (mod?.createServer) {return mod as typeof import('node:net');}
 	// Fallback for ESM-only contexts
 	throw new Error('net module not available (require("net") failed). Extension backend needs Node runtime.');
 }
@@ -166,6 +166,8 @@ export function startExtensionBackend(
 		const net = loadNet();
 		return new Promise<{ port: number; dispose: () => void }>((resolve, reject) => {
 			const server = net.createServer(async (socket) => {
+			// Prevent idle sockets from keeping the Node event loop alive (important for unit tests).
+			socket.unref?.();
 			let buffer = '';
 			socket.setEncoding('utf8');
 			socket.on('data', async (chunk) => {
@@ -173,7 +175,7 @@ export function startExtensionBackend(
 				const lines = buffer.split('\n');
 				buffer = lines.pop() ?? '';
 				for (const line of lines) {
-					if (!line.trim()) continue;
+					if (!line.trim()) {continue;}
 					try {
 						const req = JSON.parse(line) as BackendRequest;
 						if (typeof req.id !== 'number' || !req.method || !isToolMethod(req.method)) {
@@ -200,6 +202,8 @@ export function startExtensionBackend(
 		});
 
 		server.listen(0, '127.0.0.1', () => {
+			// Prevent the server itself from keeping the Node event loop alive (important for unit tests).
+			server.unref?.();
 			const addr = server.address();
 			const port = typeof addr === 'object' && addr !== null && 'port' in addr ? (addr as { port: number }).port : 0;
 			if (port <= 0) {
