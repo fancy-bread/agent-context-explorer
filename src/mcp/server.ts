@@ -145,7 +145,7 @@ interface ProjectEntry {
 
 /** Extract projectKey from tool args; clients may send flat (projectKey) or nested (arguments.projectKey) or snake_case (project_key). */
 function getProjectKeyArg(args: unknown): string | undefined {
-	if (!args || typeof args !== 'object') return undefined;
+	if (!args || typeof args !== 'object') {return undefined;}
 	const o = args as Record<string, unknown>;
 	const v = o.projectKey ?? o.project_key ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).projectKey) ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).project_key);
 	return typeof v === 'string' ? v : undefined;
@@ -384,14 +384,14 @@ function bridgeCall(port: number, method: string, params: Record<string, unknown
 		socket.on('data', (chunk) => {
 			buffer += chunk;
 			const idx = buffer.indexOf('\n');
-			if (idx === -1) return;
+			if (idx === -1) {return;}
 			const line = buffer.slice(0, idx);
 			buffer = buffer.slice(idx + 1);
 			socket.destroy();
 			try {
 				const res = JSON.parse(line) as { id: number; result?: unknown; error?: string };
-				if (res.error) reject(new Error(res.error));
-				else resolve(res.result);
+				if (res.error) {reject(new Error(res.error));}
+				else {resolve(res.result);}
 			} catch (e) {
 				reject(e);
 			}
@@ -464,7 +464,7 @@ async function main(): Promise<void> {
 	if (projectsJson) {
 		try {
 			projects = JSON.parse(projectsJson) as ProjectEntry[];
-			if (!Array.isArray(projects) || projects.length === 0) projects = undefined;
+			if (!Array.isArray(projects) || projects.length === 0) {projects = undefined;}
 		} catch {
 			// ignore
 		}
