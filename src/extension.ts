@@ -296,7 +296,7 @@ async function refreshData() {
 		// Refresh the Workspaces tree view
 		treeProvider.refresh();
 
-		const successMessage = `Refreshed ${allProjects.length} projects (including current workspace)`;
+		const successMessage = `Refreshed ${allProjects.length} resources`;
 		outputChannel.appendLine(successMessage);
 
 		// Resolve agent roots (Cursor, Claude, Global) and populate Agents view data

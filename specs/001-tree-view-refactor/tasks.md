@@ -79,10 +79,10 @@ The current branch holds the *spec*; main receives it first. Implementation (cod
 
 **Independent Test**: Add one project, expand it; Cursor has single Commands and Skills lists (no workspace/global split). Section labeled "Specs + ASDLC" contains AGENTS.md, VISION, specs, schemas. Speckit shows only constitution link. With zero projects, Workspaces view shows empty state with Add and Refresh.
 
-- [ ] T007 [US1] In `src/providers/projectTreeProvider.ts` under Cursor section: stop creating `commands-workspace`/`commands-global` and `skills-workspace`/`skills-global`; show single Commands node (children = project commands only) and single Skills node (children = project skills only) per `specs/tree-view/spec.md`
-- [ ] T008 [US1] In `src/providers/projectTreeProvider.ts`: rename project-level "Agents" section to "Specs + ASDLC" (label and any user-facing text); keep internal category as needed for routing
-- [ ] T009 [US1] In `src/providers/projectTreeProvider.ts` Speckit section: remove "Open .specify folder" tree item; show only constitution link when `asdlcArtifacts.speckit.constitutionPath` exists per `specs/001-tree-view-refactor/data-model.md`
-- [ ] T010 [US1] In `src/providers/projectTreeProvider.ts`: when there are no projects, Workspaces view root children = single "No projects" (or similar) placeholder with Add/Refresh still available (empty state)
+- [x] T007 [US1] In `src/providers/projectTreeProvider.ts` under Cursor section: stop creating `commands-workspace`/`commands-global` and `skills-workspace`/`skills-global`; show single Commands node (children = project commands only) and single Skills node (children = project skills only) per `specs/tree-view/spec.md`
+- [x] T008 [US1] In `src/providers/projectTreeProvider.ts`: rename project-level "Agents" section to "Specs + ASDLC" (label and any user-facing text); keep internal category as needed for routing
+- [x] T009 [US1] In `src/providers/projectTreeProvider.ts` Speckit section: remove "Open .specify folder" tree item; show only constitution link when `asdlcArtifacts.speckit.constitutionPath` exists per `specs/001-tree-view-refactor/data-model.md` — **Resolved by dropping Speckit from tree; no Speckit section shown.**
+- [x] T010 [US1] In `src/providers/projectTreeProvider.ts`: when there are no projects, Workspaces view root children = single "No projects" (or similar) placeholder with Add/Refresh still available (empty state)
 
 **Checkpoint**: Workspace view matches spec: Cursor local-only, Specs + ASDLC label, Speckit constitution only, empty state.
 
@@ -94,10 +94,10 @@ The current branch holds the *spec*; main receives it first. Implementation (cod
 
 **Independent Test**: With ~/.cursor or ~/.agents present, open Agents view; root shows corresponding nodes; expanding one shows Commands/Skills. Toolbar has no Add. Refresh reloads agent data.
 
-- [ ] T011 [US2] Add agent roots resolution in extension or shared module: resolve ~/.cursor, ~/.claude, ~/.agents via `os.homedir()` or `process.env.HOME`; check directory existence with `vscode.workspace.fs` (or allowlisted API); expose list of existing roots to AgentsTreeProvider per `specs/001-tree-view-refactor/research.md`
-- [ ] T012 [US2] In `src/providers/agentsTreeProvider.ts`: implement `getChildren(undefined)` to return one node per existing agent root (Cursor, Claude, Global) with correct labels; children of each root = Commands, Skills (same structure as in data-model)
-- [ ] T013 [US2] Extend scanning for agent roots: ensure ~/.claude/commands and ~/.claude/skills are scanned (extend `src/scanner/core/scanCommandsCore.ts` and `scanSkillsCore.ts` or adapter if needed); aggregate data by root and pass into AgentsTreeProvider per `specs/001-tree-view-refactor/research.md`
-- [ ] T014 [US2] In `src/extension.ts`: when Refresh is run from Agents view (or when agents view is focused), refresh only agent/global data and call `agentsTreeProvider.refresh()` so Agents view updates without rescanning workspace projects
+- [x] T011 [US2] Add agent roots resolution in extension or shared module: resolve ~/.cursor, ~/.claude, ~/.agents via `os.homedir()` or `process.env.HOME`; check directory existence with `vscode.workspace.fs` (or allowlisted API); expose list of existing roots to AgentsTreeProvider per `specs/001-tree-view-refactor/research.md`
+- [x] T012 [US2] In `src/providers/agentsTreeProvider.ts`: implement `getChildren(undefined)` to return one node per existing agent root (Cursor, Claude, Global) with correct labels; children of each root = Commands, Skills (same structure as in data-model)
+- [x] T013 [US2] Extend scanning for agent roots: ensure ~/.claude/commands and ~/.claude/skills are scanned (extend `src/scanner/core/scanCommandsCore.ts` and `scanSkillsCore.ts` or adapter if needed); aggregate data by root and pass into AgentsTreeProvider per `specs/001-tree-view-refactor/research.md`
+- [x] T014 [US2] In `src/extension.ts`: when Refresh is run from Agents view (or when agents view is focused), refresh only agent/global data and call `agentsTreeProvider.refresh()` so Agents view updates without rescanning workspace projects
 
 **Checkpoint**: Agents view shows Cursor/Claude/Global when present; Commands/Skills under each; Refresh only in toolbar; data from scanners.
 
@@ -109,8 +109,8 @@ The current branch holds the *spec*; main receives it first. Implementation (cod
 
 **Independent Test**: In Workspaces view toolbar: Add and Refresh (for `aceProjects`). In Agents view toolbar: Refresh only. Edit/Remove project on project node only in Workspaces view.
 
-- [ ] T015 [US3] Verify and fix `package.json` menus: `view/title` has `ace.addProject` only when `view == aceProjects`; `ace.refresh` when `view == aceProjects` or `view == aceAgents`; `view/item/context` for `ace.editProject` and `ace.removeProject` only when `view == aceProjects && viewItem == activeProject` per `specs/001-tree-view-refactor/contracts/view-contributions.md`
-- [ ] T016 [US3] Ensure Refresh command in `src/extension.ts` (or command handler) refreshes workspace data when invoked from Workspaces view and agent data when invoked from Agents view (e.g. pass view id or call both providers’ refresh as needed)
+- [x] T015 [US3] Verify and fix `package.json` menus: `view/title` has `ace.addProject` only when `view == aceProjects`; `ace.refresh` when `view == aceProjects` or `view == aceAgents`; `view/item/context` for `ace.editProject` and `ace.removeProject` only when `view == aceProjects && viewItem == activeProject` per `specs/001-tree-view-refactor/contracts/view-contributions.md`
+- [x] T016 [US3] Ensure Refresh command in `src/extension.ts` (or command handler) refreshes workspace data when invoked from Workspaces view and agent data when invoked from Agents view (e.g. pass view id or call both providers’ refresh as needed)
 
 **Checkpoint**: Toolbar and context menus match contract; Refresh behavior correct per view.
 
