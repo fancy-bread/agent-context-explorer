@@ -25,6 +25,11 @@
       "key": "FB-107",
       "summary": "Story C (P3): Commands, Extension, Services, Utils",
       "url": "https://fancybread.atlassian.net/browse/FB-107"
+    },
+    {
+      "key": "FB-109",
+      "summary": "Story D (P4): Line coverage gate (≥ 80% lines)",
+      "url": "https://fancybread.atlassian.net/browse/FB-109"
     }
   ]
 }

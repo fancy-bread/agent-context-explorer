@@ -95,6 +95,95 @@ describe('mcp/tools (McpTools)', () => {
 		assert.strictEqual(out, null);
 	});
 
+	it('getCommand finds by path substring match', async () => {
+		setWorkspaceFolders('/workspace');
+		const c: Command = {
+			uri: vscode.Uri.file('/workspace/.cursor/commands/foo-bar.md') as any,
+			fileName: 'foo-bar.md',
+			content: 'cmd',
+			location: 'workspace'
+		};
+		CommandsScanner.prototype.scanWorkspaceCommands = async () => [c];
+		CommandsScanner.prototype.scanGlobalCommands = async () => [];
+
+		const out = await McpTools.getCommand({ name: 'foo-bar.md', projectPath: '/workspace' });
+		assert.ok(out);
+		assert.strictEqual(out?.content, 'cmd');
+	});
+
+	it('getRule returns null when no rule matches', async () => {
+		setWorkspaceFolders('/workspace');
+		RulesScanner.prototype.scanRules = async () => [];
+
+		const out = await McpTools.getRule({ name: 'nope', projectPath: '/workspace' });
+		assert.strictEqual(out, null);
+	});
+
+	it('getRule matches by uri path substring', async () => {
+		setWorkspaceFolders('/workspace');
+		const rule: Rule = {
+			uri: vscode.Uri.file('/workspace/.cursor/rules/nested/X.mdc') as any,
+			fileName: 'X.mdc',
+			content: 'nested',
+			metadata: { description: 'D' }
+		};
+		RulesScanner.prototype.scanRules = async () => [rule];
+
+		const out = await McpTools.getRule({ name: 'nested/x', projectPath: '/workspace' });
+		assert.ok(out);
+		assert.strictEqual(out?.content, 'nested');
+	});
+
+	it('getSkill returns skill content when found', async () => {
+		setWorkspaceFolders('/workspace');
+		const s: Skill = {
+			uri: vscode.Uri.file('/workspace/.cursor/skills/foo/SKILL.md') as any,
+			fileName: 'foo',
+			content: 'skill body',
+			location: 'workspace',
+			metadata: { title: 'T', overview: 'o' }
+		};
+		SkillsScanner.prototype.scanWorkspaceSkills = async () => [s];
+		SkillsScanner.prototype.scanGlobalSkills = async () => [];
+
+		const out = await McpTools.getSkill({ name: 'foo', projectPath: '/workspace' });
+		assert.ok(out);
+		assert.strictEqual(out?.content, 'skill body');
+	});
+
+	it('getSkill matches by path substring', async () => {
+		setWorkspaceFolders('/workspace');
+		const s: Skill = {
+			uri: vscode.Uri.file('/workspace/.cursor/skills/bar/SKILL.md') as any,
+			fileName: 'bar',
+			content: 'b',
+			location: 'workspace',
+			metadata: {}
+		};
+		SkillsScanner.prototype.scanWorkspaceSkills = async () => [s];
+		SkillsScanner.prototype.scanGlobalSkills = async () => [];
+
+		const out = await McpTools.getSkill({ name: 'skills/bar', projectPath: '/workspace' });
+		assert.ok(out);
+	});
+
+	it('listSpecs returns specs from scanAll', async () => {
+		setWorkspaceFolders('/workspace');
+		AsdlcArtifactScanner.prototype.scanAll = async () => ({
+			agentsMd: { exists: true, sections: [] },
+			specs: {
+				exists: true,
+				specs: [{ path: 'specs/a/spec.md', domain: 'a', hasBlueprint: true, hasContract: false }]
+			},
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: true
+		});
+
+		const out = await McpTools.listSpecs({ projectPath: '/workspace' });
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].domain, 'a');
+	});
+
 	it('listSkills returns combined workspace + global', async () => {
 		setWorkspaceFolders('/workspace');
 		const w: Skill = {

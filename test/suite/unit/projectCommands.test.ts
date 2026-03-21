@@ -115,4 +115,100 @@ describe('ProjectCommands', () => {
 		await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
 		assert.strictEqual((await pm.getProjects()).length, 0);
 	});
+
+	it('ace.removeProject does nothing when user chooses No', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'Keep', path: '/workspace/keep' });
+
+		vscode.window.showWarningMessage = async () => 'No';
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		assert.strictEqual((await pm.getProjects()).length, 1);
+	});
+
+	it('ace.listProjects shows message when no projects', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let infoMsg = '';
+		vscode.window.showInformationMessage = (msg: string) => {
+			infoMsg = msg;
+		};
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.listProjects'] as () => Promise<void>)();
+		assert.strictEqual(infoMsg, 'No projects defined');
+	});
+
+	it('ace.editProject updates project when inputs valid', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'Old', path: '/workspace/old', description: 'd0' });
+
+		const inputs = ['NewName', 'new desc'];
+		let step = 0;
+		vscode.window.showInputBox = async (opts: { value?: string; validateInput?: (v: string) => string | null }) => {
+			if (step === 0) {
+				step++;
+				const v = inputs[0];
+				if (opts?.validateInput) {
+					const err = opts.validateInput(v);
+					if (err) {
+						return undefined;
+					}
+				}
+				return v;
+			}
+			step++;
+			return inputs[1];
+		};
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+
+		const projects = await pm.getProjects();
+		assert.strictEqual(projects[0].name, 'NewName');
+		assert.strictEqual(projects[0].description, 'new desc');
+	});
+
+	it('ace.addProject shows error when addProject throws', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		await pm.addProject({ name: 'Existing', path: '/dup/path' });
+
+		const inputs = ['Dup', '/dup/path', ''];
+		let step = 0;
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null | Promise<string | null> }) => {
+			const v = inputs[step] ?? '';
+			step++;
+			if (opts?.validateInput) {
+				const err = await Promise.resolve(opts.validateInput(v));
+				if (err) {
+					return undefined;
+				}
+			}
+			return v;
+		};
+		const origStat = vscode.__overrides.stat;
+		vscode.__overrides.stat = async () => ({ type: 2 });
+
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => {
+			errMsg = msg;
+		};
+
+		try {
+			ProjectCommands.registerCommands(ctx);
+			await (registered['ace.addProject'] as () => Promise<void>)();
+		} finally {
+			vscode.__overrides.stat = origStat;
+		}
+
+		assert.ok(errMsg.includes('Failed to add project'));
+		assert.ok(errMsg.includes('already exists'));
+	});
 });

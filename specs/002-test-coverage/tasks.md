@@ -82,17 +82,17 @@
 
 ---
 
-## Story D (P4): Line coverage gate (≥ 80% lines)
+## Story D (P4): Line coverage gate (≥ 80% lines **per file**)
 
-**Goal**: NYC **All files** **`% Lines` ≥ 80** for instrumented `src/**/*.ts` (per `.nycrc`), with **check-coverage** failing the command when below threshold.
+**Goal**: **Each** instrumented `src/**/*.ts` file (per `.nycrc` `include` / `exclude`) has **`% Lines` ≥ 80** in the NYC table, with **check-coverage** in **per-file** mode so any file below threshold fails the command.
 
 **Done when**: story AC-D1..AC-D4 in `spec.md` are satisfied.
 
 **Note**: Implementation approach (manual passes, agent-driven iterations, small PRs) is **open**.
 
-- [ ] T040 Add or extend tests until `npm run test:coverage` reports **All files** **`% Lines` ≥ 80**
-- [ ] T041 Set NYC **`check-coverage`** **`lines`** to **80** in `.nycrc` (keep statements/branches/functions at project-agreed levels or 0 until separately tightened)
-- [ ] T042 Verify `npm run test:unit` and `npm run test:coverage` both exit **0** with the gate enabled
+- [x] T040 Add or extend tests until **every** included file row shows **`% Lines` ≥ 80** (not aggregate-only)
+- [x] T041 Set NYC **`check-coverage`**, **`per-file`: true**, and **`lines`: 80** in `.nycrc` (keep statements/branches/functions at project-agreed levels or 0 until separately tightened)
+- [x] T042 Verify `npm run test:unit` and `npm run test:coverage` both exit **0** with the per-file gate enabled
 
 ---
 
