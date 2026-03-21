@@ -149,5 +149,117 @@ describe('mcp/mcpServerProvider', () => {
 			console.warn = originalWarn;
 		}
 	});
+
+	it('syncCursorRegistration registers ace when one workspace folder', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const registered: string[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: { name: string }) => {
+					registered.push(c.name);
+				},
+				unregisterServer: () => {}
+			}
+		};
+		setWorkspaceFolders([{ name: 'Repo', fsPath: '/ws/repo' }]);
+
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.deepStrictEqual(registered, ['ace']);
+	});
+
+	it('syncCursorRegistration uses ace-<folder> when multiple roots', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const registered: string[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: { name: string }) => {
+					registered.push(c.name);
+				},
+				unregisterServer: () => {}
+			}
+		};
+		setWorkspaceFolders([
+			{ name: 'A', fsPath: '/ws/a' },
+			{ name: 'B', fsPath: '/ws/b' }
+		]);
+
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.deepStrictEqual(registered.sort(), ['ace-A', 'ace-B'].sort());
+	});
+
+	it('dispose unregisters cursor servers when API present', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const unregistered: string[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: { name: string }) => {
+					void c;
+				},
+				unregisterServer: (name: string) => {
+					unregistered.push(name);
+				}
+			}
+		};
+		setWorkspaceFolders([{ name: 'R', fsPath: '/ws/r' }]);
+
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		provider.dispose();
+		assert.deepStrictEqual(unregistered, ['ace']);
+	});
+
+	it('refresh triggers sync and onDidChange', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		let fires = 0;
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: () => {},
+				unregisterServer: () => {}
+			}
+		};
+		setWorkspaceFolders([{ name: 'R', fsPath: '/ws/r' }]);
+
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		provider.onDidChangeMcpServerDefinitions(() => {
+			fires++;
+		});
+		provider.refresh();
+		assert.strictEqual(fires, 1);
+	});
+
+	it('ensureBackendOrFallback uses ACE_PROJECT_PATHS when backend start fails', async () => {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const ebPath = require.resolve('../../../src/mcp/extensionBackend');
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const eb = require(ebPath) as { startExtensionBackend: typeof import('../../../src/mcp/extensionBackend').startExtensionBackend };
+		const orig = eb.startExtensionBackend;
+		eb.startExtensionBackend = async () => {
+			throw new Error('bind failed');
+		};
+		// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+		delete require.cache[require.resolve('../../../src/mcp/mcpServerProvider')];
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const { McpServerProvider } = require('../../../src/mcp/mcpServerProvider') as typeof import('../../../src/mcp/mcpServerProvider');
+
+		try {
+			setWorkspaceFolders([{ name: 'W', fsPath: '/ws/w' }]);
+			const lines: string[] = [];
+			const provider = new McpServerProvider(
+				makeContext() as any,
+				async () => [],
+				{ appendLine: (s: string) => { lines.push(s); } } as any
+			);
+			const defs = await provider.provideMcpServerDefinitions();
+			assert.strictEqual(defs.length, 1);
+			assert.ok((defs[0] as any).env.ACE_PROJECT_PATHS);
+			assert.ok(lines.some(l => l.includes('standalone')));
+		} finally {
+			eb.startExtensionBackend = orig;
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+			delete require.cache[require.resolve('../../../src/mcp/mcpServerProvider')];
+		}
+	});
 });
 

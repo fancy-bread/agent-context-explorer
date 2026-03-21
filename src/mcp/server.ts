@@ -373,7 +373,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 // Bridge mode: forward tool calls to extension (extension owns project resolution)
 // =============================================================================
 
-function bridgeCall(port: number, method: string, params: Record<string, unknown>): Promise<unknown> {
+/** Exported for unit tests (bridge TCP client). */
+export function bridgeCall(port: number, method: string, params: Record<string, unknown>): Promise<unknown> {
 	return new Promise((resolve, reject) => {
 		const id = Math.floor(Math.random() * 1e9);
 		const socket = net.connect(port, '127.0.0.1', () => {
@@ -425,7 +426,8 @@ export function toBackendParams(args: unknown): Record<string, unknown> {
 	return {};
 }
 
-function createBridgeServer(port: number): McpServer {
+/** Exported for unit tests (bridge MCP server factory). */
+export function createBridgeServer(port: number): McpServer {
 	const server = new McpServer(
 		{ name: 'ace-mcp', version: '1.0.0' },
 		{ capabilities: { tools: {}, resources: {} } }
@@ -444,6 +446,7 @@ function createBridgeServer(port: number): McpServer {
 // Main Entry Point
 // =============================================================================
 
+/* istanbul ignore next — stdio/CLI entry; covered by packaging / manual smoke */
 async function main(): Promise<void> {
 	const extensionPort = process.env.ACE_EXTENSION_PORT;
 	if (extensionPort) {
@@ -489,6 +492,8 @@ function isMainEntrypoint(): boolean {
 }
 
 // Run the server only when executed directly (import-safe for unit tests).
+// CLI / stdio entry is integration-tested via the packaged binary; exclude from unit coverage gate.
+/* istanbul ignore next */
 if (isMainEntrypoint()) {
 	main().catch((error) => {
 		console.error('Failed to start ACE MCP Server:', error);

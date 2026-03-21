@@ -7,7 +7,14 @@ import type { ProjectDefinition } from '../types/project';
 import { startExtensionBackend, buildProjectList } from './extensionBackend';
 
 /** Cursor MCP API - registerServer wires the server into Cursor's AI tools (see cursor.com/docs/context/mcp-extension-api) */
-const cursorMcp = (vscode as typeof vscode & { cursor?: { mcp?: { registerServer: (c: unknown) => void; unregisterServer: (name: string) => void } } }).cursor?.mcp;
+function getCursorMcp():
+	| { registerServer: (c: unknown) => void; unregisterServer: (name: string) => void }
+	| undefined {
+	// Use require('vscode') so tests (and Cursor) can attach `cursor.mcp` to the same module object as runtime;
+	// `import * as vscode` may not be the identical object as require() in some bundlers/ts emit paths.
+	const v = require('vscode') as typeof vscode & { cursor?: { mcp?: { registerServer: (c: unknown) => void; unregisterServer: (name: string) => void } } };
+	return v.cursor?.mcp;
+}
 
 /**
  * MCP Server Definition Provider for Agent Context Explorer
@@ -139,6 +146,7 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	 * Call once at activation and on workspace folder changes (refresh).
 	 */
 	async syncCursorRegistration(): Promise<void> {
+		const cursorMcp = getCursorMcp();
 		if (!cursorMcp?.registerServer) {
 			return;
 		}
@@ -200,6 +208,7 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	 * Dispose of the provider
 	 */
 	dispose(): void {
+		const cursorMcp = getCursorMcp();
 		if (cursorMcp?.unregisterServer) {
 			for (const name of this.cursorServerNames) {
 				try {

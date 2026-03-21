@@ -1,5 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
+import type { CoreSkill } from '../../../src/scanner/core/types';
+import * as scanSkillsCoreMod from '../../../src/scanner/core/scanSkillsCore';
 import { parseSKILLMetadata } from '../../../src/scanner/skillParsing';
 import { SkillsScanner } from '../../../src/scanner/skillsScanner';
 
@@ -125,6 +127,12 @@ guidance:
 
 	describe('SkillsScanner wrapper', () => {
 		const workspaceRoot = vscode.Uri.file('/test/workspace');
+		const mod = scanSkillsCoreMod as unknown as { scanSkillsCore: typeof scanSkillsCoreMod.scanSkillsCore };
+		const origScan = mod.scanSkillsCore;
+
+		afterEach(() => {
+			mod.scanSkillsCore = origScan;
+		});
 
 		it('scanWorkspaceSkills returns array (wrapper executes without error)', async () => {
 			const scanner = new SkillsScanner(workspaceRoot);
@@ -140,6 +148,44 @@ guidance:
 			const skills = await scanner.scanGlobalSkills();
 
 			assert.ok(Array.isArray(skills));
+		});
+
+		it('maps workspace and global skills from core results', async () => {
+			const coreRows: CoreSkill[] = [
+				{
+					path: '/test/workspace/.cursor/skills/ws-skill/SKILL.md',
+					content: 'body',
+					fileName: 'ws-skill',
+					location: 'workspace',
+					metadata: { title: 'WS', overview: 'o' }
+				},
+				{
+					path: '/home/.cursor/skills/glob-skill/SKILL.md',
+					content: 'g',
+					fileName: 'glob-skill',
+					location: 'global',
+					metadata: undefined
+				}
+			];
+			mod.scanSkillsCore = async () => coreRows;
+			const scanner = new SkillsScanner(workspaceRoot);
+			const ws = await scanner.scanWorkspaceSkills();
+			assert.strictEqual(ws.length, 1);
+			assert.strictEqual(ws[0].fileName, 'ws-skill');
+			assert.strictEqual(ws[0].location, 'workspace');
+			const gl = await scanner.scanGlobalSkills();
+			assert.strictEqual(gl.length, 1);
+			assert.strictEqual(gl[0].fileName, 'glob-skill');
+			assert.strictEqual(gl[0].location, 'global');
+		});
+
+		it('returns empty array when scanSkillsCore throws', async () => {
+			mod.scanSkillsCore = async () => {
+				throw new Error('fs error');
+			};
+			const scanner = new SkillsScanner(workspaceRoot);
+			assert.deepStrictEqual(await scanner.scanWorkspaceSkills(), []);
+			assert.deepStrictEqual(await scanner.scanGlobalSkills(), []);
 		});
 	});
 });

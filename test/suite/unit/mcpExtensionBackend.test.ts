@@ -1,4 +1,5 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import {
 	resolveProjectKey,
 	normalizeParams,
@@ -212,6 +213,106 @@ describe('MCP extension backend: startExtensionBackend', () => {
 			});
 
 			assert.strictEqual(res.id, 2);
+			assert.ok(typeof res.error === 'string');
+		} finally {
+			dispose();
+		}
+	});
+
+	it('handles list_rules and get_project_context with logLine', async () => {
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: process.cwd() }, name: 'repo' }];
+
+		const logs: string[] = [];
+		const { port, dispose } = await startExtensionBackend(async () => [], (line) => { logs.push(line); });
+		try {
+			const send = (payload: object) => new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					try {
+						resolve(JSON.parse(line));
+					} catch (e) {
+						reject(e);
+					}
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify(payload) + '\n');
+			});
+
+			const r1 = await send({ id: 10, method: 'list_rules', params: {} });
+			assert.strictEqual(r1.id, 10);
+			assert.ok(Array.isArray(r1.result));
+			assert.ok(logs.some(l => l.includes('list_rules')));
+
+			const r2 = await send({ id: 11, method: 'get_project_context', params: { project_key: path.basename(process.cwd()) } });
+			assert.strictEqual(r2.id, 11);
+			assert.ok(r2.result && typeof (r2.result as any).projectPath === 'string');
+		} finally {
+			dispose();
+		}
+	});
+
+	it('returns error when get_rule missing name', async () => {
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws/one' }, name: 'One' }];
+
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					resolve(JSON.parse(line));
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify({ id: 20, method: 'get_rule', params: {} }) + '\n');
+			});
+			assert.strictEqual(res.id, 20);
+			assert.ok(typeof res.error === 'string');
+			assert.ok(res.error.includes('Missing name'));
+		} finally {
+			dispose();
+		}
+	});
+
+	it('returns error with id -1 for invalid JSON line', async () => {
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					resolve(JSON.parse(line));
+				});
+				socket.on('error', reject);
+				socket.write('not-json-at-all\n');
+			});
+			assert.strictEqual(res.id, -1);
 			assert.ok(typeof res.error === 'string');
 		} finally {
 			dispose();
