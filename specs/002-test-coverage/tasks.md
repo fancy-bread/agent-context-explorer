@@ -56,9 +56,9 @@
 
 **Done when**: story AC-B1..AC-B3 in `spec.md` are satisfied.
 
-- [ ] T020 Add/adjust unit tests so each scoped scanner file is imported and exercised by at least one test
-- [ ] T021 Prefer VS Code stub overrides / adapters over direct disk scanning outside fixtures
-- [ ] T022 Run `npm run test:coverage` and confirm each scoped scanner file shows non-zero coverage in the NYC table
+- [x] T020 Add/adjust unit tests so each scoped scanner file is imported and exercised by at least one test
+- [x] T021 Prefer VS Code stub overrides / adapters over direct disk scanning outside fixtures
+- [x] T022 Run `npm run test:coverage` and confirm each scoped scanner file shows non-zero coverage in the NYC table
 
 ---
 
