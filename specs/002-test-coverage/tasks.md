@@ -74,9 +74,11 @@
 
 **Done when**: story AC-C1..AC-C2 in `spec.md` are satisfied.
 
-- [ ] T030 Add/adjust unit tests so each scoped runtime `.ts` file is imported and exercised by at least one test
-- [ ] T031 Document/confirm the explicit exception for `src/types/vscode-cursor.d.ts` (type-only) in the story notes / PR description
-- [ ] T032 Run `npm run test:coverage` and confirm each scoped runtime `.ts` file shows non-zero coverage in the NYC table
+- [x] T030 Add/adjust unit tests so each scoped runtime `.ts` file is imported and exercised by at least one test
+- [x] T031 Document/confirm the explicit exception for `src/types/vscode-cursor.d.ts` (type-only) in the story notes / PR description
+- [x] T032 Run `npm run test:coverage` and confirm each scoped runtime `.ts` file shows non-zero coverage in the NYC table
+
+**T031 (vscode-cursor.d.ts)**: Module augmentation only — no executable lines; NYC excludes `**/*.d.ts` in `.nycrc`. Non-zero coverage applies to scoped **runtime** `.ts` files per AC-C2.
 
 ---
 
