@@ -31,5 +31,5 @@
 
 ## Notes
 
-- This spec intentionally frames “coverage” as a quality capability. Implementation details (specific tools, scripts, thresholds, and CI wiring) belong in planning and tasks.
+- This spec intentionally frames “coverage” as a quality capability. **Story D (P4)** names a concrete **80% aggregate line** minimum and enforcement via NYC; other implementation details (agent workflows, iteration style) belong in planning/tasks/process.
 

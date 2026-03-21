@@ -10,16 +10,18 @@
 ### Session 2026-03-19
 
 - Primary scope → **Test implementation only** (use the known list as input; no new audit tooling required in this epic)
+- **Story D (P4)** → **Aggregate line coverage** for instrumented `src/**/*.ts` (per project NYC config) MUST reach **≥ 80%** with enforcement via check-coverage. *How* contributors or agents close the gap (iterative tests, refactors, documented exclusions) is **not specified** in the spec.
 
 ## Epic Summary
 
-This epic is about **completing test coverage for the known untested set** of source files that were not imported by any test at the time of the audit.
+This epic is about **completing test coverage for the known untested set** of source files that were not imported by any test at the time of the audit, and **raising overall unit-test line coverage** to a sustained minimum.
 
-Work is intentionally split into **3 small stories** grouped by subsystem:
+Work is split into **4 stories**:
 
-- **Story A (MCP)**: cover MCP layer files (schemas/tools/server glue)
-- **Story B (Scanner)**: cover scanner core + Node FS adapter code paths
-- **Story C (Commands, Extension, Services, Utils)**: cover extension entrypoints, commands, services, and utilities
+- **Story A (P1)**: MCP — cover MCP layer files (schemas/tools/server glue)
+- **Story B (P2)**: Scanner — cover scanner core + Node FS adapter code paths
+- **Story C (P3)**: Commands, Extension, Services, Utils — cover extension entrypoints, commands, services, and utilities
+- **Story D (P4)**: **Line coverage gate** — **≥ 80% lines** on NYC aggregate **All files** for instrumented `src/**/*.ts` after `npm run test:coverage`; enforcement wired so regressions fail the check
 
 ### Known Gap File List (authoritative scope)
 
@@ -85,6 +87,19 @@ As a maintainer, I want core non-scanner/non-MCP entrypoints and utilities to be
 - **AC-C1**: `npm run test:unit` passes.
 - **AC-C2**: `npm run test:coverage` completes (no hang) and shows **non-zero coverage** for each scoped file **except** `src/types/vscode-cursor.d.ts` (see exclusions).
 
+### Story D — Line coverage gate (Priority: P4)
+
+As a maintainer, I want **aggregate line coverage** for the unit-instrumented source tree to stay at or above **80%** so that new and existing code does not silently erode test quality.
+
+**Scope**: All `src/**/*.ts` files included by the project’s NYC configuration (excluding generated/type-only paths that config already excludes).
+
+**Acceptance Criteria**:
+
+- **AC-D1**: `npm run test:unit` passes.
+- **AC-D2**: `npm run test:coverage` completes (no hang) and the NYC **All files** row reports **`% Lines` ≥ 80**.
+- **AC-D3**: NYC **check-coverage** (or equivalent) is set so that **line** coverage below **80%** causes a **non-zero exit** from the coverage command (regressions fail locally/CI).
+- **AC-D4**: Any intentional exclusion from the gate (if allowed by project policy) MUST be documented with rationale; default is **no** file-specific carve-outs beyond existing `.nycrc` excludes.
+
 ## Edge Cases
 
 - **Type-only files**: `.d.ts` may be excluded from “must have non-zero coverage” because it is not runtime JS.
@@ -95,14 +110,16 @@ As a maintainer, I want core non-scanner/non-MCP entrypoints and utilities to be
 
 ### Functional Requirements
 
-- **FR-001**: This epic MUST be delivered as 3 stories: **MCP**, **Scanner**, **Commands, Extension, Services, Utils** (aligned to the file list above).
-- **FR-002**: Each story MUST add/adjust tests such that each in-scope `.ts` file is imported and exercised by at least one test (resulting in non-zero NYC coverage).
+- **FR-001**: This epic MUST be delivered as **4 stories**: **MCP**, **Scanner**, **Commands, Extension, Services, Utils**, and **Line coverage gate (P4)** (aligned to the file list above for A–C).
+- **FR-002**: Stories A–C MUST add/adjust tests such that each in-scope `.ts` file is imported and exercised by at least one test (resulting in non-zero NYC coverage), subject to **FR-004**.
 - **FR-003**: Test runs MUST NOT hang: `npm run test:coverage` must complete reliably.
-- **FR-004**: `src/types/vscode-cursor.d.ts` MAY be excluded from coverage requirements and should be documented as an explicit exception.
+- **FR-004**: `src/types/vscode-cursor.d.ts` MAY be excluded from per-file “non-zero” expectations in A–C and should be documented as an explicit exception where relevant.
+- **FR-005** (P4): Aggregate **line** coverage for NYC-instrumented `src/**/*.ts` MUST be **≥ 80%** after `npm run test:coverage`, and the project MUST enforce that minimum via NYC **check-coverage** (or equivalent) so drops fail the command.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: After each story lands, the NYC summary shows **non-zero coverage** for each in-scope runtime `.ts` file for that story.
+- **SC-001**: After stories A–C land, the NYC summary shows **non-zero coverage** for each in-scope runtime `.ts` file for each story (subject to **FR-004**).
 - **SC-002**: `npm run test:coverage` completes without hanging.
+- **SC-003** (P4): NYC **All files** **`% Lines` ≥ 80** with check-coverage enabled for **lines** at **80**; `npm run test:coverage` exits **0** only when the gate is satisfied.

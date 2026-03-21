@@ -18,7 +18,7 @@ This feature is primarily about test work and quality gating. It introduces no r
 
 ### Coverage Gate
 
-**Represents**: The definition of “good enough” coverage expectations and how they are applied incrementally.  
+**Represents**: The definition of “good enough” coverage expectations and how they are applied incrementally — including **Story D (P4)**: **≥ 80%** aggregate **`% Lines`** on NYC **All files** for instrumented `src/**/*.ts`, with **check-coverage** enforcement.  
 **Identity**: Spec version + gate rules.  
 **Lifecycle**: Evolving (living spec), updated when team policy changes.
 

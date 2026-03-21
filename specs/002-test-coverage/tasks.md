@@ -3,7 +3,7 @@
 **Input**: Design documents from `specs/002-test-coverage/`  
 **Prerequisites**: `plan.md` (required), `spec.md` (required), `research.md`, `contracts/`, `quickstart.md`
 
-**Organization**: Tasks grouped into 3 stories (MCP / Scanner / Commands+Extension+Services+Utils). Each story is an independently shippable slice.
+**Organization**: Tasks grouped into **4 stories** (MCP / Scanner / Commands+Extension+Services+Utils / **P4 line gate**). Each story is an independently shippable slice where dependencies allow.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -80,12 +80,28 @@
 
 ---
 
+## Story D (P4): Line coverage gate (≥ 80% lines)
+
+**Goal**: NYC **All files** **`% Lines` ≥ 80** for instrumented `src/**/*.ts` (per `.nycrc`), with **check-coverage** failing the command when below threshold.
+
+**Done when**: story AC-D1..AC-D4 in `spec.md` are satisfied.
+
+**Note**: Implementation approach (manual passes, agent-driven iterations, small PRs) is **open**.
+
+- [ ] T040 Add or extend tests until `npm run test:coverage` reports **All files** **`% Lines` ≥ 80**
+- [ ] T041 Set NYC **`check-coverage`** **`lines`** to **80** in `.nycrc` (keep statements/branches/functions at project-agreed levels or 0 until separately tightened)
+- [ ] T042 Verify `npm run test:unit` and `npm run test:coverage` both exit **0** with the gate enabled
+
+---
+
 ## Dependencies & Execution Order
 
 - Story A depends on T001–T002 (baseline).
 - Stories B and C depend on T001–T002 (baseline) but not on each other.
+- **Story D** depends on T001–T002; **recommended after A–C** to avoid thrashing the gate while gap files are still at 0% lines (may overlap once most of `src/**` is reasonably covered).
 
 ## Parallel Opportunities
 
 - Story B and Story C can be implemented in parallel once baseline is confirmed.
+- Story D can overlap late-stage B/C if aggregate coverage is already near 80%.
 
