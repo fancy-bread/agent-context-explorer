@@ -5,7 +5,7 @@
 
 ## Summary
 
-Fill in test coverage for the known set of `src/**` files that were not imported by any test at the time of the audit. Deliver as 3 stories grouped by subsystem (MCP / Scanner / Commands+Extension+Services+Utils), each independently verifiable by `npm run test:unit` + `npm run test:coverage` with non-zero per-file coverage for the scoped runtime `.ts` files.
+Fill in test coverage for the known set of `src/**` files that were not imported by any test at the time of the audit. Deliver as **4 stories**: three subsystem slices (MCP / Scanner / Commands+Extension+Services+Utils) with **non-zero** per-file line coverage for declared targets, plus **Story D (P4)**: **≥ 80% aggregate `% Lines`** on NYC **All files** for instrumented `src/**/*.ts`, with NYC **check-coverage** enforcing the line floor. *How* agents or humans iterate tests to reach 80% is not prescribed by this plan.
 
 ## Technical Context
 
@@ -20,7 +20,7 @@ Fill in test coverage for the known set of `src/**` files that were not imported
 - No new dependencies unless strictly necessary (prefer existing tooling)
 - Avoid flaky tests and “hanging” test runs (open handles)
 - Maintain viewer-only philosophy (no behavior changes beyond testing/tooling)
-**Scale/Scope**: Fixed known-gap list in `.plans/untested.txt`; address via 3 small stories scoped by subsystem
+**Scale/Scope**: Fixed known-gap list in `.plans/untested.txt` (stories A–C); **P4** applies to **full** instrumented `src/**` per `.nycrc` (aggregate line gate at 80%)
 
 ## Constitution Check
 
@@ -99,15 +99,15 @@ This feature introduces no persistent runtime data model. The “entities” are
 
 ### Contracts
 
-No public API contracts change. For this XS epic, the “contract” is the **story acceptance criteria** in `spec.md` (non-zero per-file coverage + no hang).
+No public API contracts change. The “contract” is the **story acceptance criteria** in `spec.md`: stories A–C = non-zero per-file coverage + no hang; **story D** = **≥ 80% lines** aggregate + enforced **check-coverage**. See [contracts/coverage-pbi.md](./contracts/coverage-pbi.md).
 
 **Output**: `contracts/coverage-pbi.md`
 
 ### Quickstart
 
-Use the existing project test documentation as the quickstart source of truth (`test/README.md`). This epic’s verification is simply the two commands below plus checking scoped file rows in NYC output:
+Use the existing project test documentation as the quickstart source of truth (`test/README.md`). Verification:
 
 - `npm run test:unit`
-- `npm run test:coverage`
+- `npm run test:coverage` — stories A–C: confirm target rows in the text report; **story D**: confirm **All files** `% Lines` ≥ **80** and command exits **0** with check-coverage enabled.
 
-**Output**: N/A (existing docs)
+**Output**: [quickstart.md](./quickstart.md)

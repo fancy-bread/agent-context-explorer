@@ -27,6 +27,16 @@
 
 **Rationale**: This prevents “boil the ocean” changes and keeps review manageable.
 
+## Decision: Aggregate line floor (P4) at 80%
+
+**Decision**: After gap-fill stories, the repo adopts a **minimum 80%** **line** coverage target on NYC **All files** for instrumented `src/**/*.ts`, enforced via NYC **check-coverage** (`lines`: 80 in `.nycrc`).
+
+**Rationale**: A single aggregate gate is easy to verify in CI and local runs; per-file non-zero rules (stories A–C) remain the backlog driver for thin files.
+
+**Alternatives considered**:
+- Higher threshold (e.g. 90%): may be unrealistic before refactors; can be revisited after sustained 80%.
+- Per-directory thresholds only: more precise but heavier to maintain; optional follow-up.
+
 ## Decision: Avoid hanging test runs by design
 
 **Decision**: When tests start servers/watchers/sockets, ensure they do not keep the Node event loop alive after tests complete.
