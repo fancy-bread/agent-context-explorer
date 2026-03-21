@@ -38,9 +38,9 @@
 
 **Done when**: story AC-A1..AC-A3 in `spec.md` are satisfied.
 
-- [ ] T010 Add/adjust unit tests so each scoped MCP file is imported and exercised by at least one test
-- [ ] T011 Ensure any server/socket behavior does not hang coverage runs (dispose/unref as needed)
-- [ ] T012 Run `npm run test:coverage` and confirm each scoped MCP file shows non-zero coverage in the NYC table
+- [x] T010 Add/adjust unit tests so each scoped MCP file is imported and exercised by at least one test
+- [x] T011 Ensure any server/socket behavior does not hang coverage runs (dispose/unref as needed)
+- [x] T012 Run `npm run test:coverage` and confirm each scoped MCP file shows non-zero coverage in the NYC table
 
 ---
 

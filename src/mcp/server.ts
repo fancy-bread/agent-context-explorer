@@ -45,7 +45,7 @@ interface SkillInfo {
 	location: 'workspace' | 'global';
 }
 
-function coreRuleToRuleInfo(r: { fileName: string; metadata: { description: string; globs?: string[]; alwaysApply?: boolean }; path: string }): RuleInfo {
+export function coreRuleToRuleInfo(r: { fileName: string; metadata: { description: string; globs?: string[]; alwaysApply?: boolean }; path: string }): RuleInfo {
 	const type = r.metadata.alwaysApply ? 'always' : (r.metadata.globs && r.metadata.globs.length > 0) ? 'glob' : 'manual';
 	return {
 		name: r.fileName.replace(/\.(mdc|md)$/, ''),
@@ -56,7 +56,7 @@ function coreRuleToRuleInfo(r: { fileName: string; metadata: { description: stri
 	};
 }
 
-function coreCommandToCommandInfo(c: { fileName: string; content: string; path: string; location: 'workspace' | 'global' }): CommandInfo {
+export function coreCommandToCommandInfo(c: { fileName: string; content: string; path: string; location: 'workspace' | 'global' }): CommandInfo {
 	let description = '';
 	const overviewMatch = c.content.match(/## Overview\s*\n+([^\n#]+)/);
 	if (overviewMatch) {
@@ -79,7 +79,7 @@ function coreCommandToCommandInfo(c: { fileName: string; content: string; path: 
 	};
 }
 
-function coreSkillToSkillInfo(s: { fileName: string; metadata?: { title?: string; overview?: string }; path: string; location: 'workspace' | 'global' }): SkillInfo {
+export function coreSkillToSkillInfo(s: { fileName: string; metadata?: { title?: string; overview?: string }; path: string; location: 'workspace' | 'global' }): SkillInfo {
 	return {
 		name: s.fileName,
 		title: s.metadata?.title || s.fileName,
@@ -144,7 +144,7 @@ interface ProjectEntry {
 }
 
 /** Extract projectKey from tool args; clients may send flat (projectKey) or nested (arguments.projectKey) or snake_case (project_key). */
-function getProjectKeyArg(args: unknown): string | undefined {
+export function getProjectKeyArg(args: unknown): string | undefined {
 	if (!args || typeof args !== 'object') {return undefined;}
 	const o = args as Record<string, unknown>;
 	const v = o.projectKey ?? o.project_key ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).projectKey) ?? (o.arguments && typeof o.arguments === 'object' && (o.arguments as Record<string, unknown>).project_key);
@@ -156,7 +156,7 @@ function getProjectKeyArg(args: unknown): string | undefined {
  * @param workspacePath - Primary workspace (used when ACE_PROJECT_PATHS not set)
  * @param projects - When set (from ACE_PROJECT_PATHS), list_projects and resolve use this list
  */
-function createServer(workspacePath: string, projects?: ProjectEntry[]): McpServer {
+export function createServer(workspacePath: string, projects?: ProjectEntry[]): McpServer {
 	const server = new McpServer(
 		{
 			name: 'ace-mcp',
@@ -418,7 +418,7 @@ const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<str
 ];
 
 /** Ensure params for backend: SDK passes validated args; coerce to flat object. */
-function toBackendParams(args: unknown): Record<string, unknown> {
+export function toBackendParams(args: unknown): Record<string, unknown> {
 	if (args && typeof args === 'object' && !Array.isArray(args)) {
 		return args as Record<string, unknown>;
 	}
@@ -483,8 +483,15 @@ async function main(): Promise<void> {
 	console.error(`ACE MCP Server started (${projectCount} project(s)): ${primaryPath}`);
 }
 
-// Run the server
-main().catch((error) => {
-	console.error('Failed to start ACE MCP Server:', error);
-	process.exit(1);
-});
+function isMainEntrypoint(): boolean {
+	// Import-safe guard for both CJS (tests) and bundled runtime.
+	return typeof require !== 'undefined' && typeof module !== 'undefined' && require.main === module;
+}
+
+// Run the server only when executed directly (import-safe for unit tests).
+if (isMainEntrypoint()) {
+	main().catch((error) => {
+		console.error('Failed to start ACE MCP Server:', error);
+		process.exit(1);
+	});
+}
