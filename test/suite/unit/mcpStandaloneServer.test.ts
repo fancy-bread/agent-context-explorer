@@ -2,7 +2,8 @@ import * as assert from 'assert';
 import { createRequire } from 'module';
 
 describe('mcp/server (standalone entrypoint helpers)', () => {
-	const require = createRequire(import.meta.url);
+	// CommonJS emit (test/tsconfig.json): use __filename, not import.meta.url
+	const require = createRequire(__filename);
 	const {
 		coreCommandToCommandInfo,
 		coreRuleToRuleInfo,
