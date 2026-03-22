@@ -12,6 +12,10 @@
 - **Terminology & living specs (proactive)**: Canonical terms and cross-spec alignment requirements were added under **Terminology** and **FR-007–FR-008** to resolve ambiguity between **Agents view**, **`AGENTS.md`**, and **agent definition files**, and to require coordinated updates to **tree-view**, **scanners**, **providers**, and **MCP** living specifications in the same delivery.
 - **MCP scope (disjunctive requirement)**: Rather than leaving MCP indeterminate, **FR-008** requires either new MCP tool surface for agent definitions **or** an explicit documented deferral in the MCP living spec—both satisfy the vertical slice alignment goal.
 
+### Session 2026-03-12 (UI polish)
+
+- **Workspaces → Cursor** subsection label: **Agents** (folder listing agent definition files). Sibling nodes under **Cursor** are ordered **alphabetically** by label (**Agents**, **Commands**, **Rules**, **Skills**).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See agent definitions per project (Priority: P1)
@@ -24,9 +28,9 @@ As a developer using ACE, I want **agent definition files** for each workspace p
 
 **Acceptance Scenarios**:
 
-1. **Given** a project whose workspace contains at least one agent definition file in a **supported location**, **When** I expand that project’s **Workspaces** tree to the section that holds Cursor artifacts, **Then** I see a dedicated grouping labeled **Agent definitions** (see Terminology) listing each file.
+1. **Given** a project whose workspace contains at least one agent definition file in a **supported location**, **When** I expand that project’s **Workspaces** tree to the section that holds Cursor artifacts, **Then** I see a dedicated grouping labeled **Agents** (see Terminology) listing each file.
 2. **Given** a listed agent definition file, **When** I activate it (e.g. click), **Then** the file opens in the editor the same way other ACE tree leaves open files (ACE does not mutate artifacts from the tree).
-3. **Given** a project with **no** agent definition files in supported locations, **When** I view the Cursor section, **Then** the **Agent definitions** subsection is absent **or** shows an explicit empty state—never misleading counts or errors.
+3. **Given** a project with **no** agent definition files in supported locations, **When** I view the Cursor section, **Then** the **Agents** subsection is absent **or** shows an explicit empty state—never misleading counts or errors.
 
 ---
 
@@ -36,12 +40,12 @@ As a developer, I want **the same class of agent definition files** to appear un
 
 **Why this priority**: The **Agents view** is where cross-workspace and global context lives; parity with Workspaces avoids two mental models.
 
-**Independent Test**: Configure at least one agent root that contains agent definition files; expand that root; an **Agent definitions** subsection lists files with the same icon treatment as in the Workspaces view; empty roots behave clearly.
+**Independent Test**: Configure at least one agent root that contains agent definition files; expand that root; an **Agents** subsection lists files with the same icon treatment as in the Workspaces view; empty roots behave clearly.
 
 **Acceptance Scenarios**:
 
-1. **Given** an agent root directory that contains agent definition files in **supported locations**, **When** I expand that root in the **Agents view** (sidebar), **Then** I see **Commands**, **Skills**, and **Agent definitions** as siblings at the same structural level, with **Agent definitions** listing each file.
-2. **Given** an agent root with **no** agent definition files, **When** I expand **Agent definitions**, **Then** I see a clear empty state (consistent with Commands/Skills empty messaging style).
+1. **Given** an agent root directory that contains agent definition files in **supported locations**, **When** I expand that root in the **Agents view** (sidebar), **Then** I see **Commands**, **Skills**, and **Agents** as siblings at the same structural level (alphabetically ordered with **Commands** and **Skills**), with **Agents** listing each file.
+2. **Given** an agent root with **no** agent definition files, **When** I expand **Agents**, **Then** I see a clear empty state (consistent with Commands/Skills empty messaging style).
 
 ---
 
@@ -55,7 +59,7 @@ As a developer, I want adding, renaming, or removing agent definition files to b
 
 **Acceptance Scenarios**:
 
-1. **Given** a visible **Agent definitions** list, **When** I add a new supported file on disk and **refresh** the tree, **Then** the new file appears.
+1. **Given** a visible **Agents** list, **When** I add a new supported file on disk and **refresh** the tree, **Then** the new file appears.
 2. **Given** a listed file, **When** I remove it on disk and **refresh**, **Then** it no longer appears.
 
 ---
@@ -74,17 +78,18 @@ As a developer, I want adding, renaming, or removing agent definition files to b
 - **Agent definition file**: A Markdown file in a **supported agents folder** (per planning) representing a reusable **agent profile** for the IDE. *Not* the same as **`AGENTS.md`** (project constitution).
 - **`AGENTS.md`**: The project’s **agent constitution** / operational boundaries; it remains under **Specs + ASDLC** in the Workspaces tree and is unchanged by this feature.
 - **Agents view**: The **sidebar** that lists **agent roots** (Cursor, Claude, Global) and their children. *Capital “Agents” refers only to this view*, not to individual files.
-- **Agent definitions** (tree subsection): The **folder node** under **Cursor** (Workspaces) or under an **agent root** (Agents view) that lists **agent definition files**. MUST be labeled **Agent definitions** (or **Agent definitions** with equivalent clear wording in UI copy) to avoid conflating with **Agents view** or **`AGENTS.md`**.
+- **Agents** (tree subsection — Workspaces): The **folder node** under **Cursor** (Workspaces) that lists **agent definition files**. MUST be labeled **Agents**. It is distinct from the **Agents view** activity-bar sidebar and from **`AGENTS.md`** (constitution under Specs + ASDLC).
+- **Agents** (tree subsection — Agents view): When implemented under an **agent root** in the **Agents view**, the folder that lists agent definition files SHOULD use the same labeling and ordering conventions as the Workspaces tree unless UX research dictates otherwise.
 
 ### Functional Requirements
 
-- **FR-001**: The product MUST **scan** for **agent definition files** in each **workspace project root** according to **supported location rules** (see Assumptions) and expose them in the **Workspaces** tree under the same **Cursor** branch that already groups commands, rules, and skills, as a new subsection labeled **Agent definitions** (see Terminology).
-- **FR-002**: The product MUST **scan** for **agent definition files** under each **agent root** used by the **Agents view** (same roots as for commands and skills) and expose them in a subsection labeled **Agent definitions** parallel to **Commands** and **Skills**.
+- **FR-001**: The product MUST **scan** for **agent definition files** in each **workspace project root** according to **supported location rules** (see Assumptions) and expose them in the **Workspaces** tree under the same **Cursor** branch that already groups commands, rules, and skills, as a subsection labeled **Agents** (see Terminology). Sibling folder nodes under **Cursor** MUST appear in **alphabetical order** by label.
+- **FR-002**: The product MUST **scan** for **agent definition files** under each **agent root** used by the **Agents view** (same roots as for commands and skills) and expose them in a subsection labeled **Agents** parallel to **Commands** and **Skills**, with siblings ordered **alphabetically** by label.
 - **FR-003**: Each **leaf** representing an agent definition file MUST use a **distinct visual treatment** from commands, skills, and rules—specifically the **agent** icon (or product-standard equivalent) for individual agent files, so users can scan the tree without reading every label.
 - **FR-004**: Activating a leaf MUST **open** the underlying file in the editor; the product MUST NOT create, edit, or delete agent files from the tree (**viewer-only**), consistent with ACE’s constitution.
 - **FR-005**: When no agent definition files exist for a scope, the UI MUST **not** imply files exist (empty state or hidden section per FR-001/FR-002).
 - **FR-006**: **Refresh** (existing command or automatic refresh, if any) MUST re-run discovery so lists match disk after changes.
-- **FR-007 (Living specs — tree, scanners, providers)**: The delivery MUST update the living specifications **tree-view**, **scanners**, and **providers** so they describe **agent definition file** discovery, **Agent definitions** placement in both sidebars, icons, refresh behavior, and viewer-only rules—matching shipped behavior.
+- **FR-007 (Living specs — tree, scanners, providers)**: The delivery MUST update the living specifications **tree-view**, **scanners**, and **providers** so they describe **agent definition file** discovery, **Agents** subsection placement in both sidebars, icons, refresh behavior, and viewer-only rules—matching shipped behavior.
 - **FR-008 (Living specs — MCP)**: The delivery MUST update the **MCP** living specification and related contract/data-model artifacts to reflect **one** of: **(1)** new or extended MCP tool(s) that expose **agent definition files** consistently with this feature, **or** **(2)** an explicit statement that MCP does **not** yet expose agent definitions, with a short rationale and pointer to where humans and agents can find them (sidebar / on-disk layout) until a future release.
 
 ### Non-Functional Requirements

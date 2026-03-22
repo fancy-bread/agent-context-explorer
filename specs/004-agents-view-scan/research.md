@@ -34,7 +34,7 @@
 
 ## Decision: Tree icon for agent definition leaves
 
-**Decision**: Use VS Code **`ThemeIcon('hubot')`** for agent definition file leaves in both trees — distinct from **terminal** (commands), **play-circle** (skills), **book** (rules). *Note:* **AGENTS.md** under Specs + ASDLC also uses a robot-style affordance in the current UI; agent definitions live under **Cursor** / **Agent definitions**, not under Specs + ASDLC, so context differs.
+**Decision**: Use VS Code **`ThemeIcon('hubot')`** for agent definition file leaves in both trees — distinct from **terminal** (commands), **play-circle** (skills), **book** (rules). *Note:* **AGENTS.md** under Specs + ASDLC also uses a robot-style affordance in the current UI; agent definition files live under **Cursor** / **Agents**, not under Specs + ASDLC, so context differs.
 
 **Rationale**: Spec FR-003 asks for an “agent” visual; `hubot` is the standard codicon affordance for agent-like entities in VS Code.
 

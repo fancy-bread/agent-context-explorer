@@ -168,7 +168,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			return items;
 		} else if (element.category === 'cursor' && element.project) {
-			// Cursor section: show workspace Commands, Rules, Skills, Agent definitions
+			// Cursor section: workspace Commands, Rules, Skills, Agents — sorted alphabetically by label
 			const projectData = this.projectData.get(element.project.id);
 			const rulesCount = projectData?.rules.length || 0;
 			const commandsCount = projectData?.commands.length || 0;
@@ -176,11 +176,12 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			const agentCount = projectData?.agentDefinitions.length || 0;
 
 			const sections = [
+				{ name: 'Agents', id: 'agent-definitions', icon: 'hubot', description: `${agentCount} agents` },
 				{ name: 'Commands', id: 'commands', icon: 'terminal', description: `${commandsCount} commands` },
 				{ name: 'Rules', id: 'rules', icon: 'book', description: `${rulesCount} rules` },
-				{ name: 'Skills', id: 'skills', icon: 'lightbulb', description: `${skillsCount} skills` },
-				{ name: 'Agent definitions', id: 'agent-definitions', icon: 'hubot', description: `${agentCount} agent definitions` }
+				{ name: 'Skills', id: 'skills', icon: 'lightbulb', description: `${skillsCount} skills` }
 			];
+			sections.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
 			return sections.map((section) => {
 				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
@@ -312,7 +313,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			if (defs.length === 0) {
 				return [{
-					label: 'No agent definitions found',
+					label: 'No agents found',
 					collapsibleState: vscode.TreeItemCollapsibleState.None,
 					description: 'Add Markdown files to .cursor/agents/'
 				} as ProjectTreeItem];
