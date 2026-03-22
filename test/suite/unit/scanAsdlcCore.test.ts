@@ -104,4 +104,133 @@ describe('scanner/core/scanAsdlcCore', () => {
 		const out = await scanAsdlcCore(fs, projectRoot);
 		assert.strictEqual(out.agentsMd.exists, false);
 	});
+
+	it('specs skips child entries that are not directories', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const fs = createMockFs(new Map(), new Map([[specsPath, [['readme', FileType.File]]]]));
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.exists, true);
+		assert.strictEqual(out.specs.specs.length, 0);
+	});
+
+	it('specs skips domain when spec.md stat is not a file', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const specFile = path.join(specsPath, 'auth', 'spec.md');
+		const fs = createMockFs(new Map(), new Map([[specsPath, [['auth', FileType.Directory]]]]));
+		(fs as any).stat = async (p: string) => {
+			if (p === specsPath) return { type: FileType.Directory };
+			if (p === specFile) return { type: FileType.Directory };
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.specs.length, 0);
+	});
+
+	it('specs skips domain when readFile throws', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const specFile = path.join(specsPath, 'auth', 'spec.md');
+		const fs = createMockFs(new Map(), new Map([[specsPath, [['auth', FileType.Directory]]]]));
+		(fs as any).readFile = async (p: string) => {
+			if (p === specFile) throw new Error('EACCES');
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.specs.length, 0);
+	});
+
+	it('specs uses undefined lastModified when stat has no mtime', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const specPath = path.join(specsPath, 'auth', 'spec.md');
+		const specContent = Buffer.from('# A\n\n## Blueprint\n\nx\n\n## Contract\n\ny');
+		const fs = createMockFs(
+			new Map([[specPath, specContent]]),
+			new Map([[specsPath, [['auth', FileType.Directory]]]])
+		);
+		(fs as any).stat = async (p: string) => {
+			if (p === specPath) return { type: FileType.File };
+			if (p === specsPath) return { type: FileType.Directory };
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.specs[0].lastModified, undefined);
+	});
+
+	it('schemas skips non-json files', async () => {
+		const schemasPath = path.join(projectRoot, 'schemas');
+		const fs = createMockFs(new Map(), new Map([[schemasPath, [['note.txt', FileType.File]]]]));
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.schemas.schemas.length, 0);
+	});
+
+	it('schemas adds entry without schemaId when readFile throws', async () => {
+		const schemasPath = path.join(projectRoot, 'schemas');
+		const schemaPath = path.join(schemasPath, 'bad.json');
+		const fs = createMockFs(new Map(), new Map([[schemasPath, [['bad.json', FileType.File]]]]));
+		(fs as any).readFile = async (p: string) => {
+			if (p === schemaPath) throw new Error('read fail');
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.schemas.schemas.length, 1);
+		assert.strictEqual(out.schemas.schemas[0].name, 'bad');
+		assert.strictEqual(out.schemas.schemas[0].schemaId, undefined);
+	});
+
+	it('specs returns empty when specs path is not a directory', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const fs = createMockFs(new Map(), new Map());
+		(fs as any).stat = async (p: string) => {
+			if (p === specsPath) return { type: FileType.File };
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.exists, false);
+		assert.deepStrictEqual(out.specs.specs, []);
+	});
+
+	it('specs outer catch when specs directory stat throws', async () => {
+		const specsPath = path.join(projectRoot, 'specs');
+		const fs = createMockFs(new Map(), new Map());
+		(fs as any).stat = async (p: string) => {
+			if (p === specsPath) throw new Error('ENOENT');
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.specs.exists, false);
+	});
+
+	it('schemas returns empty when schemas path is not a directory', async () => {
+		const schemasPath = path.join(projectRoot, 'schemas');
+		const fs = createMockFs(new Map(), new Map());
+		(fs as any).stat = async (p: string) => {
+			if (p === schemasPath) return { type: FileType.File };
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.schemas.exists, false);
+	});
+
+	it('schemas outer catch when schemas directory stat throws', async () => {
+		const schemasPath = path.join(projectRoot, 'schemas');
+		const fs = createMockFs(new Map(), new Map());
+		(fs as any).stat = async (p: string) => {
+			if (p === schemasPath) throw new Error('ENOENT');
+			throw new Error('ENOENT');
+		};
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.schemas.exists, false);
+	});
+
+	it('schemas includes json reached via symbolic link entry', async () => {
+		const schemasPath = path.join(projectRoot, 'schemas');
+		const schemaPath = path.join(schemasPath, 'via-link.json');
+		const schemaContent = Buffer.from(JSON.stringify({ $id: 'urn:sym' }));
+		const fs = createMockFs(
+			new Map([[schemaPath, schemaContent]]),
+			new Map([[schemasPath, [['via-link.json', FileType.SymbolicLink]]]])
+		);
+		const out = await scanAsdlcCore(fs, projectRoot);
+		assert.strictEqual(out.schemas.schemas.length, 1);
+		assert.strictEqual(out.schemas.schemas[0].schemaId, 'urn:sym');
+	});
 });

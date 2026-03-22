@@ -8,7 +8,7 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 **Input**: Design documents from `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/`  
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md), [quickstart.md](./quickstart.md)
 
-**Organization**: Tasks follow user stories US1–US3 from [spec.md](./spec.md). Test improvement work (US2/US3) is **implementation via unit tests** under `test/suite/unit/` until NYC per-file **branch** and **function** bars pass.
+**Organization**: Tasks follow user stories US1–US3 from [spec.md](./spec.md). Test improvement work (US2/US3) is **implementation via unit tests** under `test/suite/unit/` until NYC **aggregate** `check-coverage` passes: **90%** lines, **80%** branches, **90%** functions (`per-file: false`; see `contracts/ci-quality-gate.md`).
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -29,9 +29,9 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **⚠️ After T002, `npm run test:coverage` will fail until US2/US3 test work completes.**
 
-- [ ] T002 Set **passable floor** `branches` / `functions` in `/Users/paul/projects/software/agent-context-explorer/.nycrc` per [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md) ratchet (e.g. **40** / **50** until US2/US3 raise toward **80** / **90**); retain `lines` **80**, `per-file` **true**, `check-coverage` **true**, existing `include`/`exclude`
+- [ ] T002 Set **aggregate** thresholds in `/Users/paul/projects/software/agent-context-explorer/.nycrc` per [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md): `lines` **90**, `branches` **80**, `functions` **90**, `per-file` **false**, `check-coverage` **true**, existing `include`/`exclude`
 
-**Checkpoint**: `.nycrc` matches contract **floor** table; **target** remains 80 / 90 in spec for US2/US3.
+**Checkpoint**: `.nycrc` matches contract; `npm run test:coverage` exits **0**.
 
 ---
 
@@ -47,21 +47,21 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 ## Phase 4: User Story 2 — Branch coverage ≥ 80% (Priority: P2)
 
-**Goal**: Every included NYC file row meets **% Branch** ≥ **80**.
+**Goal**: Aggregate **% Branch** ≥ **80**.
 
-**Independent test**: `npm run test:coverage` shows no per-file branch violations.
+**Independent test**: `npm run test:coverage` exits **0** with `per-file: false` (All files row).
 
-- [ ] T004 [US2] Iteratively add or extend unit tests under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` (and adjust stubs/mocks as needed) until `npm run test:coverage` exits **0** with respect to **branch** thresholds for all included `src/**/*.ts` files
+- [ ] T004 [US2] Iteratively add or extend unit tests under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` (and adjust stubs/mocks as needed) until `npm run test:coverage` exits **0** with respect to **aggregate branch** threshold (All files row)
 
 ---
 
 ## Phase 5: User Story 3 — Function coverage ≥ 90% (Priority: P3)
 
-**Goal**: Every included NYC file row meets **% Funcs** ≥ **90**.
+**Goal**: Aggregate **% Funcs** ≥ **90**.
 
-**Independent test**: NYC text report shows no function threshold errors.
+**Independent test**: `npm run test:coverage` exits **0** (All files row).
 
-- [ ] T005 [US3] Continue test improvements under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` until `npm run test:coverage` meets **function** thresholds per file; if T004 already satisfied functions, confirm with one clean run and document any no-op
+- [ ] T005 [US3] Continue test improvements under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` until aggregate **function** coverage meets **90%**; confirm with one clean run and document any no-op if T004 already satisfied it
 
 ---
 

@@ -124,5 +124,104 @@ describe('mcp/resources (McpResources)', () => {
 		assert.strictEqual(schema!.mimeType, 'application/json');
 		assert.strictEqual(schema!.content, 'content');
 	});
+
+	it('listAsdlcResources includes agents-md when AGENTS exists with mission', async () => {
+		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
+			agentsMd: { exists: true, path: '/tmp/AGENTS.md', mission: 'Our mission' },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: true
+		});
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		const list = await r.listAsdlcResources();
+		const agents = list.find(x => x.uri === 'ace://agents-md');
+		assert.ok(agents);
+		assert.ok(agents!.description.includes('Our mission'));
+	});
+
+	it('getResource reads agents-md via workspace.fs', async () => {
+		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
+			agentsMd: { exists: true, path: '/tmp/AGENTS.md' },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: true
+		});
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		const res = await r.getResource('ace://agents-md');
+		assert.ok(res);
+		assert.strictEqual(res!.content, 'content');
+	});
+
+	it('getResource returns null for agents-md when readFile throws', async () => {
+		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
+			agentsMd: { exists: true, path: '/tmp/AGENTS.md' },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: true
+		});
+		(vscode.workspace.fs.readFile as any) = async () => {
+			throw new Error('EACCES');
+		};
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		assert.strictEqual(await r.getResource('ace://agents-md'), null);
+	});
+
+	it('getResource returns JSON list for ace://specs and null for unknown domain', async () => {
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		const list = await r.getResource('ace://specs');
+		assert.ok(list);
+		assert.strictEqual(list!.mimeType, 'application/json');
+		assert.ok(list!.content.includes('demo'));
+		assert.strictEqual(await r.getResource('ace://specs/unknown-domain'), null);
+	});
+
+	it('getResource returns null when spec file read throws', async () => {
+		let calls = 0;
+		(vscode.workspace.fs.readFile as any) = async () => {
+			calls++;
+			if (calls === 1) {
+				throw new Error('boom');
+			}
+			return Buffer.from('content', 'utf8');
+		};
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		assert.strictEqual(await r.getResource('ace://specs/demo'), null);
+	});
+
+	it('listCommandsResources suffixes global in name and uses schemaId or fallback in description', async () => {
+		(CommandsScanner.prototype.scanWorkspaceCommands as any) = async () => ([]);
+		(CommandsScanner.prototype.scanGlobalCommands as any) = async () => ([
+			{ fileName: 'g.md', uri: vscode.Uri.file('/g.md'), content: '# G', location: 'global' }
+		]);
+		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
+			agentsMd: { exists: false },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: true, schemas: [{ name: 'anon', path: '/tmp/anon.json' }] },
+			hasAnyArtifacts: true
+		});
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		const cmds = await r.listCommandsResources();
+		const g = cmds.find(x => x.uri === 'ace://commands/g');
+		assert.ok(g);
+		assert.ok(g!.name.includes('(global)'));
+		const schemasMeta = await r.listAsdlcResources();
+		const one = schemasMeta.find(x => x.uri === 'ace://schemas/anon');
+		assert.ok(one!.description.includes('Schema: anon'));
+	});
+
+	it('getResource returns JSON list for ace://schemas and null when schema read throws', async () => {
+		const r = new McpResources(vscode.Uri.file('/workspace'));
+		const list = await r.getResource('ace://schemas');
+		assert.ok(list?.content.includes('schema'));
+		let first = true;
+		(vscode.workspace.fs.readFile as any) = async () => {
+			if (first) {
+				first = false;
+				throw new Error('read fail');
+			}
+			return Buffer.from('{}', 'utf8');
+		};
+		assert.strictEqual(await r.getResource('ace://schemas/schema'), null);
+	});
 });
 

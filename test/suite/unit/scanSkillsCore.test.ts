@@ -95,6 +95,21 @@ describe('scanner/core/scanSkillsCore', () => {
 		assert.strictEqual(out[0].content, 'Error reading file content');
 	});
 
+	it('pushes skill without metadata object when parseSKILLMetadata returns undefined', async () => {
+		const projectSkillsDir = path.join(projectRoot, '.cursor', 'skills');
+		const skillPath = path.join(projectSkillsDir, 'plain', 'SKILL.md');
+		// No YAML frontmatter, no markdown heading → undefined metadata
+		const content = Buffer.from('plain body only');
+		const fs = createMockFs(
+			new Map([[skillPath, content]]),
+			new Map([[projectSkillsDir, [['plain', FileType.Directory]]]])
+		);
+		const out = await scanSkillsCore(fs, projectRoot, userRoot);
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].fileName, 'plain');
+		assert.strictEqual(out[0].metadata, undefined);
+	});
+
 	it('scanAgentSkillsCore scans skills from an agent root', async () => {
 		const agentRoot = '/agents/root';
 		const skillsDir = path.join(agentRoot, 'skills');

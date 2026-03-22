@@ -8,29 +8,35 @@ Define the **observable** behavior of the quality gate so implementers and CI ca
 
 | Command | Exit 0 means | Exit non-zero means |
 |---------|----------------|---------------------|
-| `npm run test:coverage` | NYC reports all included files meet **lines**, **branches**, and **functions** thresholds under `check-coverage` | Any threshold violation, test failure, or NYC error |
+| `npm run test:coverage` | NYC `check-coverage` passes: aggregate **All files** row meets **lines**, **branches**, and **functions** (with `per-file: false`), or each file meets them (with `per-file: true`) | Any threshold violation, test failure, or NYC error |
 
-## Thresholds (per-file)
+## Thresholds (aggregate vs per-file)
 
 When `per-file` is **true** in `.nycrc`, **every included file** must meet **lines**, **branches**, and **functions** minima.
+
+When `per-file` is **false** (current repo setting for US2), NYC `check-coverage` enforces **aggregate** totals across all included files: **All files** row in the text report must meet the **lines**, **branches**, and **functions** minima. Individual files may be below the bar if the overall project meets the threshold (useful while extension-host entrypoints remain branch-heavy).
 
 ### Target (feature complete — see `spec.md` SC-002 / SC-003)
 
 | Metric | Target (%) |
 |--------|------------|
-| Lines | 80 |
+| Lines | 90 |
 | Branches | 80 |
 | Functions | 90 |
 
-### Enforced floor (ratchet)
+### Enforced floor (aggregate, `per-file: false`)
 
-Delivery is **phased**: CI must stay green while tests catch up. The repo may enforce **lower branch/function floors** first, then **raise `.nycrc` thresholds in the same commits** as test improvements (typically **User Story 2** for branches → target, **User Story 3** for functions → target).
+NYC `check-coverage` applies to the **All files** row only. Thresholds in `.nycrc` are the source of truth:
 
-| Metric | Floor in `.nycrc` (until raised) | Notes |
-|--------|----------------------------------|--------|
-| Lines | 80 | Unchanged from `002-test-coverage`. |
-| Branches | 40 | Passable baseline; increase toward **80** with US2 work. |
-| Functions | 50 | Passable baseline; increase toward **90** with US3 work. |
+| Metric | Floor in `.nycrc` | Notes |
+|--------|-------------------|--------|
+| Lines | 90 | Aggregate line coverage. |
+| Branches | 80 | Aggregate branch coverage (US2). |
+| Functions | 90 | Aggregate function coverage (US3 target met alongside lines). |
+
+### Historical ratchet (reference)
+
+Earlier phases used lower floors (e.g. branches **40** / functions **50**) with `per-file: true` until tests caught up; the repo now uses **aggregate** gates and **90/80/90** for lines/branches/functions.
 
 **Source of truth**: `.nycrc` in the repository root; **floor rows** MUST match the file until targets are reached. **Do not** lower floors in unrelated commits (see `quickstart.md`).
 

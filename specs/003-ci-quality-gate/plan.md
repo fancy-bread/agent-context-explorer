@@ -5,7 +5,7 @@
 
 ## Summary
 
-Raise **NYC** enforcement to **80% branches** and **90% functions** per instrumented file (alongside existing **80% lines** from `002-test-coverage`), run the same gate in **GitHub Actions** on pull requests, bump CI **Node.js** to **24.x**, and add or extend **unit tests** until every included file meets the new bars. **Local parity** is satisfied by shared `.nycrc` and documented commands (`quickstart.md`).
+Raise **NYC** enforcement on the **aggregate** `All files` row: **90% lines**, **80% branches**, **90% functions** (with **`per-file`: false**), run the same gate in **GitHub Actions** on pull requests, bump CI **Node.js** to **24.x**, and add or extend **unit tests** until `npm run test:coverage` exits 0. **Local parity** is satisfied by shared `.nycrc` and documented commands (`quickstart.md`).
 
 **Technical approach** (see [research.md](./research.md)): update `.nycrc`; update `.github/workflows/ci.yml` (Node 24 + `npm run test:coverage`); iteratively improve `test/suite/unit/**` until `npm run test:coverage` exits 0; optionally set `package.json` `engines.node` to `>=24`.
 
@@ -84,7 +84,7 @@ Output: **research.md** — decisions on NYC per-file thresholds, Node 24 in Act
 
 High-level steps (not executable tasks):
 
-1. **Config**: Set `.nycrc` `branches`: 80, `functions`: 90 (keep `lines`: 80, `per-file`: true`).
+1. **Config**: Set `.nycrc` `lines`: 90, `branches`: 80, `functions`: 90, `per-file`: false.
 2. **CI**: Set `node-version` to `24.x` in all relevant jobs; ensure PR pipeline runs `npm run test:coverage` (or `ci:coverage` if lint is deduplicated) and fails on non-zero.
 3. **Tests**: Run `npm run test:coverage`, identify files below branch/function bars, add targeted unit tests (iterate until green).
 4. **Docs**: `package.json` `engines` if desired; `quickstart.md` linked from README or AGENTS if project convention requires.

@@ -318,4 +318,145 @@ describe('MCP extension backend: startExtensionBackend', () => {
 			dispose();
 		}
 	});
+
+	it('skips blank lines in socket buffer and handles get_command missing name', async () => {
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws/one' }, name: 'One' }];
+
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					resolve(JSON.parse(line));
+				});
+				socket.on('error', reject);
+				socket.write('\n\n' + JSON.stringify({ id: 30, method: 'get_command', params: {} }) + '\n');
+			});
+			assert.strictEqual(res.id, 30);
+			assert.ok(String(res.error).includes('Missing name'));
+		} finally {
+			dispose();
+		}
+	});
+
+	it('returns invalid request when id is not a number', async () => {
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					resolve(JSON.parse(line));
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify({ id: 'bad', method: 'list_projects', params: {} }) + '\n');
+			});
+			assert.strictEqual(res.error, 'Invalid request');
+			assert.ok(res.id === 'bad' || res.id === undefined);
+		} finally {
+			dispose();
+		}
+	});
+
+	it('handles get_rule with name and get_skill missing name via socket', async () => {
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/ws/one' }, name: 'One' }];
+
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		const send = (payload: object) => new Promise<any>((resolve, reject) => {
+			const socket = net.connect(port, '127.0.0.1');
+			socket.setEncoding('utf8');
+			let buffer = '';
+			socket.on('data', (chunk) => {
+				buffer += chunk;
+				const idx = buffer.indexOf('\n');
+				if (idx === -1) {
+					return;
+				}
+				socket.destroy();
+				try {
+					resolve(JSON.parse(buffer.slice(0, idx)));
+				} catch (e) {
+					reject(e);
+				}
+			});
+			socket.on('error', reject);
+			socket.write(JSON.stringify(payload) + '\n');
+		});
+		try {
+			const ok = await send({ id: 50, method: 'get_rule', params: { name: 'any', projectKey: 'one' } });
+			assert.strictEqual(ok.id, 50);
+			assert.ok(ok.result === null || typeof ok.result === 'object');
+
+			const bad = await send({ id: 51, method: 'get_skill', params: {} });
+			assert.strictEqual(bad.id, 51);
+			assert.ok(String(bad.error).includes('Missing name'));
+
+			const specs = await send({ id: 52, method: 'list_specs', params: { projectKey: 'one' } });
+			assert.strictEqual(specs.id, 52);
+			assert.ok(Array.isArray(specs.result));
+
+			const art = await send({ id: 53, method: 'get_asdlc_artifacts', params: { projectKey: 'one' } });
+			assert.strictEqual(art.id, 53);
+			assert.ok(art.result && typeof (art.result as any).hasAnyArtifacts === 'boolean');
+		} finally {
+			dispose();
+		}
+	});
+
+	it('resolves project via project_key snake_case alias', async () => {
+		const vscode = require('vscode');
+		vscode.workspace.workspaceFolders = [{ uri: { fsPath: process.cwd() }, name: 'repo' }];
+
+		const { port, dispose } = await startExtensionBackend(async () => []);
+		try {
+			const res = await new Promise<any>((resolve, reject) => {
+				const socket = net.connect(port, '127.0.0.1');
+				socket.setEncoding('utf8');
+				let buffer = '';
+				socket.on('data', (chunk) => {
+					buffer += chunk;
+					const idx = buffer.indexOf('\n');
+					if (idx === -1) {
+						return;
+					}
+					const line = buffer.slice(0, idx);
+					socket.destroy();
+					try {
+						resolve(JSON.parse(line));
+					} catch (e) {
+						reject(e);
+					}
+				});
+				socket.on('error', reject);
+				socket.write(JSON.stringify({
+					id: 40,
+					method: 'list_skills',
+					params: { project_key: path.basename(process.cwd()) }
+				}) + '\n');
+			});
+			assert.strictEqual(res.id, 40);
+			assert.ok(Array.isArray(res.result));
+		} finally {
+			dispose();
+		}
+	});
 });

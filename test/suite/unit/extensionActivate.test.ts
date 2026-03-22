@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import { AgentsTreeProvider } from '../../../src/providers/agentsTreeProvider';
 import { ProjectTreeProvider } from '../../../src/providers/projectTreeProvider';
+import { RulesScanner } from '../../../src/scanner/rulesScanner';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const vscode = require('vscode');
@@ -164,6 +165,30 @@ describe('extension activate / deactivate', () => {
 			await new Promise((r) => setImmediate(r));
 		}
 		extension.deactivate();
+	});
+
+	it('refreshData continues when extra project scan throws', async function () {
+		if (!extension) {
+			this.skip();
+		}
+		const origScan = RulesScanner.prototype.scanRules;
+		RulesScanner.prototype.scanRules = async function (this: RulesScanner) {
+			const root = (this as unknown as { workspaceRoot: { fsPath: string } }).workspaceRoot;
+			if (root?.fsPath === '/other/project') {
+				throw new Error('scan boom');
+			}
+			return [];
+		} as typeof RulesScanner.prototype.scanRules;
+		try {
+			const ctx = makeContextWithExtraProject();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+		} finally {
+			RulesScanner.prototype.scanRules = origScan;
+			extension.deactivate();
+		}
 	});
 
 	it('refreshData scans stored projects when project path differs from workspace', async function () {
