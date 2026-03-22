@@ -59,6 +59,17 @@ describe('mcp/types (real implementation)', () => {
 			assert.deepStrictEqual(info.globs, ['*.ts']);
 		});
 
+		it('toRuleInfo treats empty globs array as manual', () => {
+			const rule: Rule = {
+				uri: makeUri('/y.mdc') as any,
+				metadata: { description: 'D', globs: [] },
+				content: '',
+				fileName: 'y.mdc'
+			};
+			const info = toRuleInfo(rule);
+			assert.strictEqual(info.type, 'manual');
+		});
+
 		it('toRuleContent includes content', () => {
 			const rule: Rule = {
 				uri: makeUri('/r.mdc') as any,
@@ -69,6 +80,24 @@ describe('mcp/types (real implementation)', () => {
 			const content = toRuleContent(rule);
 			assert.strictEqual(content.content, 'full **markdown**');
 			assert.strictEqual(content.name, 'r');
+		});
+
+		it('toRuleContent uses always and glob types like toRuleInfo', () => {
+			const always: Rule = {
+				uri: makeUri('/a.mdc') as any,
+				metadata: { description: 'A', alwaysApply: true },
+				content: 'x',
+				fileName: 'a.mdc'
+			};
+			assert.strictEqual(toRuleContent(always).type, 'always');
+
+			const glob: Rule = {
+				uri: makeUri('/g.mdc') as any,
+				metadata: { description: 'G', globs: ['*.md'] },
+				content: 'y',
+				fileName: 'g.mdc'
+			};
+			assert.strictEqual(toRuleContent(glob).type, 'glob');
 		});
 	});
 
@@ -84,6 +113,28 @@ describe('mcp/types (real implementation)', () => {
 			assert.strictEqual(info.name, 'cmd');
 			assert.strictEqual(info.description, 'Do something useful.');
 			assert.strictEqual(info.location, 'workspace');
+		});
+
+		it('toCommandInfo falls back to first non-heading paragraph when no Overview', () => {
+			const cmd: Command = {
+				uri: makeUri('/n.md') as any,
+				content: '# Title\n\nFirst paragraph line.\n\n## Other',
+				fileName: 'n.md',
+				location: 'global'
+			};
+			const info = toCommandInfo(cmd);
+			assert.ok(info.description.includes('First paragraph'));
+		});
+
+		it('toCommandInfo returns empty description when no usable paragraph', () => {
+			const cmd: Command = {
+				uri: makeUri('/empty.md') as any,
+				content: '# Only\n\n- list item',
+				fileName: 'empty.md',
+				location: 'workspace'
+			};
+			const info = toCommandInfo(cmd);
+			assert.strictEqual(info.description, '');
 		});
 
 		it('toCommandContent includes full content', () => {

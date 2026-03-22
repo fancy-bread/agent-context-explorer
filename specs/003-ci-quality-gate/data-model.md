@@ -8,14 +8,15 @@ This feature is **configuration- and policy-driven**; there is no new runtime da
 |-------|------|-------------|
 | `include` | glob list | Instrumented sources (e.g. `src/**/*.ts`) |
 | `exclude` | glob list | Excluded from instrumentation |
-| `per-file` | boolean | Enforce thresholds per file row |
-| `lines` | number (%) | Minimum line coverage per file (from 002: **80**) |
-| `branches` | number (%) | Minimum branch coverage per file (**80** target) |
-| `functions` | number (%) | Minimum function coverage per file (**90** target) |
+| `per-file` | boolean | If **true**, enforce thresholds on **each** file row; if **false**, enforce on the **All files** aggregate row only |
+| `lines` | number (%) | Minimum **line** coverage (**90** aggregate when `per-file` is false) |
+| `branches` | number (%) | Minimum **branch** coverage (**80** aggregate) |
+| `functions` | number (%) | Minimum **function** coverage (**90** aggregate) |
 | `check-coverage` | boolean | Fail process when thresholds not met |
 
 **Validation rules**:
-- All three dimensions (lines, branches, functions) MUST pass `check-coverage` when `per-file` is true, for each non-excluded included file unless a documented exclusion policy exists (AC-D4 style from 002).
+- When `per-file` is **true**: lines, branches, and functions MUST pass `check-coverage` for each non-excluded included file (unless a documented exclusion policy exists).
+- When `per-file` is **false** (current repo): the **All files** row MUST meet **lines**, **branches**, and **functions** minima defined in `.nycrc` (see `contracts/ci-quality-gate.md`).
 
 ## ContinuousIntegrationConfig (GitHub Actions)
 

@@ -31,7 +31,9 @@ describe('ProjectCommands', () => {
 			},
 			executeCommand: async () => {}
 		};
+		// Preserve vscode-stub window helpers (createOutputChannel, createTreeView) used by extension tests
 		vscode.window = {
+			...vscode.window,
 			showInputBox: async () => '',
 			showInformationMessage: () => {},
 			showErrorMessage: () => {},
@@ -172,6 +174,220 @@ describe('ProjectCommands', () => {
 		const projects = await pm.getProjects();
 		assert.strictEqual(projects[0].name, 'NewName');
 		assert.strictEqual(projects[0].description, 'new desc');
+	});
+
+	it('ace.addProject validateInput rejects empty name', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let validationErr: string | null | undefined;
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null }) => {
+			if (opts?.validateInput) {
+				validationErr = opts.validateInput('');
+				validationErr = opts.validateInput('  ');
+			}
+			return undefined;
+		};
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.addProject'] as () => Promise<void>)();
+		assert.ok(validationErr && String(validationErr).includes('required'));
+	});
+
+	it('ace.addProject returns early when name prompt cancelled', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		vscode.window.showInputBox = async () => undefined;
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.addProject'] as () => Promise<void>)();
+		const pm = new ProjectManager(ctx);
+		assert.strictEqual((await pm.getProjects()).length, 0);
+	});
+
+	it('ace.addProject returns early when path prompt cancelled', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let step = 0;
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null }) => {
+			if (step === 0) {
+				step++;
+				return 'MyProj';
+			}
+			return undefined;
+		};
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.addProject'] as () => Promise<void>)();
+		const pm = new ProjectManager(ctx);
+		assert.strictEqual((await pm.getProjects()).length, 0);
+	});
+
+	it('ace.addProject path validateInput rejects empty path string', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let step = 0;
+		let emptyPathErr = '';
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null | Promise<string | null> }) => {
+			if (step === 0) {
+				step++;
+				return 'NamedProj';
+			}
+			if (step === 1 && opts?.validateInput) {
+				step++;
+				emptyPathErr = (await Promise.resolve(opts.validateInput(''))) ?? '';
+				await Promise.resolve(opts.validateInput('  '));
+			}
+			return undefined;
+		};
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.addProject'] as () => Promise<void>)();
+		assert.ok(emptyPathErr.includes('Project path is required'));
+	});
+
+	it('ace.addProject stops when path validation fails', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let step = 0;
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null | Promise<string | null> }) => {
+			if (step === 0) {
+				step++;
+				return 'P';
+			}
+			if (step === 1) {
+				step++;
+				const v = '/not/a/dir';
+				if (opts?.validateInput) {
+					const err = await Promise.resolve(opts.validateInput(v));
+					if (err) {
+						return undefined;
+					}
+				}
+				return v;
+			}
+			return '';
+		};
+		const origStat = vscode.__overrides.stat;
+		vscode.__overrides.stat = async () => {
+			throw new Error('ENOENT');
+		};
+		try {
+			ProjectCommands.registerCommands(ctx);
+			await (registered['ace.addProject'] as () => Promise<void>)();
+		} finally {
+			vscode.__overrides.stat = origStat;
+		}
+		const pm = new ProjectManager(ctx);
+		assert.strictEqual((await pm.getProjects()).length, 0);
+	});
+
+	it('ace.editProject shows error when updateProject throws', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'U', path: '/workspace/u' });
+
+		const origUpdate = ProjectManager.prototype.updateProject;
+		ProjectManager.prototype.updateProject = async () => {
+			throw new Error('update fail');
+		};
+		let errMsg = '';
+		let step = 0;
+		vscode.window.showInputBox = async (opts: { prompt?: string }) => {
+			if (step === 0) {
+				step++;
+				return 'NewName';
+			}
+			return 'd';
+		};
+		vscode.window.showErrorMessage = (msg: string) => {
+			errMsg = msg;
+		};
+
+		try {
+			ProjectCommands.registerCommands(ctx);
+			await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		} finally {
+			ProjectManager.prototype.updateProject = origUpdate;
+		}
+		assert.ok(errMsg.includes('Failed to edit project'));
+	});
+
+	it('ace.editProject validateInput rejects empty or whitespace name', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'V', path: '/workspace/v' });
+
+		let emptyErr: string | null | undefined;
+		let wsErr: string | null | undefined;
+		vscode.window.showInputBox = async (opts: { validateInput?: (v: string) => string | null }) => {
+			if (opts?.validateInput) {
+				emptyErr = opts.validateInput('');
+				wsErr = opts.validateInput('   ');
+			}
+			return undefined;
+		};
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		assert.ok(emptyErr && String(emptyErr).includes('required'));
+		assert.ok(wsErr && String(wsErr).includes('required'));
+	});
+
+	it('ace.editProject returns early when name prompt cancelled', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'E', path: '/workspace/e' });
+
+		vscode.window.showInputBox = async () => undefined;
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		const after = await pm.getProjects();
+		assert.strictEqual(after[0].name, 'E');
+	});
+
+	it('ace.removeProject shows error when removeProject throws', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p = await pm.addProject({ name: 'Rm', path: '/workspace/rm' });
+
+		vscode.window.showWarningMessage = async () => 'Yes';
+		const origRemove = ProjectManager.prototype.removeProject;
+		ProjectManager.prototype.removeProject = async () => {
+			throw new Error('rm fail');
+		};
+
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => {
+			errMsg = msg;
+		};
+
+		try {
+			ProjectCommands.registerCommands(ctx);
+			await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		} finally {
+			ProjectManager.prototype.removeProject = origRemove;
+		}
+		assert.ok(errMsg.includes('Failed to remove project'));
+	});
+
+	it('ace.listProjects shows error when openTextDocument throws', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		await pm.addProject({ name: 'L', path: '/workspace/l' });
+
+		vscode.workspace.openTextDocument = async () => {
+			throw new Error('open fail');
+		};
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => {
+			errMsg = msg;
+		};
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.listProjects'] as () => Promise<void>)();
+		assert.ok(errMsg.includes('Failed to list projects'));
 	});
 
 	it('ace.addProject shows error when addProject throws', async () => {

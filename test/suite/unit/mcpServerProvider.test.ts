@@ -229,6 +229,75 @@ describe('mcp/mcpServerProvider', () => {
 		assert.strictEqual(fires, 1);
 	});
 
+	it('provideMcpServerDefinitions second call reuses backend port', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		setWorkspaceFolders([{ name: 'W', fsPath: '/ws/w' }]);
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		const d1 = await provider.provideMcpServerDefinitions();
+		const d2 = await provider.provideMcpServerDefinitions();
+		assert.strictEqual(d1.length, 1);
+		assert.strictEqual(d2.length, 1);
+		assert.strictEqual((d1[0] as any).env.ACE_EXTENSION_PORT, (d2[0] as any).env.ACE_EXTENSION_PORT);
+		provider.dispose();
+	});
+
+	it('syncCursorRegistration registers ace when workspaceFolders is empty array', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const registered: string[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: { name: string }) => {
+					registered.push(c.name);
+				},
+				unregisterServer: () => {}
+			}
+		};
+		vscodeMod.workspace.workspaceFolders = [];
+
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.deepStrictEqual(registered, ['ace']);
+	});
+
+	it('resolveMcpServerDefinition returns server unchanged for non-stdio definition', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		const plain = { name: 'x' } as any;
+		const out = await provider.resolveMcpServerDefinition(plain);
+		assert.strictEqual(out, plain);
+	});
+
+	it('provideMcpServerDefinitions catches when ensureBackendOrFallback throws', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		setWorkspaceFolders([{ name: 'W', fsPath: '/ws/w' }]);
+		const lines: string[] = [];
+		const provider = new McpServerProvider(
+			makeContext() as any,
+			async () => [],
+			{ appendLine: (s: string) => { lines.push(s); } } as any
+		);
+		const pAny = provider as any;
+		const orig = pAny.ensureBackendOrFallback.bind(provider);
+		pAny.ensureBackendOrFallback = async () => {
+			throw new Error('forced ensure failure');
+		};
+		try {
+			const defs = await provider.provideMcpServerDefinitions();
+			assert.strictEqual(defs.length, 1);
+			assert.ok(lines.some(l => l.includes('provideMcpServerDefinitions error')));
+		} finally {
+			pAny.ensureBackendOrFallback = orig;
+		}
+	});
+
+	it('resolveMcpServerDefinition returns server when stdio args missing script path', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		const server = new vscodeMod.McpStdioServerDefinition('ACE', 'node', [], {}, '1.0.0');
+		const out = await provider.resolveMcpServerDefinition(server as any);
+		assert.strictEqual(out, server);
+	});
+
 	it('ensureBackendOrFallback uses ACE_PROJECT_PATHS when backend start fails', async () => {
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const ebPath = require.resolve('../../../src/mcp/extensionBackend');
