@@ -19,11 +19,11 @@
       "summary": "004 Phase 1: Foundational (Blocking Prerequisites)",
       "url": "https://fancybread.atlassian.net/browse/FB-118",
       "embedded_tasks": [
-        { "id": "T001", "summary": "Implement scanAgentDefinitionsCore.ts", "status": "pending" },
-        { "id": "T002", "summary": "Unit test scanAgentDefinitionsCore", "status": "pending" },
-        { "id": "T003", "summary": "Implement agentsScanner.ts", "status": "pending" },
-        { "id": "T004", "summary": "AgentDefinition types", "status": "pending" },
-        { "id": "T005", "summary": "Extend projectTreeProvider map / ProjectTreeItem", "status": "pending" }
+        { "id": "T001", "summary": "Implement scanAgentDefinitionsCore.ts", "status": "done" },
+        { "id": "T002", "summary": "Unit test scanAgentDefinitionsCore", "status": "done" },
+        { "id": "T003", "summary": "Implement agentsScanner.ts", "status": "done" },
+        { "id": "T004", "summary": "AgentDefinition types", "status": "done" },
+        { "id": "T005", "summary": "Extend projectTreeProvider map / ProjectTreeItem", "status": "done" }
       ]
     },
     {

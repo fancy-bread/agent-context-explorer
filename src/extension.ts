@@ -7,6 +7,7 @@ import { AgentsTreeProvider } from './providers/agentsTreeProvider';
 import { RulesScanner } from './scanner/rulesScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
 import { SkillsScanner } from './scanner/skillsScanner';
+import { AgentsScanner, type AgentDefinition } from './scanner/agentsScanner';
 import { AsdlcArtifactScanner } from './scanner/asdlcArtifactScanner';
 import { ProjectCommands } from './commands/projectCommands';
 import { ProjectManager } from './services/projectManager';
@@ -27,6 +28,7 @@ let agentsTreeProvider: AgentsTreeProvider | undefined;
 let rulesScanner: RulesScanner;
 let commandsScanner: CommandsScanner;
 let skillsScanner: SkillsScanner;
+let agentsScanner: AgentsScanner | undefined;
 let asdlcArtifactScanner: AsdlcArtifactScanner;
 let projectManager: ProjectManager;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
@@ -61,6 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
 		rulesScanner = new RulesScanner(workspaceRoot);
 		commandsScanner = new CommandsScanner(workspaceRoot);
 		skillsScanner = new SkillsScanner(workspaceRoot);
+		agentsScanner = new AgentsScanner(workspaceRoot);
 		asdlcArtifactScanner = new AsdlcArtifactScanner(workspaceRoot);
 	} else {
 		outputChannel.appendLine('No workspace root found');
@@ -177,6 +180,7 @@ async function refreshData() {
 			globalCommands: Command[],
 			skills: Skill[],
 			globalSkills: Skill[],
+			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts
 		}>();
 
@@ -191,11 +195,12 @@ async function refreshData() {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
 			// Scan current workspace rules, state, commands, skills, and ASDLC artifacts
-			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts] = await Promise.all([
+			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
 				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
 				skillsScanner?.scanWorkspaceSkills() || Promise.resolve([]),
-				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false })
+				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false }),
+				agentsScanner?.scanWorkspaceAgentDefinitions() || Promise.resolve([])
 			]);
 
 			// Use workspace path as the key for current workspace
@@ -207,10 +212,11 @@ async function refreshData() {
 				globalCommands,
 				skills: currentSkills,
 				globalSkills,
+				agentDefinitions: currentAgentDefs,
 				asdlcArtifacts: currentAsdlcArtifacts
 			});
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ASDLC: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, ASDLC: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -232,14 +238,16 @@ async function refreshData() {
 				const projectRulesScanner = new RulesScanner(projectUri);
 				const projectCommandsScanner = new CommandsScanner(projectUri);
 				const projectSkillsScanner = new SkillsScanner(projectUri);
+				const projectAgentsScanner = new AgentsScanner(projectUri);
 				const projectAsdlcScanner = new AsdlcArtifactScanner(projectUri);
 
-				// Scan rules, commands, skills, and ASDLC artifacts for this project
-				const [rules, commands, skills, asdlcArtifacts] = await Promise.all([
+				// Scan rules, commands, skills, agent definitions, and ASDLC artifacts for this project
+				const [rules, commands, skills, asdlcArtifacts, agentDefinitions] = await Promise.all([
 					projectRulesScanner.scanRules(),
 					projectCommandsScanner.scanWorkspaceCommands(),
 					projectSkillsScanner.scanWorkspaceSkills(),
-					projectAsdlcScanner.scanAll()
+					projectAsdlcScanner.scanAll(),
+					projectAgentsScanner.scanWorkspaceAgentDefinitions()
 				]);
 
 				projectData.set(project.id, {
@@ -249,9 +257,10 @@ async function refreshData() {
 					globalCommands,
 					skills,
 					globalSkills,
+					agentDefinitions,
 					asdlcArtifacts
 				});
-				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${commands.length} commands, ${skills.length} skills`;
+				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${commands.length} commands, ${skills.length} skills, ${agentDefinitions.length} agent definitions`;
 				outputChannel.appendLine(logMessage);
 			} catch (error) {
 				const errorMessage = `Error scanning project ${project.name}: ${error}`;
@@ -264,6 +273,7 @@ async function refreshData() {
 					globalCommands: globalCommands,
 					skills: [],
 					globalSkills: globalSkills,
+					agentDefinitions: [],
 					asdlcArtifacts: {
 						agentsMd: { exists: false, sections: [] },
 						specs: { exists: false, specs: [] },

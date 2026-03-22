@@ -63,6 +63,7 @@ describe('Rule Labels Removal', () => {
 		globalCommands: any[],
 		skills: Skill[],
 		globalSkills: Skill[],
+		agentDefinitions: import('../../../src/scanner/agentsScanner').AgentDefinition[],
 		asdlcArtifacts: AsdlcArtifacts
 	}>;
 
@@ -106,6 +107,7 @@ describe('Rule Labels Removal', () => {
 		globalCommands: [],
 		skills: [],
 		globalSkills: [],
+		agentDefinitions: [],
 		asdlcArtifacts: {
 			agentsMd: { exists: false, sections: [] },
 			specs: { exists: false, specs: [] },
@@ -205,6 +207,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -320,6 +323,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [globalCommand],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -358,6 +362,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -397,6 +402,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [globalCommand],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -424,6 +430,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -452,6 +459,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -486,6 +494,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },
@@ -527,6 +536,7 @@ describe('Rule Labels Removal', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },

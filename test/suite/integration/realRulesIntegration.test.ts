@@ -130,6 +130,7 @@ describe('Real Rules Integration Tests', () => {
 			globalCommands: [],
 			skills: [],
 			globalSkills: [],
+			agentDefinitions: [],
 			asdlcArtifacts: {
 				agentsMd: { exists: false, sections: [] },
 				specs: { exists: false, specs: [] },

@@ -4,6 +4,7 @@ import { Rule } from '../scanner/rulesScanner';
 import { ProjectState } from '../scanner/types';
 import { Command } from '../scanner/commandsScanner';
 import { Skill } from '../scanner/skillsScanner';
+import type { AgentDefinition } from '../scanner/agentsScanner';
 import { ProjectDefinition } from '../types/project';
 import { AsdlcArtifacts } from '../scanner/types';
 
@@ -11,11 +12,13 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 	rule?: Rule;
 	commandData?: Command; // Command data (avoiding conflict with TreeItem's command property)
 	skillData?: Skill; // Skill data
+	agentDefinitionData?: AgentDefinition;
 	stateItem?: any;
 	ruleType?: any;
 	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands'
 		| 'cursor' | 'agents' | 'skills'
-		| 'agents-md' | 'specs' | 'schemas';
+		| 'agents-md' | 'specs' | 'schemas'
+		| 'agent-definitions' | 'agent-definition';
 	directory?: string;
 	project?: ProjectDefinition;
 	agentRootId?: string;
@@ -38,6 +41,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			globalCommands: Command[],
 			skills: Skill[],
 			globalSkills: Skill[],
+			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts
 		}> = new Map(),
 		private projects: ProjectDefinition[] = [],
@@ -71,6 +75,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			globalCommands: Command[],
 			skills: Skill[],
 			globalSkills: Skill[],
+			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts
 		}>,
 		projects: ProjectDefinition[],
@@ -163,21 +168,23 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			return items;
 		} else if (element.category === 'cursor' && element.project) {
-			// Cursor section: show workspace Commands, Rules, Skills
+			// Cursor section: show workspace Commands, Rules, Skills, Agent definitions
 			const projectData = this.projectData.get(element.project.id);
 			const rulesCount = projectData?.rules.length || 0;
 			const commandsCount = projectData?.commands.length || 0;
 			const skillsCount = projectData?.skills.length || 0;
+			const agentCount = projectData?.agentDefinitions.length || 0;
 
 			const sections = [
 				{ name: 'Commands', id: 'commands', icon: 'terminal', description: `${commandsCount} commands` },
 				{ name: 'Rules', id: 'rules', icon: 'book', description: `${rulesCount} rules` },
-				{ name: 'Skills', id: 'skills', icon: 'lightbulb', description: `${skillsCount} skills` }
+				{ name: 'Skills', id: 'skills', icon: 'lightbulb', description: `${skillsCount} skills` },
+				{ name: 'Agent definitions', id: 'agent-definitions', icon: 'hubot', description: `${agentCount} agent definitions` }
 			];
 
 			return sections.map((section) => {
 				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
-				item.category = section.id as 'commands' | 'rules' | 'skills';
+				item.category = section.id as 'commands' | 'rules' | 'skills' | 'agent-definitions';
 				item.project = element.project;
 				item.description = section.description;
 				item.iconPath = new vscode.ThemeIcon(section.icon);
@@ -296,6 +303,36 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					command: 'vscode.open',
 					title: 'Open Skill',
 					arguments: [skill.uri]
+				};
+				return item;
+			});
+		} else if (element.category === 'agent-definitions' && element.project) {
+			const projectData = this.projectData.get(element.project.id);
+			const defs = projectData?.agentDefinitions || [];
+
+			if (defs.length === 0) {
+				return [{
+					label: 'No agent definitions found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add Markdown files to .cursor/agents/'
+				} as ProjectTreeItem];
+			}
+
+			return defs.map((ad: AgentDefinition) => {
+				const item = new vscode.TreeItem(
+					ad.displayName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.agentDefinitionData = ad;
+				item.category = 'agent-definition';
+				item.project = element.project;
+				item.tooltip = `${ad.uri.fsPath}\n\n${this.getCommandPreview(ad.content)}`;
+				item.contextValue = 'agent-definition';
+				item.iconPath = new vscode.ThemeIcon('hubot');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Agent Definition',
+					arguments: [ad.uri]
 				};
 				return item;
 			});
