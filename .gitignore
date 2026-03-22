@@ -33,6 +33,7 @@ out/
 *.js.map
 !test/runTest.js
 !test/runTest.js.map
+!test/vscode-stub/index.js
 !eslint.config.js
 
 # VS Code Extension build artifacts
