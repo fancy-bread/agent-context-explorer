@@ -59,6 +59,15 @@ export interface CoreSkill {
 	metadata?: CoreSkillMetadata;
 }
 
+/** Agent definition file (flat `agents/*.md`) — core layer, no vscode.Uri */
+export interface CoreAgentDefinition {
+	path: string;
+	content: string;
+	/** Basename without `.md` — tree label */
+	fileName: string;
+	displayName: string;
+}
+
 /** Core ASDLC artifacts - reuses structure from scanner/types with path strings */
 export interface CoreSpecFile {
 	domain: string;

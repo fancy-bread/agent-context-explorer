@@ -7,6 +7,7 @@ import { ProjectDefinition } from '../../../src/types/project';
 import { Rule } from '../../../src/scanner/rulesScanner';
 import { Command } from '../../../src/scanner/commandsScanner';
 import { Skill } from '../../../src/scanner/skillsScanner';
+import type { AgentDefinition } from '../../../src/scanner/agentsScanner';
 import { AsdlcArtifacts } from '../../../src/scanner/types';
 
 // Mock vscode module
@@ -51,6 +52,7 @@ function createProjectData(overrides: Partial<{
 	globalCommands: Command[];
 	skills: Skill[];
 	globalSkills: Skill[];
+	agentDefinitions: AgentDefinition[];
 	asdlcArtifacts: AsdlcArtifacts;
 }> = {}) {
 	const defaultArtifacts: AsdlcArtifacts = {
@@ -67,6 +69,7 @@ function createProjectData(overrides: Partial<{
 			globalCommands: overrides.globalCommands ?? [],
 			skills: overrides.skills ?? [],
 			globalSkills: overrides.globalSkills ?? [],
+			agentDefinitions: overrides.agentDefinitions ?? [],
 			asdlcArtifacts: overrides.asdlcArtifacts ?? defaultArtifacts
 		}]
 	]);
@@ -250,7 +253,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 		assert.deepStrictEqual(labels, ['Cursor', 'Specs + ASDLC']);
 	});
 
-	it('cursor -> Commands, Rules, Skills', async () => {
+	it('cursor -> Commands, Rules, Skills, Agent definitions', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const cursorItem: ProjectTreeItem = {
@@ -262,9 +265,9 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 
 		const children = await provider.getChildren(cursorItem);
 
-		assert.strictEqual(children.length, 3);
+		assert.strictEqual(children.length, 4);
 		const labels = children.map(c => c.label).sort();
-		assert.deepStrictEqual(labels, ['Commands', 'Rules', 'Skills']);
+		assert.deepStrictEqual(labels, ['Agent definitions', 'Commands', 'Rules', 'Skills']);
 	});
 
 	it('agents -> AGENTS.md, Specs, Schemas when artifacts exist', async () => {
@@ -498,6 +501,7 @@ describe('ProjectTreeProvider error handling', () => {
 			globalCommands: [] as Command[],
 			skills: [] as Skill[],
 			globalSkills: [] as Skill[],
+			agentDefinitions: [] as AgentDefinition[],
 			asdlcArtifacts: defaultArtifacts
 		};
 		const throwingData = new Map([['test-project', throwingEntry]]);
