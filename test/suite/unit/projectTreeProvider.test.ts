@@ -253,7 +253,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 		assert.deepStrictEqual(labels, ['Cursor', 'Specs + ASDLC']);
 	});
 
-	it('cursor -> Commands, Rules, Skills, Agent definitions', async () => {
+	it('cursor -> Agents, Commands, Rules, Skills (alphabetical)', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const cursorItem: ProjectTreeItem = {
@@ -267,7 +267,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 
 		assert.strictEqual(children.length, 4);
 		const labels = children.map(c => c.label).sort();
-		assert.deepStrictEqual(labels, ['Agent definitions', 'Commands', 'Rules', 'Skills']);
+		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'Rules', 'Skills']);
 	});
 
 	it('agents -> AGENTS.md, Specs, Schemas when artifacts exist', async () => {

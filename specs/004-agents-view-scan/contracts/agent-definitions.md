@@ -17,7 +17,7 @@ Missing directories → empty list (no error).
 
 ## UI contract
 
-- **Label** (folder node): **Agent definitions** (must not be confused with **Agents view** sidebar — see feature spec Terminology).
+- **Label** (folder node under Workspaces → project → **Cursor**): **Agents** — lists agent definition files; must not be confused with the **Agents view** activity-bar sidebar (see feature spec Terminology). Sibling nodes (**Commands**, **Rules**, **Skills**, **Agents**) are shown in **alphabetical order** by label.
 - **Leaf**: display name = basename without `.md`; **icon** = agent-style codicon (`hubot` per research).
 - **Activation**: opens file URI in editor; no ACE-side mutation.
 
