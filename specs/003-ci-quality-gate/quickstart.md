@@ -27,12 +27,12 @@ npm run ci:coverage
 
 ## Interpret failures
 
-- **`ERROR: Coverage for ... does not meet threshold`**: Raise tests or adjust **documented** exclusions per project policy—not by lowering thresholds in a drive-by commit.
+- **`ERROR: Coverage for ... does not meet threshold`**: Add tests (or documented exclusions per policy). **Threshold ratchet**: the **target** is 80% branches / 90% functions per file (`spec.md`). The **enforced** minima in `.nycrc` may step up over **FB-114 / FB-115** (or equivalent stories)—only raise or lower floors in commits that **document** the change in `contracts/ci-quality-gate.md` and keep CI meaningful (no drive-by drops).
 
 - **Node version**: If local Node is not 24.x, switch versions before debugging CI-only failures.
 
 ## Update checklist (for implementers)
 
-- [ ] `.nycrc` has `branches` / `functions` targets and `per-file` true.
+- [ ] `.nycrc` has `branches` / `functions` set to the **current contract floor** (or full **target** if already green) and `per-file` true.
 - [ ] `.github/workflows/ci.yml` uses Node 24.x and runs `npm run test:coverage` (or equivalent).
 - [ ] `npm run test:coverage` exits 0 locally on `main`-equivalent code after test work.

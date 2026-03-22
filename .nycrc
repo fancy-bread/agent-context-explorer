@@ -11,6 +11,6 @@
   "check-coverage": true,
   "per-file": true,
   "lines": 80,
-  "functions": 0,
-  "branches": 0
+  "functions": 50,
+  "branches": 40
 }
