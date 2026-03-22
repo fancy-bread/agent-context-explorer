@@ -159,6 +159,10 @@ ASDLC Artifact Scanning **MUST**:
 - Multi-project support via ProjectManager
 - MCP server provides dynamic context to AI agents
 
+### CI / coverage (003-ci-quality-gate)
+
+Run **`npm run test:coverage`** locally before merge—the same NYC gate as CI. See [quickstart](specs/003-ci-quality-gate/quickstart.md) and [contract](specs/003-ci-quality-gate/contracts/ci-quality-gate.md).
+
 ---
 
 ## 6. Common Pitfalls
@@ -196,5 +200,5 @@ This project scans for and uses:
 ---
 
 **Status**: Active
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-03-12
 **Pattern**: ASDLC "Agent Constitution" + explicit artifact scanning
