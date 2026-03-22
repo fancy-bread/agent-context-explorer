@@ -32,9 +32,9 @@
       "summary": "004 Phase 2: User Story 1 — Workspaces tree (MVP)",
       "url": "https://fancybread.atlassian.net/browse/FB-119",
       "embedded_tasks": [
-        { "id": "T006", "summary": "Wire AgentsScanner in extension.ts", "status": "pending" },
-        { "id": "T007", "summary": "ProjectTreeProvider Cursor — Agent definitions UI", "status": "pending" },
-        { "id": "T008", "summary": "Empty behavior workspace scope", "status": "pending" }
+        { "id": "T006", "summary": "Wire AgentsScanner in extension.ts", "status": "done" },
+        { "id": "T007", "summary": "ProjectTreeProvider Cursor — Agents UI", "status": "done" },
+        { "id": "T008", "summary": "Empty behavior workspace scope", "status": "done" }
       ]
     },
     {

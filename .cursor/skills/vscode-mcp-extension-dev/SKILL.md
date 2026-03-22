@@ -1,3 +1,4 @@
+---
 name: vscode-mcp-extension-dev
 description: >-
   Best practices for VS Code extensions that use MCP (Model Context Protocol) or expose agent context. Use when implementing extension features, MCP servers, tree views, or scanners. Covers TypeScript/extension API patterns, security, performance, error handling, testing, and operational boundaries (ALWAYS/ASK/NEVER). Project rules replacement for ACE-style extensions.
@@ -103,7 +104,7 @@ Execute user-provided code; write outside workspace; commit secrets; modify file
 ## ACE-Specific (Viewer-Only / Agent Context)
 
 - **Viewer-only:** Extension scans and displays rules, commands, specs, AGENTS.md—no CRUD for those artifacts; users edit in their own editors.
-- **Artifacts:** AGENTS.md, `.cursor/rules`, `.cursor/commands`, `.cursor/skills`, `specs/`, `schemas/`, `.plans/`. Prefer scanning these over inferring project type from file patterns.
+- **Artifacts:** AGENTS.md, `.cursor/agents`, `.cursor/commands`, `.cursor/rules`, `.cursor/skills`, `specs/`, `schemas/`. Prefer scanning these over inferring project type from file patterns.
 - **Pitfalls:** Avoid “optimistic” state detection from file patterns; avoid adding rules/artifact management or compliance auditing to a general viewer; avoid packaging full `node_modules` (bundle); ensure MCP server uses bundled code and correct externals.
 
 ---

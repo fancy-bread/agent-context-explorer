@@ -278,9 +278,9 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 			hasAnyArtifacts: true
 		};
 		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const agentsItem: ProjectTreeItem = { label: 'Agents', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
+		const specsAsdlcItem: ProjectTreeItem = { label: 'Specs + ASDLC', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(agentsItem);
+		const children = await provider.getChildren(specsAsdlcItem);
 
 		assert.strictEqual(children.length, 3);
 		assert.ok(children.some(c => c.label === 'AGENTS.md'));
@@ -290,12 +290,53 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 
 	it('agents -> "No ASDLC artifacts found" when none exist', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const agentsItem: ProjectTreeItem = { label: 'Agents', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
+		const specsAsdlcItem: ProjectTreeItem = { label: 'Specs + ASDLC', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(agentsItem);
+		const children = await provider.getChildren(specsAsdlcItem);
 
 		assert.strictEqual(children.length, 1);
 		assert.strictEqual(children[0].label, 'No ASDLC artifacts found');
+	});
+});
+
+describe('ProjectTreeProvider agents (Cursor — agent-definitions)', () => {
+	it('returns placeholder when no agent definition files (FR-005 / T008)', async () => {
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		const agentsFolderItem: ProjectTreeItem = {
+			label: 'Agents',
+			collapsibleState: 0,
+			category: 'agent-definitions',
+			project: mockProject
+		} as ProjectTreeItem;
+
+		const children = await provider.getChildren(agentsFolderItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'No agents found');
+	});
+
+	it('returns agent leaves with hubot icon and vscode.open (US1)', async () => {
+		const ad: AgentDefinition = {
+			uri: vscode.Uri.file('/test/.cursor/agents/my-agent.md'),
+			content: '# My Agent\n',
+			fileName: 'my-agent',
+			displayName: 'my-agent'
+		};
+		const provider = new ProjectTreeProvider(createProjectData({ agentDefinitions: [ad] }), [mockProject], mockProject);
+		const agentsFolderItem: ProjectTreeItem = {
+			label: 'Agents',
+			collapsibleState: 0,
+			category: 'agent-definitions',
+			project: mockProject
+		} as ProjectTreeItem;
+
+		const children = await provider.getChildren(agentsFolderItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'my-agent');
+		assert.strictEqual(children[0].contextValue, 'agent-definition');
+		assert.strictEqual((children[0].iconPath as { id: string }).id, 'hubot');
+		assert.strictEqual(children[0].command?.command, 'vscode.open');
 	});
 });
 

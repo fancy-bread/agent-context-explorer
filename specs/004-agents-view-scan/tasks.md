@@ -20,11 +20,11 @@
 
 **⚠️ CRITICAL**: No user story UI work until this phase completes.
 
-- [ ] T001 Implement `src/scanner/core/scanAgentDefinitionsCore.ts` scanning flat `*.md` in `agents/` per `specs/004-agents-view-scan/contracts/agent-definitions.md` (workspace `.cursor/agents`, agent roots including `~/.agents/agents` for Global)
-- [ ] T002 Add `test/suite/unit/scanAgentDefinitionsCore.unit.test.ts` with fixtures for populated `agents/`, missing directory, and alphabetical ordering
-- [ ] T003 Implement `src/scanner/agentsScanner.ts` wrapping core with `VSCodeFsAdapter` for workspace project roots
-- [ ] T004 Add exported `AgentDefinition` (or equivalent) types in `src/scanner/agentsScanner.ts` and/or `src/scanner/types.ts` aligned with `specs/004-agents-view-scan/data-model.md`
-- [ ] T005 Extend `src/providers/projectTreeProvider.ts` `updateData` map type and `ProjectTreeItem` to support `agentDefinitions: AgentDefinition[]` and new categories/context for agent-definition leaves
+- [x] T001 Implement `src/scanner/core/scanAgentDefinitionsCore.ts` scanning flat `*.md` in `agents/` per `specs/004-agents-view-scan/contracts/agent-definitions.md` (workspace `.cursor/agents`, agent roots including `~/.agents/agents` for Global)
+- [x] T002 Add `test/suite/unit/scanAgentDefinitionsCore.unit.test.ts` with fixtures for populated `agents/`, missing directory, and alphabetical ordering
+- [x] T003 Implement `src/scanner/agentsScanner.ts` wrapping core with `VSCodeFsAdapter` for workspace project roots
+- [x] T004 Add exported `AgentDefinition` (or equivalent) types in `src/scanner/agentsScanner.ts` and/or `src/scanner/types.ts` aligned with `specs/004-agents-view-scan/data-model.md`
+- [x] T005 Extend `src/providers/projectTreeProvider.ts` `updateData` map type and `ProjectTreeItem` to support `agentDefinitions: AgentDefinition[]` and new categories/context for agent-definition leaves
 
 **Checkpoint**: Core scan tested; tree provider can accept agent definition arrays.
 
@@ -32,13 +32,13 @@
 
 ## Phase 2: User Story 1 — Workspaces tree (Priority: P1) 🎯 MVP
 
-**Goal**: **Agent definitions** subsection under each project’s **Cursor** branch in the Workspaces sidebar. **Branch**: e.g. `004-agents-us1-workspaces` or Jira story for US1.
+**Goal**: **Agents** subsection under each project’s **Cursor** branch in the Workspaces sidebar (alphabetically ordered with Commands, Rules, Skills). **Branch**: e.g. `feat/FB-119` or `004-agents-us1-workspaces`.
 
-**Independent Test**: Create `project/.cursor/agents/test-agent.md`, expand Workspaces → project → Cursor → **Agent definitions**, open file (see `specs/004-agents-view-scan/quickstart.md`).
+**Independent Test**: Create `project/.cursor/agents/test-agent.md`, expand Workspaces → project → Cursor → **Agents**, open file (see `specs/004-agents-view-scan/quickstart.md`).
 
-- [ ] T006 [US1] Wire `AgentsScanner` in `src/extension.ts` so each `projectData.set` entry includes `agentDefinitions` for that project’s workspace root
-- [ ] T007 [US1] Update `src/providers/projectTreeProvider.ts` Cursor section (`getChildren` for `cursor`) to add collapsible **Agent definitions** node and leaves with `ThemeIcon('hubot')`, `vscode.open`, tooltips for duplicate names per spec edge cases
-- [ ] T008 [US1] Implement empty behavior for workspace scope: hide **Agent definitions** or show empty child per FR-005 in `src/providers/projectTreeProvider.ts`
+- [x] T006 [US1] Wire `AgentsScanner` in `src/extension.ts` so each `projectData.set` entry includes `agentDefinitions` for that project’s workspace root
+- [x] T007 [US1] Update `src/providers/projectTreeProvider.ts` Cursor section (`getChildren` for `cursor`) to add collapsible **Agents** node and leaves with `ThemeIcon('hubot')`, `vscode.open`, tooltips for duplicate names per spec edge cases
+- [x] T008 [US1] Implement empty behavior for workspace scope: show empty child per FR-005 in `src/providers/projectTreeProvider.ts` (**No agents found**)
 
 **Checkpoint**: User Story 1 complete — MVP demoable without Agents view.
 
