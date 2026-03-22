@@ -19,7 +19,7 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Purpose**: Document Node policy for contributors (optional but supports FR-003 / NFR-001).
 
-- [ ] T001 [P] Add `"node": ">=24"` to `engines` in `/Users/paul/projects/software/agent-context-explorer/package.json` (keep existing `vscode` engine)
+- [x] T001 [P] Add `"node": ">=24"` to `engines` in `/Users/paul/projects/software/agent-context-explorer/package.json` (keep existing `vscode` engine)
 
 ---
 
@@ -27,9 +27,9 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Purpose**: Coverage policy values MUST be set before CI and local runs enforce the new bars.
 
-**⚠️ After T002, `npm run test:coverage` will fail until US2/US3 test work completes.**
+**✅ Coverage gate green:** aggregate `test:coverage` meets **90 / 80 / 90** (lines / branches / functions).
 
-- [ ] T002 Set **aggregate** thresholds in `/Users/paul/projects/software/agent-context-explorer/.nycrc` per [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md): `lines` **90**, `branches` **80**, `functions` **90**, `per-file` **false**, `check-coverage` **true**, existing `include`/`exclude`
+- [x] T002 Set **aggregate** thresholds in `/Users/paul/projects/software/agent-context-explorer/.nycrc` per [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md): `lines` **90**, `branches` **80**, `functions` **90**, `per-file` **false**, `check-coverage` **true**, existing `include`/`exclude`
 
 **Checkpoint**: `.nycrc` matches contract; `npm run test:coverage` exits **0**.
 
@@ -41,7 +41,7 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Independent test**: Open a PR with intentionally violated thresholds (or pre-T004 state); CI **test** job fails. After gates are green, PR passes.
 
-- [ ] T003 [US1] Update `/Users/paul/projects/software/agent-context-explorer/.github/workflows/ci.yml`: set `actions/setup-node` **node-version** to **24.x** in both `build` and `test` jobs (replace **22.x**); in `test` job, after `npm run compile`, run `npm run compile:test` then **`npm run test:coverage`** (replace or supplement `npm run test` per [research.md](./research.md) — keep `DISPLAY` env if still running electron harness in same job only if required; otherwise document split in commit message)
+- [x] T003 [US1] Update `/Users/paul/projects/software/agent-context-explorer/.github/workflows/ci.yml`: set `actions/setup-node` **node-version** to **24.x** in both `build` and `test` jobs (replace **22.x**); in `test` job, after `npm run compile`, run `npm run compile:test` then **`npm run test:coverage`** (replace or supplement `npm run test` per [research.md](./research.md) — keep `DISPLAY` env if still running electron harness in same job only if required; otherwise document split in commit message)
 
 ---
 
@@ -51,7 +51,7 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Independent test**: `npm run test:coverage` exits **0** with `per-file: false` (All files row).
 
-- [ ] T004 [US2] Iteratively add or extend unit tests under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` (and adjust stubs/mocks as needed) until `npm run test:coverage` exits **0** with respect to **aggregate branch** threshold (All files row)
+- [x] T004 [US2] Iteratively add or extend unit tests under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` (and adjust stubs/mocks as needed) until `npm run test:coverage` exits **0** with respect to **aggregate branch** threshold (All files row)
 
 ---
 
@@ -61,7 +61,7 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Independent test**: `npm run test:coverage` exits **0** (All files row).
 
-- [ ] T005 [US3] Continue test improvements under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` until aggregate **function** coverage meets **90%**; confirm with one clean run and document any no-op if T004 already satisfied it
+- [x] T005 [US3] Continue test improvements under `/Users/paul/projects/software/agent-context-explorer/test/suite/unit/` until aggregate **function** coverage meets **90%**; confirm with one clean run and document any no-op if T004 already satisfied it
 
 ---
 
@@ -69,9 +69,9 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **Purpose**: NFR-001 (local parity), doc consistency, final verification.
 
-- [ ] T006 [P] Reconcile `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/contracts/ci-quality-gate.md` and `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/quickstart.md` with final `.nycrc` and `ci.yml` behavior
-- [ ] T007 [P] Add a short pointer to `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/quickstart.md` from `/Users/paul/projects/software/agent-context-explorer/AGENTS.md` (Tech Stack or Quality section) **or** root `README.md` — pick one visible location for contributors
-- [ ] T008 Run `/Users/paul/projects/software/agent-context-explorer` locally: `npm run lint`, `npm run test:coverage` (exit 0); confirm CI workflow matches [plan.md](./plan.md)
+- [x] T006 [P] Reconcile `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/contracts/ci-quality-gate.md` and `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/quickstart.md` with final `.nycrc` and `ci.yml` behavior
+- [x] T007 [P] Add a short pointer to `/Users/paul/projects/software/agent-context-explorer/specs/003-ci-quality-gate/quickstart.md` from `/Users/paul/projects/software/agent-context-explorer/AGENTS.md` (Tech Stack or Quality section) **or** root `README.md` — pick one visible location for contributors
+- [x] T008 Run `/Users/paul/projects/software/agent-context-explorer` locally: `npm run lint`, `npm run test:coverage` (exit 0); confirm CI workflow matches [plan.md](./plan.md)
 
 ---
 
