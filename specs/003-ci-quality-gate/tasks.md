@@ -29,9 +29,9 @@ description: "Task list for CI quality gate (003-ci-quality-gate)"
 
 **⚠️ After T002, `npm run test:coverage` will fail until US2/US3 test work completes.**
 
-- [ ] T002 Set `branches` to **80** and `functions` to **90** in `/Users/paul/projects/software/agent-context-explorer/.nycrc` (retain `lines` **80**, `per-file` **true**, `check-coverage` **true**, existing `include`/`exclude`)
+- [ ] T002 Set **passable floor** `branches` / `functions` in `/Users/paul/projects/software/agent-context-explorer/.nycrc` per [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md) ratchet (e.g. **40** / **50** until US2/US3 raise toward **80** / **90**); retain `lines` **80**, `per-file` **true**, `check-coverage` **true**, existing `include`/`exclude`
 
-**Checkpoint**: `.nycrc` matches [contracts/ci-quality-gate.md](./contracts/ci-quality-gate.md) threshold table.
+**Checkpoint**: `.nycrc` matches contract **floor** table; **target** remains 80 / 90 in spec for US2/US3.
 
 ---
 

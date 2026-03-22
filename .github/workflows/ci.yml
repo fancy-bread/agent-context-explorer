@@ -17,10 +17,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js 22.x
+    - name: Setup Node.js 24.x
       uses: actions/setup-node@v4
       with:
-        node-version: '22.x'
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -54,10 +54,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Setup Node.js 24.x
       uses: actions/setup-node@v4
       with:
-        node-version: '22.x'
+        node-version: '24.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -66,8 +66,9 @@ jobs:
     - name: Compile for tests
       run: npm run compile
 
-    - name: Run tests
-      run: npm run test
-      env:
-        DISPLAY: ':99.0'
+    - name: Compile test harness TypeScript
+      run: npm run compile:test
+
+    - name: Unit tests with coverage (NYC check-coverage)
+      run: npm run test:coverage
 
