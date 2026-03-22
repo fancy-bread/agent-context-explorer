@@ -1,0 +1,93 @@
+{
+  "created_at": "2026-03-12T00:00:00Z",
+  "updated_at": "2026-03-12T00:00:00Z",
+  "spec": "004-agents-view-scan",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "mcp_server": "user-atlassian",
+  "hierarchy_note": "Stories created with parent Epic FB-117 via createJiraIssue/editJiraIssue parent field where API accepts; Epic also referenced in each Story description. Config used task_type empty (2-level): tasks embedded in Story descriptions only.",
+  "epic": {
+    "key": "FB-117",
+    "summary": "Agent definitions in Workspaces and Agents views (004-agents-view-scan)",
+    "url": "https://fancybread.atlassian.net/browse/FB-117"
+  },
+  "stories": [
+    {
+      "key": "FB-118",
+      "phase": "Phase 1: Foundational (Blocking Prerequisites)",
+      "summary": "004 Phase 1: Foundational (Blocking Prerequisites)",
+      "url": "https://fancybread.atlassian.net/browse/FB-118",
+      "embedded_tasks": [
+        { "id": "T001", "summary": "Implement scanAgentDefinitionsCore.ts", "status": "pending" },
+        { "id": "T002", "summary": "Unit test scanAgentDefinitionsCore", "status": "pending" },
+        { "id": "T003", "summary": "Implement agentsScanner.ts", "status": "pending" },
+        { "id": "T004", "summary": "AgentDefinition types", "status": "pending" },
+        { "id": "T005", "summary": "Extend projectTreeProvider map / ProjectTreeItem", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-119",
+      "phase": "Phase 2: User Story 1 — Workspaces tree (MVP)",
+      "summary": "004 Phase 2: User Story 1 — Workspaces tree (MVP)",
+      "url": "https://fancybread.atlassian.net/browse/FB-119",
+      "embedded_tasks": [
+        { "id": "T006", "summary": "Wire AgentsScanner in extension.ts", "status": "pending" },
+        { "id": "T007", "summary": "ProjectTreeProvider Cursor — Agent definitions UI", "status": "pending" },
+        { "id": "T008", "summary": "Empty behavior workspace scope", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-120",
+      "phase": "Phase 3: User Story 2 — Agents view",
+      "summary": "004 Phase 3: User Story 2 — Agents view",
+      "url": "https://fancybread.atlassian.net/browse/FB-120",
+      "embedded_tasks": [
+        { "id": "T009", "summary": "Extend AgentRootDefinition", "status": "pending" },
+        { "id": "T010", "summary": "resolveAgentRootsWithData agentDefinitions", "status": "pending" },
+        { "id": "T011", "summary": "agentsTreeProvider Agent definitions section", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-121",
+      "phase": "Phase 4: User Story 3 — Refresh & watchers",
+      "summary": "004 Phase 4: User Story 3 — Refresh & watchers",
+      "url": "https://fancybread.atlassian.net/browse/FB-121",
+      "embedded_tasks": [
+        { "id": "T012", "summary": "FileSystemWatcher .cursor/agents", "status": "pending" },
+        { "id": "T013", "summary": "Verify ace.refresh scans", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-122",
+      "phase": "Phase 5: MCP tools & project context",
+      "summary": "004 Phase 5: MCP tools & project context",
+      "url": "https://fancybread.atlassian.net/browse/FB-122",
+      "embedded_tasks": [
+        { "id": "T014", "summary": "mcp/types.ts agent definition types", "status": "pending" },
+        { "id": "T015", "summary": "toolsImpl list/get agent definitions", "status": "pending" },
+        { "id": "T016", "summary": "Register MCP tools server + backend", "status": "pending" },
+        { "id": "T017", "summary": "get_project_context includes agentDefinitions", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-123",
+      "phase": "Phase 6: Polish & cross-cutting",
+      "summary": "004 Phase 6: Polish & cross-cutting",
+      "url": "https://fancybread.atlassian.net/browse/FB-123",
+      "embedded_tasks": [
+        { "id": "T018", "summary": "Living spec tree-view", "status": "pending" },
+        { "id": "T019", "summary": "Living spec scanners", "status": "pending" },
+        { "id": "T020", "summary": "Living spec providers", "status": "pending" },
+        { "id": "T021", "summary": "Living spec MCP + data-model", "status": "pending" },
+        { "id": "T022", "summary": "compile:test + test:coverage + quickstart", "status": "pending" }
+      ]
+    }
+  ],
+  "summary": {
+    "total_stories": 6,
+    "total_embedded_tasks": 22,
+    "completed_tasks": 0,
+    "pending_tasks": 22
+  }
+}
