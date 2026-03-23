@@ -60,7 +60,7 @@ function patchVscodeForExtension(): void {
 		commandHandlers[id] = fn;
 		return { dispose: () => {} };
 	};
-	/** One hook set per createFileSystemWatcher call (rules, commands, skills, global×2). */
+	/** One hook set per createFileSystemWatcher call (rules, commands, skills, agents, global×3). */
 	const watcherHooksList: WatcherHookSet[] = [];
 	(vscode.workspace as unknown as { __watcherHooksList: WatcherHookSet[] }).__watcherHooksList = watcherHooksList;
 	vscode.workspace.createFileSystemWatcher = () => {
@@ -144,7 +144,32 @@ describe('extension activate / deactivate', () => {
 		extension.deactivate();
 	});
 
-	it('file watcher callbacks trigger refresh (rules/commands/skills)', async function () {
+	it('ace.refresh invokes workspace agent definition scan (T013)', async function () {
+		if (!extension) {
+			this.skip();
+		}
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const { AgentsScanner } = require('../../../src/scanner/agentsScanner');
+		let scanCalls = 0;
+		const origScan = AgentsScanner.prototype.scanWorkspaceAgentDefinitions;
+		AgentsScanner.prototype.scanWorkspaceAgentDefinitions = async function (this: unknown) {
+			scanCalls++;
+			return origScan.call(this);
+		};
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+			assert.ok(scanCalls >= 1, 'scanWorkspaceAgentDefinitions should run on refresh');
+		} finally {
+			AgentsScanner.prototype.scanWorkspaceAgentDefinitions = origScan;
+			extension.deactivate();
+		}
+	});
+
+	it('file watcher callbacks trigger refresh (rules/commands/skills/agents + global)', async function () {
 		if (!extension) {
 			this.skip();
 		}
@@ -154,9 +179,9 @@ describe('extension activate / deactivate', () => {
 		assert.ok(refresh);
 		await refresh();
 		const list = (vscode.workspace as unknown as { __watcherHooksList?: WatcherHookSet[] }).__watcherHooksList;
-		assert.ok(list && list.length >= 3, 'rules/commands/skills watchers');
-		// First three watchers: exercise create/change/delete on each (rules, commands, skills)
-		for (let i = 0; i < 3; i++) {
+		assert.ok(list && list.length >= 7, 'workspace×4 + global×3 watchers');
+		// All watchers: exercise create/change/delete on each
+		for (let i = 0; i < list!.length; i++) {
 			const h = list![i];
 			assert.ok(h.onDidCreate && h.onDidChange && h.onDidDelete);
 			await h.onDidCreate!();

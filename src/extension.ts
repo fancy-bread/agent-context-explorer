@@ -146,6 +146,10 @@ async function ensureDataLoaded(): Promise<void> {
 		if (globalSkillsWatcher) {
 			extensionContext.subscriptions.push(globalSkillsWatcher);
 		}
+		const globalAgentsWatcher = setupGlobalAgentsWatcher();
+		if (globalAgentsWatcher) {
+			extensionContext.subscriptions.push(globalAgentsWatcher);
+		}
 		outputChannel.appendLine('File watchers registered (lazy setup)');
 	}
 }
@@ -431,6 +435,10 @@ function setupFileWatcher() {
 	const skillsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/skills/*/SKILL.md');
 	const skillsWatcher = vscode.workspace.createFileSystemWatcher(skillsPattern);
 
+	// Watch for changes in .cursor/agents (flat + nested *.md; scanner uses flat only)
+	const agentsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/agents/**/*.md');
+	const agentsWatcher = vscode.workspace.createFileSystemWatcher(agentsPattern);
+
 	// Rules watcher handlers
 	rulesWatcher.onDidCreate(() => {
 		outputChannel.appendLine('Rule file created, refreshing...');
@@ -479,6 +487,22 @@ function setupFileWatcher() {
 		refreshData();
 	});
 
+	// Agents watcher handlers (workspace agent definition files)
+	agentsWatcher.onDidCreate(() => {
+		outputChannel.appendLine('Agent definition file created, refreshing...');
+		refreshData();
+	});
+
+	agentsWatcher.onDidChange(() => {
+		outputChannel.appendLine('Agent definition file changed, refreshing...');
+		refreshData();
+	});
+
+	agentsWatcher.onDidDelete(() => {
+		outputChannel.appendLine('Agent definition file deleted, refreshing...');
+		refreshData();
+	});
+
 	// Combine watchers for disposal
 	fileWatcher = {
 		...rulesWatcher,
@@ -486,6 +510,7 @@ function setupFileWatcher() {
 			rulesWatcher.dispose();
 			commandsWatcher.dispose();
 			skillsWatcher.dispose();
+			agentsWatcher.dispose();
 		}
 	} as vscode.FileSystemWatcher;
 }
@@ -550,6 +575,36 @@ function setupGlobalSkillsWatcher(): vscode.FileSystemWatcher | undefined {
 	} catch (error) {
 		outputChannel.appendLine(`Unable to watch global skills directory: ${error instanceof Error ? error.message : String(error)}`);
 		// Continue without global skills watcher - extension still functions
+		return undefined;
+	}
+}
+
+function setupGlobalAgentsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch ~/.cursor/agents/*.md (mirrors global commands/skills; Agents view Cursor root)
+	try {
+		const homeDir = os.homedir();
+		const globalAgentsPattern = path.join(homeDir, '.cursor', 'agents', '*.md');
+		const globalAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalAgentsPattern);
+
+		globalAgentsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global agent definition file created, refreshing...');
+			refreshData();
+		});
+
+		globalAgentsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global agent definition file changed, refreshing...');
+			refreshData();
+		});
+
+		globalAgentsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global agent definition file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global agents file watcher created successfully');
+		return globalAgentsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global agents directory: ${error instanceof Error ? error.message : String(error)}`);
 		return undefined;
 	}
 }

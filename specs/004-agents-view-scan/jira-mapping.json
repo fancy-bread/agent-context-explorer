@@ -54,8 +54,8 @@
       "summary": "004 Phase 4: User Story 3 — Refresh & watchers",
       "url": "https://fancybread.atlassian.net/browse/FB-121",
       "embedded_tasks": [
-        { "id": "T012", "summary": "FileSystemWatcher .cursor/agents", "status": "pending" },
-        { "id": "T013", "summary": "Verify ace.refresh scans", "status": "pending" }
+        { "id": "T012", "summary": "FileSystemWatcher .cursor/agents", "status": "done" },
+        { "id": "T013", "summary": "Verify ace.refresh scans", "status": "done" }
       ]
     },
     {
