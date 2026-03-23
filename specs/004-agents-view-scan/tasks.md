@@ -64,8 +64,8 @@
 
 **Independent Test**: Add/remove `.md` under `.cursor/agents/`, run refresh and/or rely on watcher; list updates without IDE restart.
 
-- [ ] T012 [US3] Register `vscode.FileSystemWatcher` for `.cursor/agents/**/*.md` in `src/extension.ts` `setupFileWatcher()` with create/change/delete → same refresh path as rules/commands/skills
-- [ ] T013 [US3] Verify `ace.refresh` in `src/extension.ts` re-runs agent definition scans for all projects and agent roots
+- [x] T012 [US3] Register `vscode.FileSystemWatcher` for `.cursor/agents/**/*.md` in `src/extension.ts` `setupFileWatcher()` with create/change/delete → same refresh path as rules/commands/skills; plus `setupGlobalAgentsWatcher()` for `~/.cursor/agents/*.md`
+- [x] T013 [US3] `ace.refresh` → `refreshData()` already re-scans `agentDefinitions` per project and `resolveAgentRootsWithData()` for Agents view; watcher tests cover 7 hooks
 
 **Checkpoint**: User Story 3 satisfied — stale-tree risk mitigated.
 
