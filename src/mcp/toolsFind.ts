@@ -1,6 +1,8 @@
 import type { Rule } from '../scanner/rulesScanner';
 import type { Command } from '../scanner/commandsScanner';
 import type { Skill } from '../scanner/skillsScanner';
+import type { AgentDefinition } from '../scanner/agentsScanner';
+import type { AgentDefinitionLocation } from './types';
 
 /** Find a rule by logical name or path fragment (MCP get_rule). */
 export function findRuleByName(rules: Rule[], name: string): Rule | undefined {
@@ -29,5 +31,22 @@ export function findSkillByName(skills: Skill[], name: string): Skill | undefine
 	return skills.find((s) => {
 		const skillName = s.fileName.toLowerCase();
 		return skillName === normalizedName || s.uri.fsPath.toLowerCase().includes(needle);
+	});
+}
+
+/** Workspace + agent-root agent definitions with scope (MCP list_agents / get_agent). */
+export interface TaggedAgentDefinition {
+	def: AgentDefinition;
+	location: AgentDefinitionLocation;
+}
+
+/** Find an agent definition by stem, display name, or path fragment (MCP get_agent). */
+export function findAgentDefinitionByName(items: TaggedAgentDefinition[], name: string): TaggedAgentDefinition | undefined {
+	const normalizedName = name.toLowerCase().replace(/\.md$/, '');
+	const needle = name.toLowerCase();
+	return items.find(({ def }) => {
+		const stem = def.fileName.toLowerCase();
+		const display = def.displayName.toLowerCase();
+		return stem === normalizedName || display === normalizedName || def.uri.fsPath.toLowerCase().includes(needle);
 	});
 }

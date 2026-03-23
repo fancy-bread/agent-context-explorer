@@ -75,10 +75,10 @@ As a developer, I want adding, renaming, or removing agent definition files to b
 
 ### Terminology *(canonical)*
 
-- **Agent definition file**: A Markdown file in a **supported agents folder** (per planning) representing a reusable **agent profile** for the IDE. *Not* the same as **`AGENTS.md`** (project constitution).
-- **`AGENTS.md`**: The project’s **agent constitution** / operational boundaries; it remains under **Specs + ASDLC** in the Workspaces tree and is unchanged by this feature.
+- **Agent definition file**: A Markdown file in a **supported agents folder** (per planning) representing a reusable **agent profile** for the IDE. *Not* the same as **`AGENTS.md`** (project constitution at repo root).
+- **`AGENTS.md`**: Optional project constitution / operational boundaries file; **not** listed in the Workspaces **Specs** section (that section is only `specs/` and `schemas/`). Scanners may still read it for MCP and other tools.
 - **Agents view**: The **sidebar** that lists **agent roots** (Cursor, Claude, Global) and their children. *Capital “Agents” refers only to this view*, not to individual files.
-- **Agents** (tree subsection — Workspaces): The **folder node** under **Cursor** (Workspaces) that lists **agent definition files**. MUST be labeled **Agents**. It is distinct from the **Agents view** activity-bar sidebar and from **`AGENTS.md`** (constitution under Specs + ASDLC).
+- **Agents** (tree subsection — Workspaces): The **folder node** under **Cursor** (Workspaces) that lists **agent definition files**. MUST be labeled **Agents**. It is distinct from the **Agents view** activity-bar sidebar and from **`AGENTS.md`** at the project root.
 - **Agents** (tree subsection — Agents view): When implemented under an **agent root** in the **Agents view**, the folder that lists agent definition files SHOULD use the same labeling and ordering conventions as the Workspaces tree unless UX research dictates otherwise.
 
 ### Functional Requirements
@@ -98,7 +98,7 @@ As a developer, I want adding, renaming, or removing agent definition files to b
 
 ### Assumptions
 
-- **A-001**: **Agent definition files** are **Markdown** files stored in platform-conventional **agents** folders (e.g. under each relevant `.cursor` / agent root), following the same broad conventions Cursor uses for reusable agent definitions—not **`AGENTS.md`** at repo root (that remains under Specs + ASDLC). Exact glob patterns and depth are **planning** details.
+- **A-001**: **Agent definition files** are **Markdown** files stored in platform-conventional **agents** folders (e.g. under each relevant `.cursor` / agent root), following the same broad conventions Cursor uses for reusable agent definitions—not **`AGENTS.md`** at repo root (constitution file; separate from **Specs** / **Schemas** in the Workspaces tree). Exact glob patterns and depth are **planning** details.
 - **A-002**: **MCP tool surface** for agent definitions is **not** assumed either way: **FR-008** requires the **MCP** living spec to document either **new tools** or **explicit deferral** in the same delivery as sidebar support.
 - **A-003**: **Claude** and **Global** roots follow the **same** relative folder convention where applicable; if a root has no agents folder, the section is empty or omitted per FR-005.
 

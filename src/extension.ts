@@ -198,7 +198,7 @@ async function refreshData() {
 		if (currentWorkspaceRoot) {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
-			// Scan current workspace rules, state, commands, skills, and ASDLC artifacts
+			// Scan current workspace rules, state, commands, skills, and specs/schemas index
 			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
 				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
@@ -220,7 +220,7 @@ async function refreshData() {
 				asdlcArtifacts: currentAsdlcArtifacts
 			});
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, ASDLC: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, specs/schemas: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -245,7 +245,7 @@ async function refreshData() {
 				const projectAgentsScanner = new AgentsScanner(projectUri);
 				const projectAsdlcScanner = new AsdlcArtifactScanner(projectUri);
 
-				// Scan rules, commands, skills, agent definitions, and ASDLC artifacts for this project
+				// Scan rules, commands, skills, agent definitions, and specs/schemas for this project
 				const [rules, commands, skills, asdlcArtifacts, agentDefinitions] = await Promise.all([
 					projectRulesScanner.scanRules(),
 					projectCommandsScanner.scanWorkspaceCommands(),

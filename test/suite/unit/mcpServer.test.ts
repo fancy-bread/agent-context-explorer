@@ -815,6 +815,8 @@ const EXPECTED_MCP_TOOLS = [
 	'get_command',
 	'list_skills',
 	'get_skill',
+	'list_agents',
+	'get_agent',
 	'get_asdlc_artifacts',
 	'list_specs',
 	'get_project_context'
@@ -833,7 +835,7 @@ describe('MCP Server contract (tools-only)', () => {
 		assert.strictEqual(EXPECTED_MCP_TOOLS[0], 'list_projects');
 		assert.ok(EXPECTED_MCP_TOOLS.includes('list_rules'));
 		assert.ok(EXPECTED_MCP_TOOLS.includes('get_project_context'));
-		assert.strictEqual(EXPECTED_MCP_TOOLS.length, 10);
+		assert.strictEqual(EXPECTED_MCP_TOOLS.length, 12);
 	});
 });
 

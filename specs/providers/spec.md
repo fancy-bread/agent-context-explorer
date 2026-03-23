@@ -10,11 +10,11 @@
 
 ### Context
 
-Tree view providers translate project artifacts (rules, commands, skills, ASDLC artifacts) into the hierarchical UI displayed in VS Code's sidebar. The tree view is the primary interface for browsing project context.
+Tree view providers translate project artifacts (rules, commands, skills, specs, schemas) into the hierarchical UI displayed in VS Code's sidebar. The tree view is the primary interface for browsing project context.
 
 **Problem solved**: Users need an organized, hierarchical view of project context. Flat file lists are hard to navigate. Providers structure artifacts by type, location (workspace/global), and category.
 
-**Design principle**: **Platform-first organization**. Group artifacts by platform (Cursor IDE) and paradigm (ASDLC) to future-proof for multi-platform support (Claude Desktop, Windsurf, etc.).
+**Design principle**: **Platform-first organization**. Group artifacts by platform (Cursor IDE) and by on-disk layout (specs/schemas) to future-proof for multi-platform support (Claude Desktop, Windsurf, etc.).
 
 ### Architecture
 
@@ -24,7 +24,7 @@ Tree view providers translate project artifacts (rules, commands, skills, ASDLC 
 graph TB
     Root["Current Workspace"]
     Cursor["📁 Cursor"]
-    Agents["📁 Agents (ASDLC)"]
+    SpecsRoot["📁 Specs"]
     
     Commands["📁 Commands"]
     Rules["📁 Rules"]
@@ -48,15 +48,11 @@ graph TB
     SkillFile1["create-spec"]
     SkillFile2["start-task"]
     
-    AgentsMd["📄 AGENTS.md"]
-    Specs["📁 Specs"]
-    Schemas["📁 Schemas"]
     SpecFile1["scanners/spec.md"]
     SpecFile2["mcp/spec.md"]
-    SchemaFile["config.json"]
     
     Root --> Cursor
-    Root --> Agents
+    Root --> SpecsRoot
     
     Cursor --> Commands
     Cursor --> Rules
@@ -80,23 +76,19 @@ graph TB
     SkillsWorkspace --> SkillFile1
     SkillsGlobal --> SkillFile2
     
-    Agents --> AgentsMd
-    Agents --> Specs
-    Agents --> Schemas
-    Specs --> SpecFile1
-    Specs --> SpecFile2
-    Schemas --> SchemaFile
+    SpecsRoot --> SpecFile1
+    SpecsRoot --> SpecFile2
     
     style Root fill:#e1f5ff
     style Cursor fill:#fff4e1
-    style Agents fill:#f3e5f5
+    style SpecsRoot fill:#f3e5f5
 ```
 
 **Design rationale**:
-- **Cursor section**: IDE-specific artifacts (rules, commands, skills, subagents)
-- **Agents section**: Paradigm-agnostic ASDLC artifacts (AGENTS.md, specs, schemas)
+- **Cursor section**: IDE-specific artifacts (rules, commands, skills, agent definitions)
+- **Specs section**: Flat list of living specs (`specs/*/spec.md`) — no nested folders, no `schemas/` in the tree, no repo constitution leaf
 - **Future-proof**: Easy to add "Claude Desktop" or "Windsurf" sections alongside Cursor
-- **Clarity**: Clear separation between IDE tools and development methodology
+- **Clarity**: Clear separation between IDE tools and the specs list
 
 #### Provider Pattern
 
@@ -139,7 +131,8 @@ interface ProjectTreeItem extends vscode.TreeItem {
   category?: 'cursor' | 'agents' | 'rules' | 'commands' | 'skills' |
             'commands-workspace' | 'commands-global' |
             'skills-workspace' | 'skills-global' |
-            'agents-md' | 'specs' | 'schemas' | 'subagents'
+            'agent-definitions' | 'agent-definition' |
+            'specs'
 
   // Location metadata
   commandLocation?: 'workspace' | 'global'
@@ -162,7 +155,7 @@ Categories define tree node types and determine children resolution:
 |----------|--------|----------|---------|
 | `'projects'` | Root | `'cursor'`, `'agents'` | Top-level project node |
 | `'cursor'` | `'projects'` | `'commands'`, `'rules'`, `'skills'`, `'subagents'` | Cursor IDE section |
-| `'agents'` | `'projects'` | `'agents-md'`, `'specs'`, `'schemas'` | ASDLC section |
+| `'agents'` | `'projects'` | `'specs'` (leaves) | Flat spec domains from `specs/` |
 | `'commands'` | `'cursor'` | `'commands-workspace'`, `'commands-global'` | Commands section |
 | `'skills'` | `'cursor'` | `'skills-workspace'`, `'skills-global'` | Skills section |
 | `'rules'` | `'cursor'` | `'always'`, `'glob'`, `'manual'` rule types | Rules section |
@@ -170,8 +163,7 @@ Categories define tree node types and determine children resolution:
 | `'commands-global'` | `'commands'` | Individual command items | Global commands |
 | `'skills-workspace'` | `'skills'` | Individual skill items | Workspace skills |
 | `'skills-global'` | `'skills'` | Individual skill items | Global skills |
-| `'specs'` | `'agents'` | Individual spec files | Specifications |
-| `'schemas'` | `'agents'` | Individual schema files | JSON schemas |
+| `'specs'` | `'agents'` | — (leaves open `spec.md`) | Living spec files under `specs/` |
 
 ### Data Flow
 

@@ -19,7 +19,7 @@ Use the existing **Refresh** command for ACE if the tree does not update immedia
 
 ## MCP (when tools are enabled)
 
-From a connected client, call **`list_agent_definitions`** then **`get_agent_definition`** with a `name` matching the display name (basename without `.md`). See [contracts/agent-definitions.md](./contracts/agent-definitions.md).
+From a connected client, call **`list_agents`** then **`get_agent`** with a `name` matching the display name (basename without `.md`). See [contracts/agent-definitions.md](./contracts/agent-definitions.md).
 
 ## Tests (contributors)
 

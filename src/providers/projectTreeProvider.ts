@@ -17,7 +17,7 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 	ruleType?: any;
 	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands'
 		| 'cursor' | 'agents' | 'skills'
-		| 'agents-md' | 'specs' | 'schemas'
+		| 'specs'
 		| 'agent-definitions' | 'agent-definition';
 	directory?: string;
 	project?: ProjectDefinition;
@@ -139,7 +139,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					return item;
 				});
 		} else if (element.category === 'projects' && element.project) {
-			// Project level: show Cursor and Specs + ASDLC sections
+			// Project level: show Cursor and Specs (living specs under specs/ only)
 			const project = element.project;
 			const currentProjectData = this.projectData.get(project.id);
 
@@ -154,7 +154,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			const sections = [
 				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
-				{ name: 'Specs + ASDLC', id: 'agents', icon: 'organization', description: 'AGENTS.md, specs, schemas, constitution' }
+				{ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' }
 			];
 
 			const items = sections.map((section) => {
@@ -192,57 +192,38 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				return item;
 			});
 		} else if (element.category === 'agents' && element.project) {
-			// Agents section: show AGENTS.md, Specs, Schemas
+			// Specs section: flat list of spec domains (specs/*/spec.md) — no nested folders, no schemas in tree
 			const projectData = this.projectData.get(element.project.id);
 			const asdlcArtifacts = projectData?.asdlcArtifacts;
+			const specs = asdlcArtifacts?.specs.specs || [];
 
-			const items: ProjectTreeItem[] = [];
-
-			// AGENTS.md (if exists)
-			if (asdlcArtifacts?.agentsMd.exists && asdlcArtifacts.agentsMd.path) {
-				const item = new vscode.TreeItem('AGENTS.md', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem;
-				item.category = 'agents-md';
-				item.project = element.project;
-				item.description = 'Agent constitution';
-				item.iconPath = new vscode.ThemeIcon('hubot');
-				item.command = {
-					command: 'vscode.open',
-					title: 'Open AGENTS.md',
-					arguments: [vscode.Uri.file(asdlcArtifacts.agentsMd.path)]
-				};
-				items.push(item);
-			}
-
-			// Specs (if exists)
-			if (asdlcArtifacts?.specs.exists) {
-				const specsItem = new vscode.TreeItem('Specs', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
-				specsItem.category = 'specs';
-				specsItem.project = element.project;
-				specsItem.description = `${asdlcArtifacts.specs.specs.length} specs`;
-				specsItem.iconPath = new vscode.ThemeIcon('library');
-				items.push(specsItem);
-			}
-
-			// Schemas (if exists)
-			if (asdlcArtifacts?.schemas.exists) {
-				const schemasItem = new vscode.TreeItem('Schemas', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
-				schemasItem.category = 'schemas';
-				schemasItem.project = element.project;
-				schemasItem.description = `${asdlcArtifacts.schemas.schemas.length} schemas`;
-				schemasItem.iconPath = new vscode.ThemeIcon('list-tree');
-				items.push(schemasItem);
-			}
-
-			// If no artifacts, show placeholder
-			if (items.length === 0) {
+			if (!asdlcArtifacts?.specs.exists || specs.length === 0) {
 				return [{
-					label: 'No ASDLC artifacts found',
+					label: 'No specs found',
 					collapsibleState: vscode.TreeItemCollapsibleState.None,
-					description: 'Add AGENTS.md, specs/, or schemas/'
+					description: 'Add a specs/ directory with feature folders'
 				} as ProjectTreeItem];
 			}
 
-			return items;
+			return specs.map(spec => {
+				const item = new vscode.TreeItem(
+					spec.domain,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.category = 'specs';
+				item.project = element.project;
+				item.tooltip = `${spec.domain}/spec.md`;
+				item.description = spec.hasBlueprint && spec.hasContract ? 'Blueprint + Contract' :
+					spec.hasBlueprint ? 'Blueprint only' :
+						spec.hasContract ? 'Contract only' : '';
+				item.iconPath = new vscode.ThemeIcon('file-code');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Spec',
+					arguments: [vscode.Uri.file(spec.path)]
+				};
+				return item;
+			});
 		} else if (element.category === 'commands' && element.project) {
 			// Commands section for specific project - single workspace-only list
 			const projectData = this.projectData.get(element.project.id);
@@ -334,70 +315,6 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					command: 'vscode.open',
 					title: 'Open Agent Definition',
 					arguments: [ad.uri]
-				};
-				return item;
-			});
-		} else if (element.category === 'specs' && element.project) {
-			// Specs section: show individual spec files
-			const projectData = this.projectData.get(element.project.id);
-			const asdlcArtifacts = projectData?.asdlcArtifacts;
-			const specs = asdlcArtifacts?.specs.specs || [];
-
-			if (specs.length === 0) {
-				return [{
-					label: 'No specs found',
-					collapsibleState: vscode.TreeItemCollapsibleState.None,
-					description: 'Add specs to specs/ directory'
-				} as ProjectTreeItem];
-			}
-
-			return specs.map(spec => {
-				const item = new vscode.TreeItem(
-					spec.domain,
-					vscode.TreeItemCollapsibleState.None
-				) as ProjectTreeItem;
-				item.category = 'specs';
-				item.project = element.project;
-				item.tooltip = `${spec.domain}/spec.md`;
-				item.description = spec.hasBlueprint && spec.hasContract ? 'Blueprint + Contract' : 
-								spec.hasBlueprint ? 'Blueprint only' : 
-								spec.hasContract ? 'Contract only' : '';
-				item.iconPath = new vscode.ThemeIcon('file-code');
-				item.command = {
-					command: 'vscode.open',
-					title: 'Open Spec',
-					arguments: [vscode.Uri.file(spec.path)]
-				};
-				return item;
-			});
-		} else if (element.category === 'schemas' && element.project) {
-			// Schemas section: show individual schema files
-			const projectData = this.projectData.get(element.project.id);
-			const asdlcArtifacts = projectData?.asdlcArtifacts;
-			const schemas = asdlcArtifacts?.schemas.schemas || [];
-
-			if (schemas.length === 0) {
-				return [{
-					label: 'No schemas found',
-					collapsibleState: vscode.TreeItemCollapsibleState.None,
-					description: 'Add schemas to schemas/ directory'
-				} as ProjectTreeItem];
-			}
-
-			return schemas.map(schema => {
-				const item = new vscode.TreeItem(
-					schema.name,
-					vscode.TreeItemCollapsibleState.None
-				) as ProjectTreeItem;
-				item.category = 'schemas';
-				item.project = element.project;
-				item.tooltip = schema.schemaId || schema.name;
-				item.description = schema.schemaId ? `ID: ${schema.schemaId}` : '';
-				item.iconPath = new vscode.ThemeIcon('json');
-				item.command = {
-					command: 'vscode.open',
-					title: 'Open Schema',
-					arguments: [vscode.Uri.file(schema.path)]
 				};
 				return item;
 			});

@@ -27,8 +27,8 @@ Aligned with FR-008 **option (1)** — implement in the same release as the tree
 
 | Tool | Input | Output |
 |------|--------|--------|
-| `list_agent_definitions` | `{ projectKey?: string }` | `AgentDefinitionInfo[]` or error object |
-| `get_agent_definition` | `{ name: string, projectKey?: string }` | `AgentDefinitionContent` or error object |
+| `list_agents` | `{ projectKey?: string }` | `AgentDefinitionInfo[]` or error object |
+| `get_agent` | `{ name: string, projectKey?: string }` | `AgentDefinitionContent` or error object |
 
 **Semantics**:
 

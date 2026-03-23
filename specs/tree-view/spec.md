@@ -17,11 +17,11 @@ revised_at: "2026-03-12"
 
 The tree view is the primary way users inspect workspace and agent context in the sidebar. It presents two separate concerns: **workspace projects** (what applies to each added project) and **agent context** (what applies across the tool—e.g. Cursor, Claude, or a shared global folder). Keeping these as separate views avoids mixing project-scoped and global context.
 
-**Problem solved**: Users need to see project-specific artifacts (rules, commands, skills, specs, constitution) without global noise, and separately to see shared agent context (commands, skills from home-directory layouts). One tree mixing both is confusing; two views with clear boundaries fixes that.
+**Problem solved**: Users need to see project-specific artifacts (rules, commands, skills, specs, schemas) without global noise, and separately to see shared agent context (commands, skills from home-directory layouts). One tree mixing both is confusing; two views with clear boundaries fixes that.
 
 **Design principles**:
 - **Two roots, not two nodes under one root.** Workspaces and Agents are separate sidebar views (separate trees), each with its own root. Workspace view = project list + per-project structure. Agents view = agent roots (e.g. Cursor, Claude) + Global, when those directories exist.
-- **Workspace view is project-only.** Under each project, Cursor shows only that workspace’s commands and skills. No “workspace vs global” split under the project. Specs and ASDLC (AGENTS.md, VISION, specs, schemas, Speckit constitution) live in one section (Specs + ASDLC). Speckit as a section shows only the constitution when present.
+- **Workspace view is project-only.** Under each project, Cursor shows only that workspace’s commands and skills. No “workspace vs global” split under the project. A **Specs** section lists living specs from `specs/*/spec.md` in a **flat** list (same level as **Cursor** — no nested Specs/Schemas folders, no `schemas/` in the tree). It does not surface root-level constitution files (e.g. `AGENTS.md`) or a separate “vision” document in the tree.
 - **Agents view is read-only and additive.** It shows whatever agent roots exist (e.g. Cursor, Claude) and a Global node for the shared agents directory. Same structural categories under each root (Commands, Skills, etc.). Toolbar: Refresh only. No “Add” in the Agents view.
 - **Viewer-only.** The tree never creates, edits, or deletes artifacts. Users open or edit in their own editors.
 
@@ -35,7 +35,7 @@ graph TB
         WRoot["Project list (root)"]
         Proj["Project A"]
         Cursor["Cursor"]
-        Specs["Specs + ASDLC"]
+        Specs["Specs"]
         Speckit["Speckit"]
         Proj --> Cursor
         Proj --> Specs
@@ -54,12 +54,12 @@ graph TB
     end
 ```
 
-- **Workspaces**: Root = list of added projects (no “Workspaces” wrapper). Per project: Cursor (local commands, rules, skills only), Specs + ASDLC (AGENTS.md, VISION, specs, schemas, constitution), Speckit (constitution only when present). Toolbar: Add (add project), Refresh.
+- **Workspaces**: Root = list of added projects (no “Workspaces” wrapper). Per project: Cursor (local commands, rules, skills only), Specs (flat list of `specs/*/spec.md`), Speckit (constitution only when present). Toolbar: Add (add project), Refresh.
 - **Agents**: Root = one node per existing agent root (e.g. Cursor, Claude) plus Global when that directory exists. Under each: same structure (Commands, Skills, etc.). Toolbar: Refresh only.
 
 #### Workspace Branch (per project)
 
-Under each project, the tree does not show global commands or skills. Cursor shows a single Commands list and a single Skills list from that project only. Specs + ASDLC groups AGENTS.md, VISION, specs, schemas, and Speckit constitution in one place. Speckit section shows only the constitution link when the file exists (no “Open folder” or other nodes).
+Under each project, the tree does not show global commands or skills. Cursor shows a single Commands list and a single Skills list from that project only. The **Specs** section is a **single collapsible node** beside Cursor; expanding it lists spec domains (files under `specs/`) directly — no intermediate “Specs”/“Schemas” sub-nodes. Speckit section shows only the constitution link when the file exists (no “Open folder” or other nodes).
 
 #### Agents Branch
 
@@ -95,7 +95,7 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 
 - [ ] Two distinct sidebar views: Workspaces and Agents (separate trees).
 - [ ] Workspace view root shows the project list only; toolbar has Add and Refresh.
-- [ ] Under each project: Cursor (local commands/skills only), Specs + ASDLC, Speckit (constitution only when present).
+- [ ] Under each project: Cursor (local commands/skills only), Specs (flat `specs/` list), Speckit (constitution only when present).
 - [ ] Agents view root shows agent roots (e.g. Cursor, Claude) + Global when directories exist; toolbar has Refresh only.
 - [ ] Under each agent root and Global: same structural categories (Commands, Skills, etc.).
 - [ ] No “Open .specify folder” or similar in Speckit; constitution link only when present.
@@ -121,7 +121,7 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 **Scenario: User opens Workspace view**
 - **Given**: At least one project is added
 - **When**: User opens the Workspaces view
-- **Then**: Root shows the project list (no wrapper node); expanding a project shows Cursor, Specs + ASDLC, Speckit
+- **Then**: Root shows the project list (no wrapper node); expanding a project shows Cursor, Specs, Speckit
 
 **Scenario: User expands Cursor under a project**
 - **Given**: Project has local commands and skills

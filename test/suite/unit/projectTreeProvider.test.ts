@@ -238,7 +238,7 @@ describe('ProjectTreeProvider getTreeItem and lifecycle', () => {
 });
 
 describe('ProjectTreeProvider tree hierarchy', () => {
-	it('project -> Cursor and Specs + ASDLC sections', async () => {
+	it('project -> Cursor and Specs sections', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
@@ -250,7 +250,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 
 		assert.strictEqual(children.length, 2);
 		const labels = children.map(c => c.label).sort();
-		assert.deepStrictEqual(labels, ['Cursor', 'Specs + ASDLC']);
+		assert.deepStrictEqual(labels, ['Cursor', 'Specs']);
 	});
 
 	it('cursor -> Agents, Commands, Rules, Skills (alphabetical)', async () => {
@@ -270,7 +270,7 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'Rules', 'Skills']);
 	});
 
-	it('agents -> AGENTS.md, Specs, Schemas when artifacts exist', async () => {
+	it('agents -> flat spec domain leaves (no nested Specs/Schemas folders)', async () => {
 		const asdlcArtifacts: AsdlcArtifacts = {
 			agentsMd: { exists: true, path: '/test/AGENTS.md', sections: [] },
 			specs: { exists: true, specs: [{ domain: 'providers', path: '/test/specs/p/spec.md', hasBlueprint: true, hasContract: true }] },
@@ -278,24 +278,24 @@ describe('ProjectTreeProvider tree hierarchy', () => {
 			hasAnyArtifacts: true
 		};
 		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const specsAsdlcItem: ProjectTreeItem = { label: 'Specs + ASDLC', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
+		const specsSectionItem: ProjectTreeItem = { label: 'Specs', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(specsAsdlcItem);
-
-		assert.strictEqual(children.length, 3);
-		assert.ok(children.some(c => c.label === 'AGENTS.md'));
-		assert.ok(children.some(c => c.label === 'Specs'));
-		assert.ok(children.some(c => c.label === 'Schemas'));
-	});
-
-	it('agents -> "No ASDLC artifacts found" when none exist', async () => {
-		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
-		const specsAsdlcItem: ProjectTreeItem = { label: 'Specs + ASDLC', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(specsAsdlcItem);
+		const children = await provider.getChildren(specsSectionItem);
 
 		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No ASDLC artifacts found');
+		assert.strictEqual(children[0].label, 'providers');
+		assert.strictEqual(children[0].category, 'specs');
+		assert.ok(!children.some(c => c.label === 'Schemas'));
+	});
+
+	it('agents -> "No specs found" when none exist', async () => {
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		const specsSectionItem: ProjectTreeItem = { label: 'Specs', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(specsSectionItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'No specs found');
 	});
 });
 
@@ -461,24 +461,8 @@ describe('ProjectTreeProvider rules', () => {
 	});
 });
 
-describe('ProjectTreeProvider specs and schemas', () => {
-	it('specs returns spec items', async () => {
-		const asdlcArtifacts: AsdlcArtifacts = {
-			agentsMd: { exists: false, sections: [] },
-			specs: { exists: true, specs: [{ domain: 'providers', path: '/test/spec.md', hasBlueprint: true, hasContract: false }] },
-			schemas: { exists: false, schemas: [] },
-			hasAnyArtifacts: true
-		};
-		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const specsItem: ProjectTreeItem = { label: 'Specs', collapsibleState: 0, category: 'specs', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(specsItem);
-
-		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'providers');
-	});
-
-	it('specs returns placeholder when empty', async () => {
+describe('ProjectTreeProvider specs section (flat under agents)', () => {
+	it('agents returns placeholder when specs exists but list empty', async () => {
 		const asdlcArtifacts: AsdlcArtifacts = {
 			agentsMd: { exists: false, sections: [] },
 			specs: { exists: true, specs: [] },
@@ -486,44 +470,12 @@ describe('ProjectTreeProvider specs and schemas', () => {
 			hasAnyArtifacts: true
 		};
 		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const specsItem: ProjectTreeItem = { label: 'Specs', collapsibleState: 0, category: 'specs', project: mockProject } as ProjectTreeItem;
+		const specsSectionItem: ProjectTreeItem = { label: 'Specs', collapsibleState: 0, category: 'agents', project: mockProject } as ProjectTreeItem;
 
-		const children = await provider.getChildren(specsItem);
+		const children = await provider.getChildren(specsSectionItem);
 
 		assert.strictEqual(children.length, 1);
 		assert.strictEqual(children[0].label, 'No specs found');
-	});
-
-	it('schemas returns schema items', async () => {
-		const asdlcArtifacts: AsdlcArtifacts = {
-			agentsMd: { exists: false, sections: [] },
-			specs: { exists: false, specs: [] },
-			schemas: { exists: true, schemas: [{ name: 'foo', path: '/test/foo.json', schemaId: 'foo-id' }] },
-			hasAnyArtifacts: true
-		};
-		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const schemasItem: ProjectTreeItem = { label: 'Schemas', collapsibleState: 0, category: 'schemas', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(schemasItem);
-
-		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'foo');
-	});
-
-	it('schemas returns placeholder when empty', async () => {
-		const asdlcArtifacts: AsdlcArtifacts = {
-			agentsMd: { exists: false, sections: [] },
-			specs: { exists: false, specs: [] },
-			schemas: { exists: true, schemas: [] },
-			hasAnyArtifacts: true
-		};
-		const provider = new ProjectTreeProvider(createProjectData({ asdlcArtifacts }), [mockProject], mockProject);
-		const schemasItem: ProjectTreeItem = { label: 'Schemas', collapsibleState: 0, category: 'schemas', project: mockProject } as ProjectTreeItem;
-
-		const children = await provider.getChildren(schemasItem);
-
-		assert.strictEqual(children.length, 1);
-		assert.strictEqual(children[0].label, 'No schemas found');
 	});
 });
 

@@ -63,7 +63,8 @@ export function normalizeParams(params: Record<string, unknown>): Record<string,
 
 const TOOL_METHODS = [
 	'list_projects', 'list_rules', 'get_rule', 'list_commands', 'get_command',
-	'list_skills', 'get_skill', 'get_asdlc_artifacts', 'list_specs', 'get_project_context'
+	'list_skills', 'get_skill', 'list_agents', 'get_agent',
+	'get_asdlc_artifacts', 'list_specs', 'get_project_context'
 ] as const;
 
 type ToolMethod = typeof TOOL_METHODS[number];
@@ -116,6 +117,14 @@ async function handleToolCall(
 			const name = p?.name;
 			if (typeof name !== 'string') {throw new Error('Missing name');}
 			const out = await McpTools.getSkill({ name, projectPath });
+			return out;
+		}
+		case 'list_agents':
+			return McpTools.listAgentDefinitions({ projectPath });
+		case 'get_agent': {
+			const name = p?.name;
+			if (typeof name !== 'string') {throw new Error('Missing name');}
+			const out = await McpTools.getAgentDefinition({ name, projectPath });
 			return out;
 		}
 		case 'get_asdlc_artifacts':
