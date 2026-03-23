@@ -17,6 +17,13 @@ import {
 	scanSkillsCore,
 	scanAsdlcCore
 } from '../scanner/core';
+import {
+	scanWorkspaceAgentDefinitionsCore,
+	scanAgentDefinitionsInDirectory,
+	agentRootAgentsDirectory
+} from '../scanner/core/scanAgentDefinitionsCore';
+import type { CoreAgentDefinition } from '../scanner/core/types';
+import type { AgentDefinitionInfo, AgentDefinitionLocation } from './types';
 
 // =============================================================================
 // Types (MCP tool output format)
@@ -125,6 +132,56 @@ async function getSkills(workspacePath: string) {
 async function getSkillsAsInfo(workspacePath: string): Promise<SkillInfo[]> {
 	const skills = await getSkills(workspacePath);
 	return skills.map(coreSkillToSkillInfo);
+}
+
+function coreAgentToInfo(c: CoreAgentDefinition, location: AgentDefinitionLocation): AgentDefinitionInfo {
+	return {
+		name: c.fileName,
+		displayName: c.displayName,
+		path: c.path,
+		location
+	};
+}
+
+async function getTaggedCoreAgentDefinitions(workspacePath: string): Promise<Array<{ core: CoreAgentDefinition; location: AgentDefinitionLocation }>> {
+	const fs = new NodeFsAdapter();
+	const userRoot = os.homedir();
+	const out: Array<{ core: CoreAgentDefinition; location: AgentDefinitionLocation }> = [];
+	const ws = await scanWorkspaceAgentDefinitionsCore(fs, workspacePath);
+	for (const c of ws) {
+		out.push({ core: c, location: 'workspace' });
+	}
+	const roots: Array<[AgentDefinitionLocation, string]> = [
+		['cursor', path.join(userRoot, '.cursor')],
+		['claude', path.join(userRoot, '.claude')],
+		['global', path.join(userRoot, '.agents')]
+	];
+	for (const [loc, root] of roots) {
+		const dir = agentRootAgentsDirectory(root);
+		const defs = await scanAgentDefinitionsInDirectory(fs, dir);
+		for (const c of defs) {
+			out.push({ core: c, location: loc });
+		}
+	}
+	return out;
+}
+
+async function getAgentDefinitionsAsInfo(workspacePath: string): Promise<AgentDefinitionInfo[]> {
+	const tagged = await getTaggedCoreAgentDefinitions(workspacePath);
+	return tagged.map(({ core, location }) => coreAgentToInfo(core, location));
+}
+
+function findCoreAgentByName(
+	items: Array<{ core: CoreAgentDefinition; location: AgentDefinitionLocation }>,
+	name: string
+): { core: CoreAgentDefinition; location: AgentDefinitionLocation } | undefined {
+	const normalizedName = name.toLowerCase().replace(/\.md$/, '');
+	const needle = name.toLowerCase();
+	return items.find(({ core: c }) => {
+		const stem = c.fileName.toLowerCase();
+		const display = c.displayName.toLowerCase();
+		return stem === normalizedName || display === normalizedName || c.path.toLowerCase().includes(needle);
+	});
 }
 
 async function getAsdlcArtifacts(workspacePath: string) {
@@ -288,6 +345,41 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
+	// list_agents - Agent definition files (workspace + Cursor/Claude/Global agent roots)
+	server.tool('list_agents', 'List agent definition files (.cursor/agents and user-level agent roots)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const list = await getAgentDefinitionsAsInfo(resolved.path);
+		return {
+			content: [{ type: 'text' as const, text: JSON.stringify(list, null, 2) }]
+		};
+	});
+
+	// get_agent - Full agent definition markdown by name
+	server.tool('get_agent', 'Get agent definition content by name', { name: { type: 'string', description: 'Agent file stem (basename without .md) or path fragment' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const tagged = await getTaggedCoreAgentDefinitions(resolved.path);
+		const found = findCoreAgentByName(tagged, args.name);
+		if (!found) {
+			return { content: [{ type: 'text' as const, text: `Agent definition "${args.name}" not found` }], isError: true };
+		}
+		const payload = {
+			name: found.core.fileName,
+			displayName: found.core.displayName,
+			path: found.core.path,
+			location: found.location,
+			content: found.core.content
+		};
+		return {
+			content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }]
+		};
+	});
+
 	// get_asdlc_artifacts - Get ASDLC artifacts (AGENTS.md, specs, schemas)
 	server.tool('get_asdlc_artifacts', 'Get ASDLC artifacts (AGENTS.md, specs, schemas)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
@@ -332,15 +424,16 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_project_context - Complete project context
-	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, agent definitions, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
 		}
-		const [rules, commands, skills, asdlc] = await Promise.all([
+		const [rules, commands, skills, agentDefinitions, asdlc] = await Promise.all([
 			getRulesAsInfo(resolved.path),
 			getCommandsAsInfo(resolved.path),
 			getSkillsAsInfo(resolved.path),
+			getAgentDefinitionsAsInfo(resolved.path),
 			getAsdlcArtifacts(resolved.path)
 		]);
 		const entry = projectList.find(p => p.path === resolved.path);
@@ -353,6 +446,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 			rules,
 			commands,
 			skills,
+			agentDefinitions,
 			asdlcArtifacts: {
 				agentsMd: { exists: asdlc.agentsMd.exists, path: asdlc.agentsMd.path },
 				specs: { exists: asdlc.specs.exists, specs: asdlc.specs.specs },
@@ -413,6 +507,8 @@ const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<str
 	{ name: 'get_command', description: 'Get command content by name', inputSchema: nameAndProjectKeyShape },
 	{ name: 'list_skills', description: 'List all Cursor skills with metadata', inputSchema: projectKeyShape },
 	{ name: 'get_skill', description: 'Get skill content by name', inputSchema: nameAndProjectKeyShape },
+	{ name: 'list_agents', description: 'List agent definition files', inputSchema: projectKeyShape },
+	{ name: 'get_agent', description: 'Get agent definition content by name', inputSchema: nameAndProjectKeyShape },
 	{ name: 'get_asdlc_artifacts', description: 'Get ASDLC artifacts', inputSchema: projectKeyShape },
 	{ name: 'list_specs', description: 'List available specifications', inputSchema: projectKeyShape },
 	{ name: 'get_project_context', description: 'Get complete project context', inputSchema: projectKeyShape }

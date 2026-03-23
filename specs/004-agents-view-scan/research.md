@@ -34,7 +34,7 @@
 
 ## Decision: Tree icon for agent definition leaves
 
-**Decision**: Use VS Code **`ThemeIcon('hubot')`** for agent definition file leaves in both trees — distinct from **terminal** (commands), **play-circle** (skills), **book** (rules). *Note:* **AGENTS.md** under Specs + ASDLC also uses a robot-style affordance in the current UI; agent definition files live under **Cursor** / **Agents**, not under Specs + ASDLC, so context differs.
+**Decision**: Use VS Code **`ThemeIcon('hubot')`** for agent definition file leaves in both trees — distinct from **terminal** (commands), **play-circle** (skills), **book** (rules). Agent definition files live under **Cursor** / **Agents**, not under the project **Specs** section (`specs/` / `schemas/`).
 
 **Rationale**: Spec FR-003 asks for an “agent” visual; `hubot` is the standard codicon affordance for agent-like entities in VS Code.
 
@@ -44,7 +44,7 @@
 
 ## Decision: MCP — add tools in the same delivery
 
-**Decision**: Implement **`list_agent_definitions`** and **`get_agent_definition`** MCP tools (names per [contracts/agent-definitions.md](./contracts/agent-definitions.md)) as thin wrappers over the same scanner types used by the tree, with **`projectKey?`** consistent with other tools.
+**Decision**: Implement **`list_agents`** and **`get_agent`** MCP tools (names per [contracts/agent-definitions.md](./contracts/agent-definitions.md)) as thin wrappers over the same scanner types used by the tree, with **`projectKey?`** consistent with other tools.
 
 **Rationale**: Satisfies FR-008 option (1); matches constitution “MCP thin adapters over scanners”; gives agents parity with humans without a second vertical slice. **FR-008** option (2) remains available if schedule forces deferral — document in MCP spec with pointer to on-disk paths.
 
@@ -62,8 +62,8 @@
 
 - **Refresh-only** (no watcher): acceptable for MVP but weaker SC-003 UX; watcher preferred for active editing.
 
-## Decision: No change to `AGENTS.md` or Specs + ASDLC
+## Decision: Agent definitions vs repo constitution
 
-**Decision**: **`AGENTS.md`** stays under **Specs + ASDLC** only; agent definition files are **only** under **Agent definitions** subsections.
+**Decision**: **`AGENTS.md`** at the project root is not shown in the Workspaces **Specs** section; agent definition files are **only** under **Cursor** → **Agents** (and the Agents view), not mixed with `specs/` / `schemas/` trees.
 
 **Rationale**: Spec terminology and FR-001/002.

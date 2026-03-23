@@ -64,10 +64,10 @@
       "summary": "004 Phase 5: MCP tools & project context",
       "url": "https://fancybread.atlassian.net/browse/FB-122",
       "embedded_tasks": [
-        { "id": "T014", "summary": "mcp/types.ts agent definition types", "status": "pending" },
-        { "id": "T015", "summary": "toolsImpl list/get agent definitions", "status": "pending" },
-        { "id": "T016", "summary": "Register MCP tools server + backend", "status": "pending" },
-        { "id": "T017", "summary": "get_project_context includes agentDefinitions", "status": "pending" }
+        { "id": "T014", "summary": "mcp/types.ts agent definition types", "status": "done" },
+        { "id": "T015", "summary": "toolsImpl list/get agent definitions", "status": "done" },
+        { "id": "T016", "summary": "Register MCP tools server + backend", "status": "done" },
+        { "id": "T017", "summary": "get_project_context includes agentDefinitions", "status": "done" }
       ]
     },
     {

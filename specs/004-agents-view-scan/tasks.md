@@ -75,10 +75,10 @@
 
 **Goal**: Thin MCP adapters per constitution and [contracts/agent-definitions.md](./contracts/agent-definitions.md) (FR-008 option 1). **Branch**: e.g. `004-agents-mcp`.
 
-- [ ] T014 Extend `src/mcp/types.ts` with `AgentDefinitionInfo`, `AgentDefinitionContent`, and add `agentDefinitions` to `ProjectContext` (and mappers if any)
-- [ ] T015 Implement `listAgentDefinitions` and `getAgentDefinition` in `src/mcp/toolsImpl.ts`; add name resolution helper in `src/mcp/toolsFind.ts` if needed
-- [ ] T016 Register `list_agent_definitions` and `get_agent_definition` in `src/mcp/server.ts` tool schemas and `src/mcp/extensionBackend.ts` dispatch switch
-- [ ] T017 Update `get_project_context` in `src/mcp/toolsImpl.ts` to include `agentDefinitions` consistent with workspace tree
+- [x] T014 Extend `src/mcp/types.ts` with `AgentDefinitionInfo`, `AgentDefinitionContent`, and add `agentDefinitions` to `ProjectContext` (and mappers if any)
+- [x] T015 Implement `listAgentDefinitions` and `getAgentDefinition` in `src/mcp/toolsImpl.ts`; add name resolution helper in `src/mcp/toolsFind.ts` if needed
+- [x] T016 Register `list_agents` and `get_agent` in `src/mcp/server.ts` tool schemas and `src/mcp/extensionBackend.ts` dispatch switch
+- [x] T017 Update `get_project_context` in `src/mcp/toolsImpl.ts` to include `agentDefinitions` consistent with workspace tree
 
 **Checkpoint**: MCP exposes agent definitions; `get_project_context` remains coherent.
 

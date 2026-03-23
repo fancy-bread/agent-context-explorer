@@ -1,12 +1,15 @@
 // MCP Tools - Tool implementations using existing scanners
 
 import * as vscode from 'vscode';
+import * as os from 'os';
+import * as path from 'path';
 import { assertWorkspaceUriForMcp } from './toolsWorkspace';
-import { findRuleByName, findCommandByName, findSkillByName } from './toolsFind';
+import { findRuleByName, findCommandByName, findSkillByName, findAgentDefinitionByName } from './toolsFind';
 import { RulesScanner } from '../scanner/rulesScanner';
 import { CommandsScanner } from '../scanner/commandsScanner';
 import { SkillsScanner } from '../scanner/skillsScanner';
 import { AsdlcArtifactScanner } from '../scanner/asdlcArtifactScanner';
+import { AgentsScanner, scanAgentDefinitionsForAgentRoot, type AgentDefinition } from '../scanner/agentsScanner';
 import {
 	RuleInfo,
 	RuleContent,
@@ -14,11 +17,15 @@ import {
 	CommandContent,
 	SkillInfo,
 	SkillContent,
+	AgentDefinitionInfo,
+	AgentDefinitionContent,
+	AgentDefinitionLocation,
 	ProjectContext,
 	ProjectScopedInput,
 	GetRuleInput,
 	GetCommandInput,
 	GetSkillInput,
+	GetAgentDefinitionInput,
 	AsdlcArtifacts,
 	SpecFile,
 	toRuleInfo,
@@ -26,7 +33,9 @@ import {
 	toCommandInfo,
 	toCommandContent,
 	toSkillInfo,
-	toSkillContent
+	toSkillContent,
+	toAgentDefinitionInfo,
+	toAgentDefinitionContent
 } from './types';
 
 /**
@@ -163,6 +172,57 @@ export class McpTools {
 	}
 
 	// =========================================================================
+	// Agent definition tools
+	// =========================================================================
+
+	/**
+	 * Workspace `.cursor/agents` plus Cursor / Claude / Global agent roots (same layout as extension).
+	 */
+	private static async collectTaggedAgentDefinitions(workspaceUri: vscode.Uri): Promise<Array<{ def: AgentDefinition; location: AgentDefinitionLocation }>> {
+		const out: Array<{ def: AgentDefinition; location: AgentDefinitionLocation }> = [];
+		const scanner = new AgentsScanner(workspaceUri);
+		const workspaceAgents = await scanner.scanWorkspaceAgentDefinitions();
+		for (const def of workspaceAgents) {
+			out.push({ def, location: 'workspace' });
+		}
+		const home = os.homedir();
+		const roots: Array<[AgentDefinitionLocation, string]> = [
+			['cursor', path.join(home, '.cursor')],
+			['claude', path.join(home, '.claude')],
+			['global', path.join(home, '.agents')]
+		];
+		for (const [loc, root] of roots) {
+			const defs = await scanAgentDefinitionsForAgentRoot(root);
+			for (const def of defs) {
+				out.push({ def, location: loc });
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * list_agents — workspace and user-level agent roots
+	 */
+	static async listAgentDefinitions(input?: ProjectScopedInput): Promise<AgentDefinitionInfo[]> {
+		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
+		const tagged = await McpTools.collectTaggedAgentDefinitions(workspaceUri);
+		return tagged.map(({ def, location }) => toAgentDefinitionInfo(def, location));
+	}
+
+	/**
+	 * get_agent — resolve by name or path fragment
+	 */
+	static async getAgentDefinition(input: GetAgentDefinitionInput): Promise<AgentDefinitionContent | null> {
+		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
+		const tagged = await McpTools.collectTaggedAgentDefinitions(workspaceUri);
+		const found = findAgentDefinitionByName(tagged, input.name);
+		if (!found) {
+			return null;
+		}
+		return toAgentDefinitionContent(found.def, found.location);
+	}
+
+	// =========================================================================
 	// ASDLC Tools
 	// =========================================================================
 
@@ -199,10 +259,11 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		// Run all scans in parallel for performance
-		const [rules, commands, skills, asdlcArtifacts] = await Promise.all([
+		const [rules, commands, skills, agentDefinitions, asdlcArtifacts] = await Promise.all([
 			this.listRules(input),
 			this.listCommands(input),
 			this.listSkills(input),
+			this.listAgentDefinitions(input),
 			this.getAsdlcArtifacts(input)
 		]);
 
@@ -212,6 +273,7 @@ export class McpTools {
 			rules,
 			commands,
 			skills,
+			agentDefinitions,
 			asdlcArtifacts
 		};
 	}

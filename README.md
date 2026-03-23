@@ -1,6 +1,6 @@
 # Agent Context Explorer (ACE)
 
-**View project context for AI agents** — Cursor rules, commands, skills, and ASDLC artifacts in one tree. Browse across multiple workspaces. ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
+**View project context for AI agents** — Cursor rules, commands, skills, and project specs in one tree. Browse across multiple workspaces. ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
 
 ## What You See
 
@@ -9,20 +9,18 @@
 - **Commands** — `.cursor/commands/*.md` (workspace) and `~/.cursor/commands/*.md` (global)
 - **Skills** — `.cursor/skills/*/SKILL.md` (workspace) and `~/.cursor/skills/*/SKILL.md` (global)
 
-**Agents** (ASDLC artifacts)
-- **AGENTS.md** — Project identity and operational boundaries
-- **Specs** — `specs/*/spec.md` (living specifications)
-- **Schemas** — `schemas/*.json` (JSON schema definitions)
+**Specs** (per project)
+- Flat list of feature specs — `specs/*/spec.md` (no separate Schemas node in the tree)
 
 ## Quick Start
 
 1. Open the ACE icon in the sidebar (or Activity Bar).
-2. Expand a project → Cursor or Agents.
+2. Expand a project → Cursor or Specs.
 3. Click any item to open it in your editor (read-only).
 
 ## Multi-Project
 
-Use the `+` button to add external projects. Each project shows its own rules, commands, skills, and ASDLC artifacts.
+Use the `+` button to add external projects. Each project shows its own rules, commands, skills, and specs.
 
 ## MCP: AI Agent Access
 
@@ -54,7 +52,7 @@ Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-
 | Rules missing | `.cursor/rules/` exists, files are `.mdc` or `.md` |
 | Commands missing | `.cursor/commands/` (workspace) or `~/.cursor/commands/` (global) |
 | Skills missing | `.cursor/skills/*/SKILL.md` (workspace) or `~/.cursor/skills/*/SKILL.md` (global) |
-| ASDLC artifacts missing | `AGENTS.md` at root, `specs/` or `schemas/` directories |
+| Specs missing | `specs/` directory with feature folders under the project |
 | Tree stale | Click refresh (↻) in the tree header |
 
 ## License

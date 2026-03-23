@@ -32,9 +32,10 @@ describe('mcp/server createServer (registered tools)', () => {
 
 		const ctx = (await tools.get_project_context.handler({})) as { content: Array<{ text: string }>; isError?: boolean };
 		assert.strictEqual(ctx.isError, undefined);
-		const parsed = JSON.parse(ctx.content[0].text) as { projectPath: string; rules: unknown[] };
+		const parsed = JSON.parse(ctx.content[0].text) as { projectPath: string; rules: unknown[]; agentDefinitions: unknown[] };
 		assert.strictEqual(typeof parsed.projectPath, 'string');
 		assert.ok(Array.isArray(parsed.rules));
+		assert.ok(Array.isArray(parsed.agentDefinitions));
 	});
 
 	it('list_commands, list_skills, list_specs, get_asdlc_artifacts succeed', async () => {
@@ -75,6 +76,24 @@ describe('mcp/server createServer (registered tools)', () => {
 		const tools = getTools(server);
 		const res = (await tools.get_skill.handler({
 			name: '__missing_skill__'
+		})) as { isError?: boolean };
+		assert.strictEqual(res.isError, true);
+	});
+
+	it('list_agents returns JSON array', async () => {
+		const server = createServer(workspaceRoot);
+		const tools = getTools(server);
+		const res = (await tools.list_agents.handler({})) as { content: Array<{ text: string }>; isError?: boolean };
+		assert.strictEqual(res.isError, undefined);
+		const parsed = JSON.parse(res.content[0].text);
+		assert.ok(Array.isArray(parsed));
+	});
+
+	it('get_agent returns error when missing', async () => {
+		const server = createServer(workspaceRoot);
+		const tools = getTools(server);
+		const res = (await tools.get_agent.handler({
+			name: '__missing_agent_def__'
 		})) as { isError?: boolean };
 		assert.strictEqual(res.isError, true);
 	});

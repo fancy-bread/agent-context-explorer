@@ -3,6 +3,7 @@
 import { Rule } from '../scanner/rulesScanner';
 import { Command } from '../scanner/commandsScanner';
 import { Skill } from '../scanner/skillsScanner';
+import type { AgentDefinition } from '../scanner/agentsScanner';
 import type { AsdlcArtifacts, SpecFile } from '../scanner/types';
 
 // =============================================================================
@@ -203,6 +204,50 @@ export function toSkillContent(skill: Skill): SkillContent {
 }
 
 // =============================================================================
+// Agent definition types (for MCP tools)
+// =============================================================================
+
+/** Where an agent definition file was discovered (workspace vs user-level agent roots). */
+export type AgentDefinitionLocation = 'workspace' | 'cursor' | 'claude' | 'global';
+
+/**
+ * Agent definition metadata for list_agents
+ */
+export interface AgentDefinitionInfo {
+	name: string;
+	displayName: string;
+	path: string;
+	location: AgentDefinitionLocation;
+}
+
+/**
+ * Full agent definition for get_agent
+ */
+export interface AgentDefinitionContent {
+	name: string;
+	displayName: string;
+	path: string;
+	location: AgentDefinitionLocation;
+	content: string;
+}
+
+export function toAgentDefinitionInfo(def: AgentDefinition, location: AgentDefinitionLocation): AgentDefinitionInfo {
+	return {
+		name: def.fileName,
+		displayName: def.displayName,
+		path: def.uri.fsPath,
+		location
+	};
+}
+
+export function toAgentDefinitionContent(def: AgentDefinition, location: AgentDefinitionLocation): AgentDefinitionContent {
+	return {
+		...toAgentDefinitionInfo(def, location),
+		content: def.content
+	};
+}
+
+// =============================================================================
 // Project Context Types (for combined get_project_context tool)
 // =============================================================================
 
@@ -215,6 +260,7 @@ export interface ProjectContext {
 	rules: RuleInfo[];
 	commands: CommandInfo[];
 	skills: SkillInfo[];
+	agentDefinitions: AgentDefinitionInfo[];
 	asdlcArtifacts: AsdlcArtifacts;
 }
 
@@ -247,6 +293,13 @@ export interface GetCommandInput extends ProjectScopedInput {
  * Input for get_skill tool
  */
 export interface GetSkillInput extends ProjectScopedInput {
+	name: string;
+}
+
+/**
+ * Input for get_agent tool
+ */
+export interface GetAgentDefinitionInput extends ProjectScopedInput {
 	name: string;
 }
 
