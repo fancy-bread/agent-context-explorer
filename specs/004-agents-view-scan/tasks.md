@@ -46,13 +46,13 @@
 
 ## Phase 3: User Story 2 — Agents view (Priority: P2)
 
-**Goal**: **Agent definitions** subsection under each agent root (Cursor, Claude, Global) parallel to Commands and Skills. **Branch**: e.g. `004-agents-us2-agents-view` or Jira story for US2.
+**Goal**: **Agents** subsection under each agent root (Cursor, Claude, Global) parallel to Commands and Skills (alphabetical). **Branch**: e.g. `feat/FB-120` or `004-agents-us2-agents-view`.
 
-**Independent Test**: Add `~/.cursor/agents/home-agent.md` (or Claude/Global paths per contract), expand Agents view → root → **Agent definitions**, open file.
+**Independent Test**: Add `~/.cursor/agents/home-agent.md` (or Claude/Global paths per contract), expand Agents view → root → **Agents**, open file.
 
-- [ ] T009 [US2] Extend `AgentRootDefinition` in `src/providers/agentsTreeProvider.ts` with `agentDefinitions: AgentDefinition[]`
-- [ ] T010 [US2] Populate `agentDefinitions` in `src/extension.ts` `resolveAgentRootsWithData()` using the same core scanner and absolute paths for `~/.cursor`, `~/.claude`, `~/.agents` per `specs/004-agents-view-scan/research.md`
-- [ ] T011 [US2] Update `src/providers/agentsTreeProvider.ts` `getChildren` for agent roots to add **Agent definitions** sibling to Commands/Skills with matching empty-state copy and `hubot` leaves
+- [x] T009 [US2] Extend `AgentRootDefinition` in `src/providers/agentsTreeProvider.ts` with `agentDefinitions: AgentDefinition[]`
+- [x] T010 [US2] Populate `agentDefinitions` in `src/extension.ts` `resolveAgentRootsWithData()` using `scanAgentDefinitionsForAgentRoot` and paths for `~/.cursor`, `~/.claude`, `~/.agents` per `specs/004-agents-view-scan/research.md`
+- [x] T011 [US2] Update `src/providers/agentsTreeProvider.ts` `getChildren` for agent roots to add **Agents** sibling to Commands/Skills with empty-state copy and `hubot` leaves
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 

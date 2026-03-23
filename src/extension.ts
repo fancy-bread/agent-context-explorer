@@ -7,7 +7,7 @@ import { AgentsTreeProvider } from './providers/agentsTreeProvider';
 import { RulesScanner } from './scanner/rulesScanner';
 import { CommandsScanner } from './scanner/commandsScanner';
 import { SkillsScanner } from './scanner/skillsScanner';
-import { AgentsScanner, type AgentDefinition } from './scanner/agentsScanner';
+import { AgentsScanner, scanAgentDefinitionsForAgentRoot, type AgentDefinition } from './scanner/agentsScanner';
 import { AsdlcArtifactScanner } from './scanner/asdlcArtifactScanner';
 import { ProjectCommands } from './commands/projectCommands';
 import { ProjectManager } from './services/projectManager';
@@ -368,10 +368,11 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				continue;
 			}
 
-			// Scan commands and skills for this agent root
-			const [coreCommands, coreSkills] = await Promise.all([
+			// Scan commands, skills, and agent definitions for this agent root
+			const [coreCommands, coreSkills, agentDefinitions] = await Promise.all([
 				sampleScanAgentCommands(fsAdapter, candidate.dir),
-				sampleScanAgentSkills(fsAdapter, candidate.dir)
+				sampleScanAgentSkills(fsAdapter, candidate.dir),
+				scanAgentDefinitionsForAgentRoot(candidate.dir)
 			]);
 
 			const commands: Command[] = coreCommands.map(c => ({
@@ -395,7 +396,8 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				description: candidate.dir,
 				icon: candidate.icon,
 				commands,
-				skills
+				skills,
+				agentDefinitions
 			});
 		} catch {
 			// Directory missing or not accessible; skip this root

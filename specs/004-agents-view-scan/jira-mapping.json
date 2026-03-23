@@ -43,9 +43,9 @@
       "summary": "004 Phase 3: User Story 2 — Agents view",
       "url": "https://fancybread.atlassian.net/browse/FB-120",
       "embedded_tasks": [
-        { "id": "T009", "summary": "Extend AgentRootDefinition", "status": "pending" },
-        { "id": "T010", "summary": "resolveAgentRootsWithData agentDefinitions", "status": "pending" },
-        { "id": "T011", "summary": "agentsTreeProvider Agent definitions section", "status": "pending" }
+        { "id": "T009", "summary": "Extend AgentRootDefinition", "status": "done" },
+        { "id": "T010", "summary": "resolveAgentRootsWithData agentDefinitions", "status": "done" },
+        { "id": "T011", "summary": "agentsTreeProvider Agents section", "status": "done" }
       ]
     },
     {

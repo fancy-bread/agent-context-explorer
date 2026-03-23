@@ -1,7 +1,11 @@
 // Agent definitions scanner — `.cursor/agents/*.md` (workspace) via scanAgentDefinitionsCore
 import * as vscode from 'vscode';
 import { VSCodeFsAdapter } from './adapters/vscodeFsAdapter';
-import { scanWorkspaceAgentDefinitionsCore } from './core/scanAgentDefinitionsCore';
+import {
+	agentRootAgentsDirectory,
+	scanAgentDefinitionsInDirectory,
+	scanWorkspaceAgentDefinitionsCore
+} from './core/scanAgentDefinitionsCore';
 
 export interface AgentDefinition {
 	uri: vscode.Uri;
@@ -27,5 +31,25 @@ export class AgentsScanner {
 		} catch {
 			return [];
 		}
+	}
+}
+
+/**
+ * Scan `<agentRoot>/agents/*.md` (e.g. `~/.cursor/agents`, `~/.agents/agents` for Global).
+ * Missing directory → empty array.
+ */
+export async function scanAgentDefinitionsForAgentRoot(agentRootAbsolutePath: string): Promise<AgentDefinition[]> {
+	try {
+		const fs = new VSCodeFsAdapter();
+		const agentsDir = agentRootAgentsDirectory(agentRootAbsolutePath);
+		const core = await scanAgentDefinitionsInDirectory(fs, agentsDir);
+		return core.map((c) => ({
+			uri: vscode.Uri.file(c.path),
+			content: c.content,
+			fileName: c.fileName,
+			displayName: c.displayName
+		}));
+	} catch {
+		return [];
 	}
 }
