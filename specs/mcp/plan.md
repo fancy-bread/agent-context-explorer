@@ -92,7 +92,7 @@ test/
 ### Phase 1: Tools-only surface
 
 - Ensure the MCP server does **not** register MCP resources (no `ace://rules`, `ace://commands`, `ace://skills`, `ace://agents-md`, `ace://specs`, or `ace://schemas` resources).
-- Confirm the server advertises only the tools defined in the spec: `list_projects`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `get_asdlc_artifacts`, `list_specs`, `get_project_context`.
+- Confirm the server advertises only the tools defined in the spec: `list_projects`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `list_specs`, `get_spec`, `get_project`.
 - Audit docs/README for any mention of `ace://` resources and update them to state that agents consume context exclusively via tools.
 
 ### Phase 2: Multi-project in all tools

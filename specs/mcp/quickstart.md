@@ -55,9 +55,13 @@ Typical flows:
   - Call `list_rules` with `{ projectKey }`.
   - Call `get_rule` with `{ name, projectKey }` for full content.
 
-- Get complete project context:
+- Get complete project snapshot:
 
-  - Call `get_project_context` with `{ projectKey }` (or omit for current workspace).
+  - Call `get_project` with `{ projectKey }` (or omit for current workspace).
+
+- Get one living spec file (`specs/<domain>/spec.md`):
+
+  - Call `list_specs` with `{ projectKey }`, then `get_spec` with `{ name: "<domain>", projectKey }` (or path fragment).
 
 All tools:
 

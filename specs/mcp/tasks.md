@@ -16,7 +16,7 @@ derived_from_plan: "specs/mcp/plan.md"
 
 - [x] **T-004** Add optional `projectPath` (or equivalent) to MCP tool input schemas for all tools in server/tools layer.
 - [x] **T-005** Implement project root resolution: when projectPath provided use it (with safety checks); when omitted use current workspace root.
-- [x] **T-006** Thread resolved project root through to scanner calls in each tool handler (list_rules, get_rule, list_commands, get_command, list_skills, get_skill, get_asdlc_artifacts, list_specs, get_project_context).
+- [x] **T-006** Thread resolved project root through to scanner calls in each tool handler (list_rules, get_rule, list_commands, get_command, list_skills, get_skill, list_agents, get_agent, list_specs, get_spec, get_project).
 - [x] **T-007** Validate projectPath against workspace/configured projects and return clear error when invalid.
 
 ## Phase 3: Verification and tests

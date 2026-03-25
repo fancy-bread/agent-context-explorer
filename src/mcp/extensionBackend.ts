@@ -64,7 +64,7 @@ export function normalizeParams(params: Record<string, unknown>): Record<string,
 const TOOL_METHODS = [
 	'list_projects', 'list_rules', 'get_rule', 'list_commands', 'get_command',
 	'list_skills', 'get_skill', 'list_agents', 'get_agent',
-	'get_asdlc_artifacts', 'list_specs', 'get_project_context'
+	'list_specs', 'get_spec', 'get_project'
 ] as const;
 
 type ToolMethod = typeof TOOL_METHODS[number];
@@ -127,12 +127,16 @@ async function handleToolCall(
 			const out = await McpTools.getAgentDefinition({ name, projectPath });
 			return out;
 		}
-		case 'get_asdlc_artifacts':
-			return McpTools.getAsdlcArtifacts({ projectPath });
 		case 'list_specs':
 			return McpTools.listSpecs({ projectPath });
-		case 'get_project_context':
-			return McpTools.getProjectContext({ projectPath });
+		case 'get_spec': {
+			const name = p?.name;
+			if (typeof name !== 'string') {throw new Error('Missing name');}
+			const out = await McpTools.getSpec({ name, projectPath });
+			return out;
+		}
+		case 'get_project':
+			return McpTools.getProject({ projectPath });
 		default:
 			throw new Error(`Unknown method: ${method}`);
 	}

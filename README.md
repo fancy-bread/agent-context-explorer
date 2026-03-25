@@ -43,7 +43,7 @@ ACE exposes an MCP server so AI agents can read project context on demand.
 
 Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-explorer-x.y.z`) and `<workspace-root>`.
 
-**Tools only** — Agents get context by calling tools only (no MCP resources). Tools: `list_projects`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `get_asdlc_artifacts`, `list_specs`, `get_project_context`.
+**Tools only** — Agents get context by calling tools only (no MCP resources). Tools: `list_projects`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `list_specs`, `get_spec`, `get_project`.
 
 ## Troubleshooting
 

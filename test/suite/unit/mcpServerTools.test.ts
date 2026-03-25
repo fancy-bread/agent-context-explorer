@@ -23,14 +23,14 @@ describe('mcp/server createServer (registered tools)', () => {
 		assert.ok(text.includes(path.basename(workspaceRoot)));
 	});
 
-	it('list_rules and get_project_context run for default workspace', async () => {
+	it('list_rules and get_project run for default workspace', async () => {
 		const server = createServer(workspaceRoot);
 		const tools = getTools(server);
 		const rules = (await tools.list_rules.handler({})) as { content: Array<{ text: string }>; isError?: boolean };
 		assert.strictEqual(rules.isError, undefined);
 		assert.ok(JSON.parse(rules.content[0].text).length >= 0);
 
-		const ctx = (await tools.get_project_context.handler({})) as { content: Array<{ text: string }>; isError?: boolean };
+		const ctx = (await tools.get_project.handler({})) as { content: Array<{ text: string }>; isError?: boolean };
 		assert.strictEqual(ctx.isError, undefined);
 		const parsed = JSON.parse(ctx.content[0].text) as { projectPath: string; rules: unknown[]; agentDefinitions: unknown[] };
 		assert.strictEqual(typeof parsed.projectPath, 'string');
@@ -38,14 +38,19 @@ describe('mcp/server createServer (registered tools)', () => {
 		assert.ok(Array.isArray(parsed.agentDefinitions));
 	});
 
-	it('list_commands, list_skills, list_specs, get_asdlc_artifacts succeed', async () => {
+	it('list_commands, list_skills, list_specs, get_spec succeed', async () => {
 		const server = createServer(workspaceRoot);
 		const tools = getTools(server);
-		for (const name of ['list_commands', 'list_skills', 'list_specs', 'get_asdlc_artifacts'] as const) {
+		for (const name of ['list_commands', 'list_skills', 'list_specs'] as const) {
 			const res = (await tools[name].handler({})) as { content: Array<{ text: string }>; isError?: boolean };
 			assert.strictEqual(res.isError, undefined, name);
 			assert.ok(res.content[0].text.length >= 0);
 		}
+		const specRes = (await tools.get_spec.handler({ name: 'mcp' })) as { content: Array<{ text: string }>; isError?: boolean };
+		assert.strictEqual(specRes.isError, undefined, 'get_spec');
+		const parsed = JSON.parse(specRes.content[0].text) as { domain: string; content: string };
+		assert.strictEqual(parsed.domain, 'mcp');
+		assert.ok(parsed.content.length > 0);
 	});
 
 	it('get_rule and get_command return error when name not found', async () => {

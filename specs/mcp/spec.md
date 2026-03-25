@@ -1,13 +1,13 @@
 ---
 spec_version: "1.1.0"
-revised_at: "2026-03-12"
+revised_at: "2026-03-23"
 ---
 
 # Feature: MCP Server Integration
 
 > **ASDLC Pattern**: [The Spec](https://asdlc.io/patterns/the-spec/)
 > **Status**: Active
-> **Last Updated**: 2026-03-12
+> **Last Updated**: 2026-03-23
 
 ---
 
@@ -21,7 +21,7 @@ The MCP (Model Context Protocol) server exposes ACE's scanning capabilities as *
 
 **Multi-project**: ACE operates over multiple projects (workspaces and added roots). The MCP surface is **multi-project by design**: agents discover available projects via `list_projects` and then address them by a short `projectKey` (the final directory name in the project path) instead of passing full filesystem paths.
 
-**Exposed surface**: The server exposes **only MCP tools (commands)**. It does **not** expose MCP resources (e.g. `ace://` URIs) to agents. All context is obtained by invoking tools (e.g. `list_rules`, `get_rule`, `get_project_context`). This keeps the agent contract simple and avoids duplicating the same data as both tools and resources.
+**Exposed surface**: The server exposes **only MCP tools (commands)**. It does **not** expose MCP resources (e.g. `ace://` URIs) to agents. All context is obtained by invoking tools (e.g. `list_rules`, `get_rule`, `get_project`). This keeps the agent contract simple and avoids duplicating the same data as both tools and resources.
 
 **Design principle**: MCP is a **thin adapter** over scanners. When run from the extension, **project resolution and scanning stay in the extension** (same source of truth as the tree view); the stdio server is a **protocol bridge** that forwards tool calls to the extension. No business logic in the bridge—just MCP ↔ extension IPC.
 
@@ -79,9 +79,11 @@ Agents interact with ACE **only** via these tools. No MCP resources are register
 | `get_command` | Get full command content | `name`, `projectKey?` | `CommandContent` |
 | `list_skills` | List workspace + global skills | `projectKey?` | `SkillInfo[]` |
 | `get_skill` | Get full skill content | `name`, `projectKey?` | `SkillContent` |
-| `get_asdlc_artifacts` | Get AGENTS.md, specs, schemas | `projectKey?` | `AsdlcArtifacts` |
-| `list_specs` | List available specifications | `projectKey?` | `SpecFile[]` |
-| `get_project_context` | Complete project context | `projectKey?` | `ProjectContext` |
+| `list_agents` | List agent definition files | `projectKey?` | `AgentDefinitionInfo[]` |
+| `get_agent` | Get full agent definition content | `name`, `projectKey?` | `AgentDefinitionContent` |
+| `list_specs` | List available specifications (`specs/*/spec.md`) | `projectKey?` | `SpecFile[]` |
+| `get_spec` | Get full `spec.md` for one domain | `name`, `projectKey?` | `SpecContent` |
+| `get_project` | Complete project snapshot (rules, commands, skills, agents, ASDLC artifacts) | `projectKey?` | `ProjectContext` |
 
 **Tool Input (multi-project)**:
 - `list_projects` returns the set of known projects, each with a stable `projectKey` (the final directory segment of the project path).
@@ -134,7 +136,7 @@ RuleContent { ...RuleInfo, content }
 #### ❌ Exposing MCP Resources for Context
 **Problem**: Registering `ace://` resources so agents can read context via resource URIs.
 **Why we avoid it**: Duplicates the tool surface; agents should use tools only for a single, clear contract.
-**Solution**: Expose only tools; agents call `list_*` / `get_*` / `get_project_context`.
+**Solution**: Expose only tools; agents call `list_*` / `get_*` / `get_project`.
 
 ---
 
@@ -148,7 +150,7 @@ RuleContent { ...RuleInfo, content }
 - [ ] **Only tools are exposed; no MCP resources are registered.**
 - [ ] Tools accept optional `projectKey` and return context for the specified project (multi-project), and `list_projects` exposes the available keys.
 - [ ] Tools return correct typed responses matching spec
-- [ ] `get_project_context` aggregates all scanner results for the given project
+- [ ] `get_project` aggregates all scanner results for the given project
 - [ ] Tools handle missing artifacts gracefully (empty results, not errors)
 - [ ] Integration tests verify tool invocations and responses
 
@@ -185,10 +187,15 @@ RuleContent { ...RuleInfo, content }
 - **When**: Agent invokes `get_rule` with `name: "missing"`
 - **Then**: Returns `null` (not error)
 
-**Scenario: Agent requests complete project context**
+**Scenario: Agent requests complete project snapshot**
 - **Given**: Workspace has rules, commands, skills, and AGENTS.md
-- **When**: Agent invokes `get_project_context`
+- **When**: Agent invokes `get_project`
 - **Then**: Returns `ProjectContext` with all artifacts, timestamp, and projectPath
+
+**Scenario: Agent reads one living spec file**
+- **Given**: `list_specs` includes domain `mcp` pointing at `specs/mcp/spec.md`
+- **When**: Agent invokes `get_spec` with `name: "mcp"` (or a path fragment)
+- **Then**: Returns `SpecContent` with full markdown body and metadata fields
 
 **Scenario: Multi-project context discovery and access**
 - **Given**: Multiple projects configured in ACE
@@ -252,5 +259,5 @@ vscode.mcp.registerServer('ace', {
 ---
 
 **Status**: Active  
-**Last Updated**: 2026-02-16  
+**Last Updated**: 2026-03-23  
 **Pattern**: ASDLC "The Spec"

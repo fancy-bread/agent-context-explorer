@@ -24,6 +24,7 @@ import {
 } from '../scanner/core/scanAgentDefinitionsCore';
 import type { CoreAgentDefinition } from '../scanner/core/types';
 import type { AgentDefinitionInfo, AgentDefinitionLocation } from './types';
+import { findSpecByName } from './toolsFind';
 
 // =============================================================================
 // Types (MCP tool output format)
@@ -380,37 +381,6 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
-	// get_asdlc_artifacts - Get ASDLC artifacts (AGENTS.md, specs, schemas)
-	server.tool('get_asdlc_artifacts', 'Get ASDLC artifacts (AGENTS.md, specs, schemas)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
-		const resolved = resolveProjectRoot(getProjectKeyArg(args));
-		if ('error' in resolved) {
-			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
-		}
-		const asdlc = await getAsdlcArtifacts(resolved.path);
-
-		const result = {
-			agentsMd: {
-				exists: asdlc.agentsMd.exists,
-				path: asdlc.agentsMd.path
-			},
-			specs: {
-				exists: asdlc.specs.exists,
-				count: asdlc.specs.specs.length,
-				specs: asdlc.specs.specs
-			},
-			schemas: {
-				exists: asdlc.schemas.exists,
-				count: asdlc.schemas.schemas.length,
-				schemas: asdlc.schemas.schemas
-			},
-			hasAnyArtifacts: asdlc.hasAnyArtifacts
-		};
-
-		return {
-			content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }]
-		};
-	});
-
 	// list_specs - List available specifications
 	server.tool('list_specs', 'List available specifications', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
@@ -423,8 +393,34 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
-	// get_project_context - Complete project context
-	server.tool('get_project_context', 'Get complete project context (rules, commands, skills, agent definitions, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	// get_spec - Full specs/<domain>/spec.md content
+	server.tool('get_spec', 'Get full spec.md content by domain (from list_specs) or path fragment', { name: { type: 'string', description: 'Spec domain folder name or path fragment' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+		const resolved = resolveProjectRoot(getProjectKeyArg(args));
+		if ('error' in resolved) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
+		}
+		const asdlc = await getAsdlcArtifacts(resolved.path);
+		const specs = asdlc.specs.specs;
+		const spec = findSpecByName(specs, args.name);
+		if (!spec) {
+			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: `Spec "${args.name}" not found` }) }], isError: true };
+		}
+		const text = await fs.readFile(spec.path, 'utf8');
+		const payload = {
+			domain: spec.domain,
+			path: spec.path,
+			hasBlueprint: spec.hasBlueprint,
+			hasContract: spec.hasContract,
+			lastModified: spec.lastModified,
+			content: text
+		};
+		return {
+			content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }]
+		};
+	});
+
+	// get_project - Complete project snapshot
+	server.tool('get_project', 'Get complete project snapshot (rules, commands, skills, agent definitions, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -509,9 +505,9 @@ const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<str
 	{ name: 'get_skill', description: 'Get skill content by name', inputSchema: nameAndProjectKeyShape },
 	{ name: 'list_agents', description: 'List agent definition files', inputSchema: projectKeyShape },
 	{ name: 'get_agent', description: 'Get agent definition content by name', inputSchema: nameAndProjectKeyShape },
-	{ name: 'get_asdlc_artifacts', description: 'Get ASDLC artifacts', inputSchema: projectKeyShape },
 	{ name: 'list_specs', description: 'List available specifications', inputSchema: projectKeyShape },
-	{ name: 'get_project_context', description: 'Get complete project context', inputSchema: projectKeyShape }
+	{ name: 'get_spec', description: 'Get full spec.md by domain', inputSchema: nameAndProjectKeyShape },
+	{ name: 'get_project', description: 'Get complete project snapshot', inputSchema: projectKeyShape }
 ];
 
 /** Ensure params for backend: SDK passes validated args; coerce to flat object. */
