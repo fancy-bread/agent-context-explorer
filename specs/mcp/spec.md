@@ -7,7 +7,7 @@ revised_at: "2026-03-23"
 
 > **ASDLC Pattern**: [The Spec](https://asdlc.io/patterns/the-spec/)
 > **Status**: Active
-> **Last Updated**: 2026-03-23
+> **Last Updated**: 2026-03-26
 
 ---
 
@@ -35,7 +35,7 @@ graph TB
     Backend["extensionBackend.ts<br/>Project resolution + McpTools"]
     Server["server.ts<br/>Stdio: bridge or standalone"]
     Tools["tools.ts<br/>McpTools (scanners)"]
-    Scanners["RulesScanner, CommandsScanner,<br/>SkillsScanner, AsdlcArtifactScanner"]
+    Scanners["RulesScanner, CommandsScanner,<br/>SkillsScanner, AgentsScanner,<br/>AsdlcArtifactScanner"]
     
     Extension --> Backend
     Extension --> Server

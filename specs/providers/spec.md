@@ -2,7 +2,7 @@
 
 > **ASDLC Pattern**: [The Spec](https://asdlc.io/patterns/the-spec/)
 > **Status**: Active
-> **Last Updated**: 2026-02-07
+> **Last Updated**: 2026-03-26
 
 ---
 
@@ -22,31 +22,26 @@ Tree view providers translate project artifacts (rules, commands, skills, specs,
 
 ```mermaid
 graph TB
-    Root["Current Workspace"]
+    Root["Project (Workspaces view)"]
     Cursor["📁 Cursor"]
-    SpecsRoot["📁 Specs"]
+    SpecsRoot["📁 Specs (flat)"]
     
     Commands["📁 Commands"]
     Rules["📁 Rules"]
     Skills["📁 Skills"]
-    Subagents["📁 Subagents<br/>(Coming soon)"]
+    AgentDefs["🤖 Agents"]
     
     CmdWorkspace["📁 Workspace Commands"]
     CmdGlobal["📁 Global Commands"]
     CmdFile1["create-plan.md"]
-    CmdFile2["deploy.md"]
     
     RulesAlways["📂 Always Apply"]
-    RulesAuto["📂 Auto (Glob-based)"]
-    RulesManual["📂 Manual"]
     RuleFile1["security.mdc"]
-    RuleFile2["typescript.mdc"]
-    RuleFile3["testing.mdc"]
     
     SkillsWorkspace["📁 Workspace Skills"]
-    SkillsGlobal["📁 Global Skills"]
     SkillFile1["create-spec"]
-    SkillFile2["start-task"]
+    
+    AgentFile1["my-agent.md"]
     
     SpecFile1["scanners/spec.md"]
     SpecFile2["mcp/spec.md"]
@@ -57,24 +52,19 @@ graph TB
     Cursor --> Commands
     Cursor --> Rules
     Cursor --> Skills
-    Cursor --> Subagents
+    Cursor --> AgentDefs
     
     Commands --> CmdWorkspace
     Commands --> CmdGlobal
     CmdWorkspace --> CmdFile1
-    CmdGlobal --> CmdFile2
     
     Rules --> RulesAlways
-    Rules --> RulesAuto
-    Rules --> RulesManual
     RulesAlways --> RuleFile1
-    RulesAuto --> RuleFile2
-    RulesManual --> RuleFile3
     
     Skills --> SkillsWorkspace
-    Skills --> SkillsGlobal
     SkillsWorkspace --> SkillFile1
-    SkillsGlobal --> SkillFile2
+    
+    AgentDefs --> AgentFile1
     
     SpecsRoot --> SpecFile1
     SpecsRoot --> SpecFile2
@@ -82,12 +72,14 @@ graph TB
     style Root fill:#e1f5ff
     style Cursor fill:#fff4e1
     style SpecsRoot fill:#f3e5f5
+    style AgentDefs fill:#e8f5e9
 ```
 
 **Design rationale**:
-- **Cursor section**: IDE-specific artifacts (rules, commands, skills, agent definitions)
-- **Specs section**: Flat list of living specs (`specs/*/spec.md`) — no nested folders, no `schemas/` in the tree, no repo constitution leaf
-- **Future-proof**: Easy to add "Claude Desktop" or "Windsurf" sections alongside Cursor
+- **Cursor section**: IDE-specific artifacts (rules, commands, skills, **Agents** — flat `.md` in `.cursor/agents/`, `hubot` icon; sections ordered alphabetically)
+- **Specs section**: Flat list of living specs (`specs/*/spec.md`, `library` icon) — no nested folders, no `schemas/` in the tree, no repo constitution leaf
+- **Agents view** (separate tree): Under each agent root, **Agents** is a sibling of Commands and Skills for that root’s `agents/*.md` ([004](../004-agents-view-scan/spec.md))
+- **Future-proof**: Easy to add other IDE sections alongside Cursor
 - **Clarity**: Clear separation between IDE tools and the specs list
 
 #### Provider Pattern
@@ -125,6 +117,7 @@ interface ProjectTreeItem extends vscode.TreeItem {
   rule?: Rule
   commandData?: Command
   skillData?: Skill
+  agentDefinitionData?: AgentDefinition
   stateItem?: any
 
   // Category classification
@@ -153,9 +146,11 @@ Categories define tree node types and determine children resolution:
 
 | Category | Parent | Children | Purpose |
 |----------|--------|----------|---------|
-| `'projects'` | Root | `'cursor'`, `'agents'` | Top-level project node |
-| `'cursor'` | `'projects'` | `'commands'`, `'rules'`, `'skills'`, `'subagents'` | Cursor IDE section |
-| `'agents'` | `'projects'` | `'specs'` (leaves) | Flat spec domains from `specs/` |
+| `'projects'` | Root | `'cursor'`, `'agents'` | Top-level project node (Workspaces view) |
+| `'cursor'` | `'projects'` | `'commands'`, `'rules'`, `'skills'`, `'agent-definitions'` (alphabetical labels) | Cursor IDE section |
+| `'agents'` | `'projects'` | `'specs'` (leaves) | **Specs** node (internal id `agents`): flat `specs/*/spec.md` leaves |
+| `'agent-definitions'` | `'cursor'` | `'agent-definition'` leaves or empty placeholder | Workspace agent definitions (`.cursor/agents/*.md`) |
+| `'agent-definition'` | `'agent-definitions'` | — | Single agent file; opens with `vscode.open` |
 | `'commands'` | `'cursor'` | `'commands-workspace'`, `'commands-global'` | Commands section |
 | `'skills'` | `'cursor'` | `'skills-workspace'`, `'skills-global'` | Skills section |
 | `'rules'` | `'cursor'` | `'always'`, `'glob'`, `'manual'` rule types | Rules section |
@@ -179,7 +174,7 @@ Categories define tree node types and determine children resolution:
 - **Activation:** `onView:aceProjects` — extension activates only when user opens ACE sidebar view (not at startup)
 - **Initial scan:** Deferred until tree view requests data (first `getChildren(undefined)` call)
 - **Loading indicator:** Tree shows "Loading..." with spinner until first scan completes
-- **File watchers:** Registered only after first successful scan (workspace + global rules, commands, skills)
+- **File watchers:** Registered only after first successful scan (workspace + global rules, commands, skills, workspace `.cursor/agents/**/*.md`, and global `~/.cursor/agents/*.md` per [004](../004-agents-view-scan/spec.md))
 
 ### File Watchers
 
@@ -220,7 +215,7 @@ skillsWatcher.onDidChange(() => refreshData());
 
 ### Definition of Done
 
-- [ ] Tree view displays all artifact types (rules, commands, skills, ASDLC)
+- [ ] Tree view displays all artifact types (rules, commands, skills, agent definitions, ASDLC / specs list)
 - [ ] Platform-first structure (Cursor / Agents top-level)
 - [ ] Category system correctly routes `getChildren()` calls
 - [ ] File watchers trigger automatic refresh when artifacts change
@@ -246,9 +241,19 @@ skillsWatcher.onDidChange(() => refreshData());
 ### Scenarios
 
 **Scenario: User expands Cursor section**
-- **Given**: Project has rules, commands, and skills
+- **Given**: Project has rules, commands, skills, and optional agent definitions
 - **When**: User expands "Cursor" node
-- **Then**: Shows "Commands", "Rules", "Skills", "Subagents" subsections with correct counts
+- **Then**: Shows "Agents", "Commands", "Rules", "Skills" subsections (alphabetical) with correct counts/descriptions
+
+**Scenario: User expands Agents under Cursor (workspace)**
+- **Given**: `.cursor/agents/` has one or more `.md` files
+- **When**: User expands Cursor → Agents
+- **Then**: Leaf items use `hubot` icon; click opens the file; duplicate display names get disambiguating tooltips (per [004](../004-agents-view-scan/spec.md))
+
+**Scenario: Agents view root shows agent definitions**
+- **Given**: `~/.cursor/agents/` exists with `.md` files
+- **When**: User expands Agents view → Cursor → Agents
+- **Then**: Same hubot leaves and empty-state copy as workspace when folder is empty
 
 **Scenario: User expands Workspace Skills**
 - **Given**: `.cursor/skills/` has 2 SKILL.md files
@@ -275,10 +280,15 @@ skillsWatcher.onDidChange(() => refreshData());
 - **When**: User expands both projects in tree
 - **Then**: Each project shows its own rules, commands, skills independently
 
-**Scenario: AGENTS.md doesn't exist**
-- **Given**: Workspace has no AGENTS.md file
-- **When**: User expands "Agents" section
-- **Then**: AGENTS.md item doesn't appear, but Specs and Schemas still shown if they exist
+**Scenario: Specs node with no spec files**
+- **Given**: Project has no `specs/*/spec.md` files
+- **When**: User expands the **Specs** node (library icon) under the project
+- **Then**: Empty or placeholder state; no error
+
+**Scenario: Workspace Agents empty**
+- **Given**: No `.cursor/agents/` or directory is empty
+- **When**: User expands Cursor → Agents
+- **Then**: Shows "No agents found" (or equivalent) with hint path `.cursor/agents/`
 
 ---
 
@@ -289,6 +299,7 @@ skillsWatcher.onDidChange(() => refreshData());
 | Component | Location |
 |-----------|----------|
 | ProjectTreeProvider | `src/providers/projectTreeProvider.ts` |
+| AgentsTreeProvider | `src/providers/agentsTreeProvider.ts` |
 | Provider types | `src/providers/projectTreeProvider.ts` (interfaces at top) |
 | Tree view registration | `src/extension.ts` |
 
@@ -327,5 +338,5 @@ context.subscriptions.push(treeView);
 ---
 
 **Status**: Active
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-03-26
 **Pattern**: ASDLC "The Spec"

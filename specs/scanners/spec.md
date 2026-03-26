@@ -2,7 +2,7 @@
 
 > **ASDLC Pattern**: [The Spec](https://asdlc.io/patterns/the-spec/)
 > **Status**: Active
-> **Last Updated**: 2026-02-07
+> **Last Updated**: 2026-03-26
 
 ---
 
@@ -47,6 +47,7 @@ class XxxScanner {
 | `RulesScanner` | `.mdc`, `.md` files | `.cursor/rules/` | Cursor rules with YAML frontmatter |
 | `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/` | Workspace and global commands |
 | `SkillsScanner` | `SKILL.md` files | `.cursor/skills/*/`, `~/.cursor/skills/*/` | Workspace and global skills (structured workflows) |
+| `AgentsScanner` + `scanAgentDefinitionsCore` | Flat `*.md` (non-recursive) | `{root}/.cursor/agents/` (workspace); per agent root `agents/` (e.g. `~/.cursor/agents`, `~/.claude/agents`, `~/.agents/agents`) | Agent definition files for tree + MCP ([004](../004-agents-view-scan/contracts/agent-definitions.md)) |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
 
 #### Unified Scanning (FB-75)
@@ -58,12 +59,13 @@ Extension and MCP standalone share a **scanner core** behind a filesystem abstra
 | `IFileSystem` | Interface: `readFile`, `readDirectory`, `stat` (no vscode) |
 | `VSCodeFsAdapter` | Implements IFileSystem via `vscode.workspace.fs` (extension) |
 | `NodeFsAdapter` | Implements IFileSystem via Node `fs/promises` (MCP standalone) |
-| `scanRulesCore`, `scanCommandsCore`, `scanSkillsCore`, `scanAsdlcCore` | Shared scan functions in `src/scanner/core/` |
+| `scanRulesCore`, `scanCommandsCore`, `scanSkillsCore`, `scanAgentDefinitionsCore`, `scanAsdlcCore` | Shared scan functions in `src/scanner/core/` |
 
 **Scan roots** (recursion limits):
 - Rules: `{projectRoot}/.cursor/rules/` only (recursive within rules/)
 - Commands: `{projectRoot}/.cursor/commands/` and `~/.cursor/commands/` (flat)
 - Skills: `{projectRoot}/.cursor/skills/` and `~/.cursor/skills/` (one level)
+- Agent definitions: `{projectRoot}/.cursor/agents/*.md` (flat); agent roots use each root’s `agents/*.md` (see [004 research](../004-agents-view-scan/research.md))
 - ASDLC: `{projectRoot}/AGENTS.md`, `specs/`, `schemas/`
 
 **Exclusions**: Paths under `test/fixtures/` or outside project/user `.cursor` are never scanned.
@@ -80,6 +82,7 @@ graph TB
     RulesScanner["RulesScanner"]
     CommandsScanner["CommandsScanner"]
     SkillsScanner["SkillsScanner"]
+    AgentsScanner["AgentsScanner"]
     AsdlcScanner["AsdlcArtifactScanner"]
     
     Core["scanRulesCore, scanCommandsCore, etc."]
@@ -92,11 +95,13 @@ graph TB
     TreeProvider --> RulesScanner
     TreeProvider --> CommandsScanner
     TreeProvider --> SkillsScanner
+    TreeProvider --> AgentsScanner
     TreeProvider --> AsdlcScanner
     
     McpTools --> RulesScanner
     McpTools --> CommandsScanner
     McpTools --> SkillsScanner
+    McpTools --> AgentsScanner
     McpTools --> AsdlcScanner
     
     RulesScanner --> VSCodeAdapter
@@ -105,6 +110,8 @@ graph TB
     CommandsScanner --> Core
     SkillsScanner --> VSCodeAdapter
     SkillsScanner --> Core
+    AgentsScanner --> VSCodeAdapter
+    AgentsScanner --> Core
     AsdlcScanner --> VSCodeAdapter
     AsdlcScanner --> Core
     
@@ -220,6 +227,11 @@ Scanners (extension) and MCP standalone both use the shared core. Extension uses
 - **When**: `RulesScanner.scanRules()` is called
 - **Then**: Returns `Rule` with error placeholder in metadata, does not throw
 
+**Scenario: Agent definitions in workspace**
+- **Given**: `.cursor/agents/` contains several `.md` files (YAML frontmatter with optional `name`)
+- **When**: `AgentsScanner.scanWorkspaceAgentDefinitions()` (or `scanAgentDefinitionsCore` via adapter) runs for that project root
+- **Then**: Returns `AgentDefinition[]` sorted alphabetically by resolved display name; missing directory yields empty array (not error)
+
 ---
 
 ## Implementation Reference
@@ -231,8 +243,9 @@ Scanners (extension) and MCP standalone both use the shared core. Extension uses
 | RulesScanner | `src/scanner/rulesScanner.ts` |
 | CommandsScanner | `src/scanner/commandsScanner.ts` |
 | SkillsScanner | `src/scanner/skillsScanner.ts` |
+| AgentsScanner | `src/scanner/agentsScanner.ts` |
 | AsdlcArtifactScanner | `src/scanner/asdlcArtifactScanner.ts` |
-| Scanner core | `src/scanner/core/` (types, listFiles, scanRulesCore, etc.) |
+| Scanner core | `src/scanner/core/` (includes `scanAgentDefinitionsCore.ts`) |
 | VSCodeFsAdapter | `src/scanner/adapters/vscodeFsAdapter.ts` |
 | NodeFsAdapter | `src/scanner/adapters/nodeFsAdapter.ts` |
 | Scanner types | `src/scanner/types.ts` |
@@ -248,6 +261,7 @@ Scanners (extension) and MCP standalone both use the shared core. Extension uses
 | CommandsScanner | `test/suite/unit/commandsScanner.test.ts` |
 | SkillsScanner | `test/suite/unit/skillsScanner.test.ts` |
 | AsdlcArtifactScanner | `test/suite/unit/asdlcArtifactScanner.test.ts` |
+| Agent definitions core | `test/suite/unit/scanAgentDefinitionsCore.unit.test.ts` |
 | MCP Server Scanners | `test/suite/unit/mcpServer.test.ts` |
 
 ---
@@ -269,5 +283,5 @@ Scanners (extension) and MCP standalone both use the shared core. Extension uses
 ---
 
 **Status**: Active
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-03-26
 **Pattern**: ASDLC "The Spec"

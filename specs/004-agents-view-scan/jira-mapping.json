@@ -76,11 +76,11 @@
       "summary": "004 Phase 6: Polish & cross-cutting",
       "url": "https://fancybread.atlassian.net/browse/FB-123",
       "embedded_tasks": [
-        { "id": "T018", "summary": "Living spec tree-view", "status": "pending" },
-        { "id": "T019", "summary": "Living spec scanners", "status": "pending" },
-        { "id": "T020", "summary": "Living spec providers", "status": "pending" },
-        { "id": "T021", "summary": "Living spec MCP + data-model", "status": "pending" },
-        { "id": "T022", "summary": "compile:test + test:coverage + quickstart", "status": "pending" }
+        { "id": "T018", "summary": "Living spec tree-view", "status": "done" },
+        { "id": "T019", "summary": "Living spec scanners", "status": "done" },
+        { "id": "T020", "summary": "Living spec providers", "status": "done" },
+        { "id": "T021", "summary": "Living spec MCP + data-model", "status": "done" },
+        { "id": "T022", "summary": "compile:test + test:coverage + quickstart", "status": "done" }
       ]
     }
   ],
