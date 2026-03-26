@@ -88,11 +88,11 @@
 
 **Purpose**: Living specs (FR-007/FR-008), coverage, quickstart validation. **Branch**: e.g. `004-agents-docs` or fold into final integration branch.
 
-- [ ] T018 [P] Update `specs/tree-view/spec.md` with **Agent definitions** nodes, icons, and terminology cross-links
-- [ ] T019 [P] Update `specs/scanners/spec.md` with `scanAgentDefinitionsCore` / `AgentsScanner` and path table
-- [ ] T020 [P] Update `specs/providers/spec.md` with Workspaces + Agents view behavior for agent definitions
-- [ ] T021 Update `specs/mcp/spec.md` and `specs/mcp/data-model.md` with new tools, types, and `ProjectContext` fields
-- [ ] T022 Run `npm run compile:test` and `npm run test:coverage`; manually step through `specs/004-agents-view-scan/quickstart.md`
+- [x] T018 [P] Update `specs/tree-view/spec.md` with **Agent definitions** nodes, icons, and terminology cross-links
+- [x] T019 [P] Update `specs/scanners/spec.md` with `scanAgentDefinitionsCore` / `AgentsScanner` and path table
+- [x] T020 [P] Update `specs/providers/spec.md` with Workspaces + Agents view behavior for agent definitions
+- [x] T021 Update `specs/mcp/spec.md` and `specs/mcp/data-model.md` with new tools, types, and `ProjectContext` fields
+- [x] T022 Run `npm run compile:test` and `npm run test:coverage`; manually step through `specs/004-agents-view-scan/quickstart.md`
 
 ---
 
