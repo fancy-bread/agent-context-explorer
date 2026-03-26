@@ -248,7 +248,7 @@ export function toAgentDefinitionContent(def: AgentDefinition, location: AgentDe
 }
 
 // =============================================================================
-// Project Context Types (for combined get_project_context tool)
+// Project snapshot (get_project tool)
 // =============================================================================
 
 /**
@@ -301,6 +301,26 @@ export interface GetSkillInput extends ProjectScopedInput {
  */
 export interface GetAgentDefinitionInput extends ProjectScopedInput {
 	name: string;
+}
+
+/**
+ * Input for get_spec tool
+ */
+export interface GetSpecInput extends ProjectScopedInput {
+	/** Spec domain folder name (as in list_specs) or path fragment */
+	name: string;
+}
+
+/**
+ * Full `specs/<domain>/spec.md` content for get_spec
+ */
+export interface SpecContent {
+	domain: string;
+	path: string;
+	hasBlueprint: boolean;
+	hasContract: boolean;
+	lastModified?: string;
+	content: string;
 }
 
 // =============================================================================

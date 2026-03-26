@@ -104,7 +104,7 @@ describe('mcp/tools (McpTools)', () => {
 		assert.strictEqual(out?.content, 'deep');
 	});
 
-	it('getAsdlcArtifacts and listSpecs use projectPath', async () => {
+	it('listSpecs uses projectPath', async () => {
 		setWorkspaceFolders('/other');
 		AsdlcArtifactScanner.prototype.scanAll = async () => ({
 			agentsMd: { exists: false, sections: [] },
@@ -113,14 +113,11 @@ describe('mcp/tools (McpTools)', () => {
 			hasAnyArtifacts: true
 		});
 
-		const arts = await McpTools.getAsdlcArtifacts({ projectPath: process.cwd() });
-		assert.strictEqual(arts.specs.specs.length, 1);
-
 		const specs = await McpTools.listSpecs({ projectPath: process.cwd() });
 		assert.strictEqual(specs[0].domain, 'd');
 	});
 
-	it('listRules, listCommands, listSkills, getProjectContext with explicit projectPath (no default workspace)', async () => {
+	it('listRules, listCommands, listSkills, getProject with explicit projectPath (no default workspace)', async () => {
 		(vscode.workspace as any).workspaceFolders = undefined;
 		RulesScanner.prototype.scanRules = async () => [];
 		CommandsScanner.prototype.scanWorkspaceCommands = async () => [];
@@ -140,7 +137,7 @@ describe('mcp/tools (McpTools)', () => {
 		const lr = await McpTools.listRules({ projectPath: cwd });
 		const lc = await McpTools.listCommands({ projectPath: cwd });
 		const ls = await McpTools.listSkills({ projectPath: cwd });
-		const ctx = await McpTools.getProjectContext({ projectPath: cwd });
+		const ctx = await McpTools.getProject({ projectPath: cwd });
 		assert.deepStrictEqual(lr, []);
 		assert.deepStrictEqual(lc, []);
 		assert.deepStrictEqual(ls, []);
@@ -372,20 +369,46 @@ describe('mcp/tools (McpTools)', () => {
 		assert.ok(out.some(s => s.name === 'g-skill' && s.title === 'G'));
 	});
 
-	it('getAsdlcArtifacts delegates to AsdlcArtifactScanner.scanAll', async () => {
+	it('getSpec reads spec file when domain matches', async () => {
+		setWorkspaceFolders('/workspace');
+		const specPath = '/workspace/specs/foo/spec.md';
+		AsdlcArtifactScanner.prototype.scanAll = async () => ({
+			agentsMd: { exists: false, sections: [] },
+			specs: {
+				exists: true,
+				specs: [{ domain: 'foo', path: specPath, hasBlueprint: true, hasContract: true }]
+			},
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: true
+		});
+		const origRead = vscode.workspace.fs.readFile;
+		vscode.workspace.fs.readFile = async (uri: vscode.Uri) => {
+			assert.strictEqual(uri.fsPath, specPath);
+			return new Uint8Array(Buffer.from('hello spec', 'utf8'));
+		};
+		try {
+			const out = await McpTools.getSpec({ name: 'foo', projectPath: '/workspace' });
+			assert.ok(out);
+			assert.strictEqual(out?.content, 'hello spec');
+			assert.strictEqual(out?.domain, 'foo');
+		} finally {
+			vscode.workspace.fs.readFile = origRead;
+		}
+	});
+
+	it('getSpec returns null when domain not found', async () => {
 		setWorkspaceFolders('/workspace');
 		AsdlcArtifactScanner.prototype.scanAll = async () => ({
 			agentsMd: { exists: false, sections: [] },
-			specs: { exists: false, specs: [] },
+			specs: { exists: true, specs: [{ domain: 'a', path: '/workspace/specs/a/spec.md', hasBlueprint: true, hasContract: false }] },
 			schemas: { exists: false, schemas: [] },
-			hasAnyArtifacts: false
+			hasAnyArtifacts: true
 		});
-
-		const out = await McpTools.getAsdlcArtifacts({ projectPath: '/workspace' });
-		assert.strictEqual(out.hasAnyArtifacts, false);
+		const out = await McpTools.getSpec({ name: 'missing', projectPath: '/workspace' });
+		assert.strictEqual(out, null);
 	});
 
-	it('getProjectContext composes results', async () => {
+	it('getProject composes results', async () => {
 		setWorkspaceFolders('/workspace');
 		RulesScanner.prototype.scanRules = async () => [];
 		CommandsScanner.prototype.scanWorkspaceCommands = async () => [];
@@ -401,7 +424,7 @@ describe('mcp/tools (McpTools)', () => {
 			hasAnyArtifacts: false
 		});
 
-		const out = await McpTools.getProjectContext({ projectPath: '/workspace' });
+		const out = await McpTools.getProject({ projectPath: '/workspace' });
 		assert.strictEqual(out.projectPath, '/workspace');
 		assert.ok(typeof out.timestamp === 'string');
 		assert.deepStrictEqual(out.rules, []);

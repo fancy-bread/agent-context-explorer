@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
 import { assertWorkspaceUriForMcp } from './toolsWorkspace';
-import { findRuleByName, findCommandByName, findSkillByName, findAgentDefinitionByName } from './toolsFind';
+import { findRuleByName, findCommandByName, findSkillByName, findAgentDefinitionByName, findSpecByName } from './toolsFind';
 import { RulesScanner } from '../scanner/rulesScanner';
 import { CommandsScanner } from '../scanner/commandsScanner';
 import { SkillsScanner } from '../scanner/skillsScanner';
@@ -26,8 +26,9 @@ import {
 	GetCommandInput,
 	GetSkillInput,
 	GetAgentDefinitionInput,
-	AsdlcArtifacts,
+	GetSpecInput,
 	SpecFile,
+	SpecContent,
 	toRuleInfo,
 	toRuleContent,
 	toCommandInfo,
@@ -223,18 +224,8 @@ export class McpTools {
 	}
 
 	// =========================================================================
-	// ASDLC Tools
+	// Specs (ASDLC artifact scanner)
 	// =========================================================================
-
-	/**
-	 * get_asdlc_artifacts - Get ASDLC artifacts (AGENTS.md, specs, schemas)
-	 */
-	static async getAsdlcArtifacts(input?: ProjectScopedInput): Promise<AsdlcArtifacts> {
-		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
-
-		const scanner = new AsdlcArtifactScanner(workspaceUri);
-		return await scanner.scanAll();
-	}
 
 	/**
 	 * list_specs - List available specifications
@@ -248,23 +239,46 @@ export class McpTools {
 		return artifacts.specs.specs;
 	}
 
+	/**
+	 * get_spec - Full spec.md body for one domain (pairs with list_specs)
+	 */
+	static async getSpec(input: GetSpecInput): Promise<SpecContent | null> {
+		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
+		const specs = await this.listSpecs(input);
+		const spec = findSpecByName(specs, input.name);
+		if (!spec) {
+			return null;
+		}
+		const uri = vscode.Uri.file(spec.path);
+		const bytes = await vscode.workspace.fs.readFile(uri);
+		const content = Buffer.from(bytes).toString('utf8');
+		return {
+			domain: spec.domain,
+			path: spec.path,
+			hasBlueprint: spec.hasBlueprint,
+			hasContract: spec.hasContract,
+			lastModified: spec.lastModified,
+			content
+		};
+	}
+
 	// =========================================================================
 	// Combined Tools
 	// =========================================================================
 
 	/**
-	 * get_project_context - Complete project context (rules, commands, skills, artifacts)
+	 * get_project - Complete project snapshot (rules, commands, skills, agents, ASDLC artifacts)
 	 */
-	static async getProjectContext(input?: ProjectScopedInput): Promise<ProjectContext> {
+	static async getProject(input?: ProjectScopedInput): Promise<ProjectContext> {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
-		// Run all scans in parallel for performance
+		const scanner = new AsdlcArtifactScanner(workspaceUri);
 		const [rules, commands, skills, agentDefinitions, asdlcArtifacts] = await Promise.all([
 			this.listRules(input),
 			this.listCommands(input),
 			this.listSkills(input),
 			this.listAgentDefinitions(input),
-			this.getAsdlcArtifacts(input)
+			scanner.scanAll()
 		]);
 
 		return {

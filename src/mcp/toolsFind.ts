@@ -2,6 +2,7 @@ import type { Rule } from '../scanner/rulesScanner';
 import type { Command } from '../scanner/commandsScanner';
 import type { Skill } from '../scanner/skillsScanner';
 import type { AgentDefinition } from '../scanner/agentsScanner';
+import type { SpecFile } from '../scanner/types';
 import type { AgentDefinitionLocation } from './types';
 
 /** Find a rule by logical name or path fragment (MCP get_rule). */
@@ -48,5 +49,15 @@ export function findAgentDefinitionByName(items: TaggedAgentDefinition[], name: 
 		const stem = def.fileName.toLowerCase();
 		const display = def.displayName.toLowerCase();
 		return stem === normalizedName || display === normalizedName || def.uri.fsPath.toLowerCase().includes(needle);
+	});
+}
+
+/** Find a spec domain folder by `list_specs` domain or path fragment (MCP get_spec). */
+export function findSpecByName(specs: SpecFile[], name: string): SpecFile | undefined {
+	const normalized = name.toLowerCase().replace(/\.md$/, '').replace(/\/spec\.md$/i, '');
+	const needle = name.toLowerCase();
+	return specs.find((s) => {
+		const domain = s.domain.toLowerCase();
+		return domain === normalized || domain === needle || s.path.toLowerCase().includes(needle);
 	});
 }

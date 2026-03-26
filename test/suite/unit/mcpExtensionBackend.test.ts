@@ -219,7 +219,7 @@ describe('MCP extension backend: startExtensionBackend', () => {
 		}
 	});
 
-	it('handles list_rules and get_project_context with logLine', async () => {
+	it('handles list_rules and get_project with logLine', async () => {
 		const vscode = require('vscode');
 		vscode.workspace.workspaceFolders = [{ uri: { fsPath: process.cwd() }, name: 'repo' }];
 
@@ -253,7 +253,7 @@ describe('MCP extension backend: startExtensionBackend', () => {
 			assert.ok(Array.isArray(r1.result));
 			assert.ok(logs.some(l => l.includes('list_rules')));
 
-			const r2 = await send({ id: 11, method: 'get_project_context', params: { project_key: path.basename(process.cwd()) } });
+			const r2 = await send({ id: 11, method: 'get_project', params: { project_key: path.basename(process.cwd()) } });
 			assert.strictEqual(r2.id, 11);
 			assert.ok(r2.result && typeof (r2.result as any).projectPath === 'string');
 		} finally {
@@ -414,9 +414,9 @@ describe('MCP extension backend: startExtensionBackend', () => {
 			assert.strictEqual(specs.id, 52);
 			assert.ok(Array.isArray(specs.result));
 
-			const art = await send({ id: 53, method: 'get_asdlc_artifacts', params: { projectKey: 'one' } });
-			assert.strictEqual(art.id, 53);
-			assert.ok(art.result && typeof (art.result as any).hasAnyArtifacts === 'boolean');
+			const gspec = await send({ id: 53, method: 'get_spec', params: { projectKey: 'one', name: '__no_such_spec__' } });
+			assert.strictEqual(gspec.id, 53);
+			assert.strictEqual(gspec.result, null);
 		} finally {
 			dispose();
 		}

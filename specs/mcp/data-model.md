@@ -78,7 +78,7 @@ The MCP layer exposes ACE scanners as typed tools. This document captures the ke
   - Input: none
   - Output: `ProjectInfo[]`
 
-- `list_rules`, `list_commands`, `list_skills`, `get_asdlc_artifacts`, `list_specs`, `get_project_context`
+- `list_rules`, `list_commands`, `list_skills`, `list_agents`, `get_agent`, `list_specs`, `get_spec`, `get_project`
   - Input: `{ projectKey?: string }`
 
 - `get_rule`, `get_command`, `get_skill`
