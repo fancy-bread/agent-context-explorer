@@ -15,6 +15,8 @@ Auto-generated from all feature plans. Last updated: 2026-03-15
 - N/A (config files only) (003-ci-quality-gate)
 - TypeScript **strict** (project standard), Node **≥24** (see `package.json` / CI). + VS Code Extension API (`vscode`), existing ACE scanners (`VSCodeFsAdapter`, `scan*Core` in `src/scanner/core/`), MCP SDK (stdio server + tools in `src/mcp/`). (004-agents-view-scan)
 - N/A (files on disk only; no DB). (004-agents-view-scan)
+- TypeScript 5.x (strict), Node.js ≥24 (tooling/CI per `package.json`) + VS Code Extension API (`vscode`), Vite (extension + MCP bundles), Mocha/NYC/ESLint (005-release-readiness)
+- N/A (docs + manifest + small source edits) (005-release-readiness)
 
 - TypeScript 5.x (strict) + VS Code Extension API, existing scanners (RulesScanner, CommandsScanner, SkillsScanner, AsdlcArtifactScanner), ProjectManager (001-tree-view-refactor)
 
@@ -34,9 +36,8 @@ npm test && npm run lint
 TypeScript 5.x (strict): Follow standard conventions
 
 ## Recent Changes
+- 005-release-readiness: Added TypeScript 5.x (strict), Node.js ≥24 (tooling/CI per `package.json`) + VS Code Extension API (`vscode`), Vite (extension + MCP bundles), Mocha/NYC/ESLint; release hygiene (CHANGELOG, README, manifest alignment) — no DB
 - 004-agents-view-scan: Added TypeScript **strict** (project standard), Node **≥24** (see `package.json` / CI). + VS Code Extension API (`vscode`), existing ACE scanners (`VSCodeFsAdapter`, `scan*Core` in `src/scanner/core/`), MCP SDK (stdio server + tools in `src/mcp/`).
-- 003-ci-quality-gate: Added TypeScript (strict), Node.js **24.x** for CI and contributor tooling + npm, Mocha, NYC, ESLint, Vite (build), VS Code extension API
-- 002-test-coverage: Added TypeScript (strict) + VS Code Extension API, Mocha, NYC, ESLint, Vite bundling
 
 
 <!-- MANUAL ADDITIONS START -->

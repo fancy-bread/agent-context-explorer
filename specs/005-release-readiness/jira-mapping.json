@@ -1,0 +1,60 @@
+{
+  "created_at": "2026-03-26T00:00:00Z",
+  "updated_at": "2026-03-26T00:00:00Z",
+  "spec": "005-release-readiness",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "mcp_server": "user-atlassian",
+  "hierarchy_note": "Stories FB-126–FB-128 created with parent Epic FB-125 (createJiraIssue parent + editJiraIssue parent where needed). Config task_type empty: tasks embedded in Story descriptions only.",
+  "epic": {
+    "key": "FB-125",
+    "summary": "005: 1.0 Release Readiness",
+    "url": "https://fancybread.atlassian.net/browse/FB-125"
+  },
+  "stories": [
+    {
+      "key": "FB-126",
+      "phase": "Phase 1: User Story 1 — Install-ready release (Priority: P1)",
+      "summary": "005 Phase 1: US1 — Install-ready release (P1)",
+      "url": "https://fancybread.atlassian.net/browse/FB-126",
+      "embedded_tasks": [
+        { "id": "T001", "summary": "lint + ci:coverage baseline", "status": "pending" },
+        { "id": "T002", "summary": ".vscodeignore CHANGELOG whitelist", "status": "pending" },
+        { "id": "T003", "summary": "root CHANGELOG.md 1.0.0", "status": "pending" },
+        { "id": "T004", "summary": "README What You See + MCP", "status": "pending" },
+        { "id": "T005", "summary": "README engines.vscode compatibility", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-127",
+      "phase": "Phase 2: User Story 2 — No broken or misleading surface (Priority: P2)",
+      "summary": "005 Phase 2: US2 — No broken or misleading surface (P2)",
+      "url": "https://fancybread.atlassian.net/browse/FB-127",
+      "embedded_tasks": [
+        { "id": "T006", "summary": "remove ace.viewStateSection from package.json", "status": "pending" },
+        { "id": "T007", "summary": "remove from AGENTS.md", "status": "pending" },
+        { "id": "T008", "summary": "extension.test.ts required commands", "status": "pending" },
+        { "id": "T009", "summary": "extensionLifecycle.test.ts required commands", "status": "pending" },
+        { "id": "T010", "summary": "fileWatcher.ts TODO cleanup", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-128",
+      "phase": "Phase 3: User Story 3 — Release gate & version (Priority: P3)",
+      "summary": "005 Phase 3: US3 — Release gate & version (P3)",
+      "url": "https://fancybread.atlassian.net/browse/FB-128",
+      "embedded_tasks": [
+        { "id": "T011", "summary": "quickstart.md checklist", "status": "pending" },
+        { "id": "T012", "summary": "final lint + ci:coverage", "status": "pending" },
+        { "id": "T013", "summary": "package.json version 1.0.0", "status": "pending" }
+      ]
+    }
+  ],
+  "summary": {
+    "total_stories": 3,
+    "total_embedded_tasks": 13,
+    "completed_tasks": 0,
+    "pending_tasks": 13
+  }
+}
