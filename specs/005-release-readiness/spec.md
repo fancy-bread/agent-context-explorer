@@ -51,6 +51,23 @@ As a maintainer, I want a repeatable “go/no-go” checklist for 1.0.0 readines
 
 ---
 
+### User Story 4 - Continuous delivery for marketplace (Priority: P4)
+
+As a maintainer, I want a documented, automatable path to package and publish the extension (GitHub Actions CD aligned with project publishing guidance), so the 1.0.0 release can ship to the VS Code Marketplace without one-off tribal knowledge.
+
+**Why this priority**: CD closes the loop after docs and the release gate; it is separate from “first-time user” polish (US1) but belongs in the same release train for teams that will cut 1.0.0 to the Marketplace.
+
+**Independent Test**: The CD workflow file is enabled (or clearly gated) with documented secrets; `npm run package` / `vsce package` steps are validated; README or deployment docs explain how to configure `VSCE_PAT` (or equivalent) for CI.
+
+**Acceptance Scenarios**:
+
+1. **Given** the repository after US1–US3 content is merged, **When** I read deployment/publishing documentation, **Then** I know which GitHub secret to set and how CD is triggered (e.g. push to default branch or release publish).
+2. **Given** a maintainer runs local packaging commands, **When** they produce a `.vsix`, **Then** the artifact installs without manifest errors attributable to packaging (icon path, required files).
+
+**Backlog alignment**: This story incorporates Jira **[FB-67](https://fancybread.atlassian.net/browse/FB-67)** (CD for publish + version 1.0.0). Version bump and root `CHANGELOG.md` remain owned by US1/US3 tasks; FB-67’s CD-specific items map here.
+
+---
+
 ### Edge Cases
 
 - **Partial environments**: Users may not have any global agent roots configured; docs should avoid implying features require them to exist.
@@ -66,12 +83,14 @@ As a maintainer, I want a repeatable “go/no-go” checklist for 1.0.0 readines
 - **FR-003**: The extension MUST NOT advertise commands or actions that are not actually available to users (e.g., in the command palette or documentation).
 - **FR-004**: The repository and packaged artifact MUST include commonly expected top-level metadata files for review (license, changelog, readme).
 - **FR-005**: Developer-facing cues implying unfinished implementation (e.g., placeholder TODO text in user-critical areas) SHOULD be removed or updated so they do not undermine release confidence.
+- **FR-006**: The project SHOULD provide a CD workflow (or equivalent documented automation) for Marketplace packaging/publish, with secrets and triggers documented for maintainers. The **first** production publish to the Marketplace MAY still be a manual step if publisher credentials are not yet available—automation and docs should not block on that.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Release Notes**: A human-readable summary of changes per version.
 - **User-Facing Surface**: The set of visible views, commands, and documented capabilities.
 - **Readiness Checklist**: A list of verifiable checks required before publishing 1.0.0.
+- **CD Pipeline**: GitHub Actions (or documented equivalent) that runs packaging/publish steps with documented required secrets.
 
 ## Success Criteria *(mandatory)*
 
@@ -81,8 +100,10 @@ As a maintainer, I want a repeatable “go/no-go” checklist for 1.0.0 readines
 - **SC-002**: Zero “advertised-but-missing” commands or UI actions are found during a standard review of the extension surface.
 - **SC-003**: At least 90% of first-time users can identify (from README alone) where to find Rules, Commands, Skills, agent definitions, Specs, and the Agents view without additional guidance.
 - **SC-004**: A maintainer can complete the release readiness checklist in under 10 minutes on a clean machine.
+- **SC-005**: CD is either enabled with documented triggers and `VSCE_PAT` (or named equivalent) setup, or explicitly gated with the same documentation so the team knows how to enable it for the first Marketplace publish.
 
 ## Assumptions & Dependencies
 
 - This feature does not add new product capabilities; it tightens release hygiene and documentation alignment only.
 - The project continues to follow a “viewer-only” philosophy; no artifact creation/editing is introduced as part of readiness.
+- **FB-67 / Marketplace**: Actual first publish may depend on publisher account and Personal Access Token availability; the spec treats **workflow + validation + docs** as in scope and **one-time publisher onboarding** as potentially out of band.

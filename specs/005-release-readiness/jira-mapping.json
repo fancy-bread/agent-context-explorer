@@ -6,7 +6,7 @@
   "jira_base_url": "https://fancybread.atlassian.net",
   "mode": "2-level",
   "mcp_server": "user-atlassian",
-  "hierarchy_note": "Stories FB-126–FB-128 created with parent Epic FB-125 (createJiraIssue parent + editJiraIssue parent where needed). Config task_type empty: tasks embedded in Story descriptions only.",
+  "hierarchy_note": "Stories FB-126–FB-128 created with parent Epic FB-125 (createJiraIssue parent + editJiraIssue parent where needed). Config task_type empty: tasks embedded in Story descriptions only. Backlog FB-67 (CD) incorporated into spec US4 / tasks T014–T018; link FB-67 to Epic FB-125 in Jira if desired.",
   "epic": {
     "key": "FB-125",
     "summary": "005: 1.0 Release Readiness",
@@ -49,12 +49,27 @@
         { "id": "T012", "summary": "final lint + ci:coverage", "status": "pending" },
         { "id": "T013", "summary": "package.json version 1.0.0", "status": "pending" }
       ]
+    },
+    {
+      "key": "FB-67",
+      "phase": "Phase 4: User Story 4 — CD & Marketplace (Priority: P4)",
+      "summary": "Prepare CD for publish; bump to 1.0.0 (incorporated into 005 US4)",
+      "url": "https://fancybread.atlassian.net/browse/FB-67",
+      "epic_link": "FB-125",
+      "embedded_tasks": [
+        { "id": "T014", "summary": "cd.yml real CD job + triggers + VSCE_PAT", "status": "pending" },
+        { "id": "T015", "summary": "document PAT / publishing (README or quickstart §7)", "status": "pending" },
+        { "id": "T016", "summary": "npm run package + vsce package + install .vsix", "status": "pending" },
+        { "id": "T017", "summary": "verify package.json icon vs ace.png", "status": "pending" },
+        { "id": "T018", "summary": "optional homepage + bugs in package.json", "status": "pending" }
+      ],
+      "overlap_note": "Version 1.0.0 (T013) and root CHANGELOG (T003) remain on FB-128 / FB-126; FB-67 tracks CD-specific work."
     }
   ],
   "summary": {
-    "total_stories": 3,
-    "total_embedded_tasks": 13,
+    "total_stories": 4,
+    "total_embedded_tasks": 18,
     "completed_tasks": 0,
-    "pending_tasks": 13
+    "pending_tasks": 18
   }
 }

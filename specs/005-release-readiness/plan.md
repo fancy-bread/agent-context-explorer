@@ -5,7 +5,7 @@
 
 ## Summary
 
-Ship **ACE 1.0.0** with release-quality documentation and a coherent **declared user surface**: add a root **`CHANGELOG.md`**, align **`README.md`** with Workspaces + Agents views, agent definitions, and MCP tools, **remove the unimplemented `ace.viewStateSection` command** from contributions and docs (or optionally implement—see [research.md](./research.md)), and remove misleading **TODO** text in `src/utils/fileWatcher.ts`. No new product features; tests updated where they assert contributed commands.
+Ship **ACE 1.0.0** with release-quality documentation and a coherent **declared user surface**: add a root **`CHANGELOG.md`**, align **`README.md`** with Workspaces + Agents views, agent definitions, and MCP tools, **remove the unimplemented `ace.viewStateSection` command** from contributions and docs (or optionally implement—see [research.md](./research.md)), and remove misleading **TODO** text in `src/utils/fileWatcher.ts`. **CD / Marketplace**: enable `.github/workflows/cd.yml`, document `VSCE_PAT`, validate `.vsix`—see Jira **[FB-67](https://fancybread.atlassian.net/browse/FB-67)** and [spec.md](./spec.md) User Story 4. No new product features; tests updated where they assert contributed commands.
 
 ## Technical Context
 
