@@ -31,8 +31,8 @@ jobs:
     - name: Build extension and MCP server bundles
       run: npm run package
 
-    - name: Install vsce
-      run: npm install -g @vscode/vsce
+    - name: Install vsce and ovsx
+      run: npm install -g @vscode/vsce ovsx
 
     - name: Package .vsix
       run: vsce package
@@ -41,3 +41,8 @@ jobs:
       run: vsce publish
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+    - name: Publish to Open VSX Registry
+      run: ovsx publish --pat ${{ secrets.OVSX_PAT }}
+      env:
+        OVSX_PAT: ${{ secrets.OVSX_PAT }}
