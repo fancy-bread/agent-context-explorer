@@ -143,8 +143,7 @@ class MockExtension {
 			'ace.refresh',
 			'ace.addProject',
 			'ace.editProject',
-			'ace.removeProject',
-			'ace.viewStateSection'
+			'ace.removeProject'
 		];
 
 		commands.forEach(command => {

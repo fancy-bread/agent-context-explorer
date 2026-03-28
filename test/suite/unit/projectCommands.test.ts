@@ -114,7 +114,7 @@ describe('ProjectCommands', () => {
 		vscode.window.showWarningMessage = async () => 'Yes';
 
 		ProjectCommands.registerCommands(ctx);
-		await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		await (registered['ace.removeProject'] as (x: any) => Promise<void>)({ project: p });
 		assert.strictEqual((await pm.getProjects()).length, 0);
 	});
 
@@ -127,7 +127,7 @@ describe('ProjectCommands', () => {
 		vscode.window.showWarningMessage = async () => 'No';
 
 		ProjectCommands.registerCommands(ctx);
-		await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		await (registered['ace.removeProject'] as (x: any) => Promise<void>)({ project: p });
 		assert.strictEqual((await pm.getProjects()).length, 1);
 	});
 
@@ -169,7 +169,7 @@ describe('ProjectCommands', () => {
 		};
 
 		ProjectCommands.registerCommands(ctx);
-		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		await (registered['ace.editProject'] as (x: any) => Promise<void>)({ project: p });
 
 		const projects = await pm.getProjects();
 		assert.strictEqual(projects[0].name, 'NewName');
@@ -302,7 +302,7 @@ describe('ProjectCommands', () => {
 
 		try {
 			ProjectCommands.registerCommands(ctx);
-			await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+			await (registered['ace.editProject'] as (x: any) => Promise<void>)({ project: p });
 		} finally {
 			ProjectManager.prototype.updateProject = origUpdate;
 		}
@@ -326,7 +326,7 @@ describe('ProjectCommands', () => {
 		};
 
 		ProjectCommands.registerCommands(ctx);
-		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		await (registered['ace.editProject'] as (x: any) => Promise<void>)({ project: p });
 		assert.ok(emptyErr && String(emptyErr).includes('required'));
 		assert.ok(wsErr && String(wsErr).includes('required'));
 	});
@@ -340,7 +340,7 @@ describe('ProjectCommands', () => {
 		vscode.window.showInputBox = async () => undefined;
 
 		ProjectCommands.registerCommands(ctx);
-		await (registered['ace.editProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+		await (registered['ace.editProject'] as (x: any) => Promise<void>)({ project: p });
 		const after = await pm.getProjects();
 		assert.strictEqual(after[0].name, 'E');
 	});
@@ -364,7 +364,7 @@ describe('ProjectCommands', () => {
 
 		try {
 			ProjectCommands.registerCommands(ctx);
-			await (registered['ace.removeProject'] as (x: ProjectDefinition) => Promise<void>)(p);
+			await (registered['ace.removeProject'] as (x: any) => Promise<void>)({ project: p });
 		} finally {
 			ProjectManager.prototype.removeProject = origRemove;
 		}

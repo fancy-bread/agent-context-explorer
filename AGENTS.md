@@ -123,7 +123,6 @@ ASDLC Artifact Scanning **MUST**:
 |--------|---------|-------|
 | **Add Project** | `ace.addProject` | Add external project to tree view |
 | **Remove Project** | `ace.removeProject` | Remove project from tree view |
-| **View State Section** | `ace.viewStateSection` | View individual state section |
 | **Refresh** | `ace.refresh` | Refresh tree view data |
 
 **Note:** Rules viewing is handled directly by tree view clicks (opens files read-only). No CRUD operations for rules.
