@@ -1,26 +1,43 @@
-# CD Pipeline - DISABLED
-# This workflow is currently disabled as the extension is not ready for marketplace deployment
-# To enable: uncomment the workflow below and configure marketplace secrets
+name: CD Pipeline
 
-name: CD Pipeline (DISABLED)
-
-# Workflow is disabled - no triggers
-# on:
-#   push:
-#     branches: [ main ]
-#   release:
-#     types: [ published ]
+on:
+  release:
+    types: [ published ]
 
 jobs:
-  disabled:
-    name: CD Pipeline Disabled
+  publish:
+    name: Package and Publish to VS Code Marketplace
     runs-on: ubuntu-latest
-    if: false  # Never runs
 
     steps:
-    - name: CD Pipeline Disabled
-      run: |
-        echo "🚫 CD Pipeline is currently disabled"
-        echo "📝 Extension is not ready for marketplace deployment"
-        echo "🔧 To enable: uncomment the workflow triggers and configure VSCE_PAT secret"
-        echo "📚 See README for deployment setup instructions"
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js 24.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run lint
+      run: npm run lint
+
+    - name: Run unit tests
+      run: npm run test:coverage
+
+    - name: Build extension and MCP server bundles
+      run: npm run package
+
+    - name: Install vsce
+      run: npm install -g @vscode/vsce
+
+    - name: Package .vsix
+      run: vsce package
+
+    - name: Publish to VS Code Marketplace
+      run: vsce publish
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
