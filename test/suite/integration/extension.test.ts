@@ -11,8 +11,7 @@ suite('Extension Test Suite', () => {
 		const commands = await vscode.commands.getCommands(true);
 		const requiredCommands = [
 			'ace.refresh',
-			'ace.addProject',
-			'ace.viewStateSection'
+			'ace.addProject'
 		];
 
 		for (const command of requiredCommands) {

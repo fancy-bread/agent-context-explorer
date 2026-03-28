@@ -2,6 +2,7 @@
 import * as vscode from 'vscode';
 import { ProjectManager } from '../services/projectManager';
 import { ProjectDefinition } from '../types/project';
+import { ProjectTreeItem } from '../providers/projectTreeProvider';
 
 export class ProjectCommands {
 	static registerCommands(context: vscode.ExtensionContext): void {
@@ -59,7 +60,12 @@ export class ProjectCommands {
 
 
 		// Remove Project command
-		const removeProject = vscode.commands.registerCommand('ace.removeProject', async (project: ProjectDefinition) => {
+		const removeProject = vscode.commands.registerCommand('ace.removeProject', async (item: ProjectTreeItem) => {
+			const project: ProjectDefinition | undefined = item?.project;
+			if (!project) {
+				vscode.window.showErrorMessage('Unable to identify project to remove.');
+				return;
+			}
 			try {
 				const result = await vscode.window.showWarningMessage(
 					`Are you sure you want to remove project "${project.name}"?`,
@@ -79,7 +85,12 @@ export class ProjectCommands {
 		});
 
 		// Edit Project command
-		const editProject = vscode.commands.registerCommand('ace.editProject', async (project: ProjectDefinition) => {
+		const editProject = vscode.commands.registerCommand('ace.editProject', async (item: ProjectTreeItem) => {
+			const project: ProjectDefinition | undefined = item?.project;
+			if (!project) {
+				vscode.window.showErrorMessage('Unable to identify project to edit.');
+				return;
+			}
 			try {
 				// Get updated name
 				const name = await vscode.window.showInputBox({

@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.9.19",
+	"version": "0.9.21",
 	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
@@ -84,11 +84,6 @@
 				"command": "ace.listProjects",
 				"title": "List Projects",
 				"icon": "$(list)"
-			},
-			{
-				"command": "ace.viewStateSection",
-				"title": "View State Section",
-				"icon": "$(eye)"
 			}
 		],
 		"menus": {
@@ -112,12 +107,12 @@
 			"view/item/context": [
 				{
 					"command": "ace.editProject",
-					"when": "view == aceProjects && viewItem == activeProject",
+					"when": "view == aceProjects && viewItem == inactiveProject",
 					"group": "inline"
 				},
 				{
 					"command": "ace.removeProject",
-					"when": "view == aceProjects && viewItem == activeProject",
+					"when": "view == aceProjects && viewItem == inactiveProject",
 					"group": "inline"
 				}
 			]
