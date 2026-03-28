@@ -1,8 +1,8 @@
 {
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
-	"description": "Provide rich project context to AI agents across multiple workspaces",
-	"version": "0.9.21",
+	"description": "Provide rich project context to AI agents across multiple workspaces. And Agents view to browse global agent definitions from `~/.agents/*` and any other configured agent roots.",
+	"version": "1.0.0",
 	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
@@ -14,16 +14,18 @@
 		"vscode": "^1.105.0"
 	},
 	"categories": [
-		"Other",
+		"Machine Learning",
 		"Visualization"
 	],
 	"keywords": [
-		"context",
+		"ai",
 		"agents",
+		"mcp",
 		"cursor",
-		"asdlc",
+		"rules",
+		"context",
 		"multi-project",
-		"mcp"
+		"agentic"
 	],
 	"activationEvents": [
   		"onView:aceProjects",
