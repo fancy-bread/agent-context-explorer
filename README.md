@@ -56,16 +56,6 @@ Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-
 
 - VS Code/Cursor compatible with extension engine requirement: `vscode` `^1.105.0` (see `package.json` `engines.vscode`).
 
-## Publishing
-
-CD runs automatically when a GitHub Release is published. To set up:
-
-1. Create a Personal Access Token at [dev.azure.com](https://dev.azure.com) with **Marketplace → Manage** scope.
-2. Add it as a repository secret named `VSCE_PAT` (**Settings → Secrets and variables → Actions**).
-3. Publish a GitHub Release — the CD workflow packages and publishes to the [VS Code Marketplace](https://marketplace.visualstudio.com/manage/publishers/fancy-bread) automatically.
-
-To test packaging locally: `npm run package && npx @vscode/vsce package`
-
 ## Troubleshooting
 
 | Issue | Check |
