@@ -1,46 +1,70 @@
 # Data Model: Claude Code Project-Level Artifact Support
 
 **Feature**: 006-claude-code-project-support
-**Date**: 2026-04-04
+**Date**: 2026-04-04 (updated after clarification)
 
 ## Entities
 
 ### ClaudeMdFile
 
-Represents a CLAUDE.md instruction file, either at project root or global home.
+Represents the `CLAUDE.md` instruction file at the project root.
 
-| Field    | Type                          | Description                          |
-|----------|-------------------------------|--------------------------------------|
-| uri      | vscode.Uri                    | Absolute file URI                    |
-| path     | string                        | Absolute filesystem path             |
-| scope    | `'workspace' \| 'global'`     | Whether project-local or global      |
+| Field | Type        | Description              |
+|-------|-------------|--------------------------|
+| uri   | vscode.Uri  | Absolute file URI        |
+| path  | string      | Absolute filesystem path |
 
-**Validation**: File must exist at `{projectRoot}/CLAUDE.md` or `{homeDir}/.claude/CLAUDE.md`. No content parsing.
+**Validation**: File must exist at `{projectRoot}/CLAUDE.md`. No content parsing.
+
+### ClaudeRule
+
+Represents a rule file in `{projectRoot}/.claude/rules/`. Same structure as the existing `Rule` type.
+
+| Field    | Type             | Description                                          |
+|----------|------------------|------------------------------------------------------|
+| uri      | vscode.Uri       | Absolute file URI                                    |
+| metadata | RuleMetadata     | Parsed YAML frontmatter (`description`, `globs`, `alwaysApply`) |
+| content  | string           | Raw file content                                     |
+| fileName | string           | Basename of the file                                 |
+
+**Validation**: File must be `.md` or `.mdc` in a recursive scan of `{projectRoot}/.claude/rules/`. Same parsing as Cursor rules via `parseRuleFromString`.
 
 ### ClaudeCommand
 
-Represents a `.md` file in `.claude/commands/`. Structurally identical to the existing `Command` type; scope distinguishes workspace vs. global.
+Represents a `.md` file in `{projectRoot}/.claude/commands/`.
 
-| Field    | Type                          | Description                          |
-|----------|-------------------------------|--------------------------------------|
-| uri      | vscode.Uri                    | Absolute file URI                    |
-| content  | string                        | Raw file content                     |
-| fileName | string                        | Basename without `.md` extension     |
-| scope    | `'workspace' \| 'global'`     | Whether project-local or `~/.claude` |
+| Field    | Type        | Description                      |
+|----------|-------------|----------------------------------|
+| uri      | vscode.Uri  | Absolute file URI                |
+| content  | string      | Raw file content                 |
+| fileName | string      | Basename without `.md` extension |
 
-**Validation**: File must be a `.md` file in a flat (non-recursive) scan of `{root}/.claude/commands/`. `README.md` is excluded.
+**Validation**: File must be a `.md` file in a flat scan of `{projectRoot}/.claude/commands/`. `README.md` excluded.
+
+### ClaudeSkill
+
+Represents a skill in `{projectRoot}/.claude/skills/`. Same structure as the existing `Skill` type.
+
+| Field    | Type          | Description                                     |
+|----------|---------------|-------------------------------------------------|
+| uri      | vscode.Uri    | Absolute URI of the `SKILL.md` file             |
+| content  | string        | Raw file content                                |
+| fileName | string        | Directory name (skill name)                     |
+| metadata | SkillMetadata? | Parsed YAML frontmatter (`title`, `overview`, etc.) |
+
+**Validation**: Must be a `SKILL.md` in a direct subdirectory of `{projectRoot}/.claude/skills/`. Same parsing as Cursor skills via `parseSKILLMetadata`.
 
 ### ClaudeCodeArtifacts
 
-Aggregates all Claude Code artifacts for a single project workspace.
+Aggregates all project-level Claude Code artifacts for a single workspace.
 
-| Field           | Type               | Description                                      |
-|-----------------|--------------------|--------------------------------------------------|
-| claudeMd        | ClaudeMdFile?      | Project-level CLAUDE.md, or undefined if absent  |
-| globalClaudeMd  | ClaudeMdFile?      | Global `~/.claude/CLAUDE.md`, or undefined       |
-| commands        | ClaudeCommand[]    | Project-level commands from `.claude/commands/`  |
-| globalCommands  | ClaudeCommand[]    | Global commands from `~/.claude/commands/`       |
-| hasAnyArtifacts | boolean            | True if any of the above are present             |
+| Field           | Type             | Description                                     |
+|-----------------|------------------|-------------------------------------------------|
+| claudeMd        | ClaudeMdFile?    | Project-level CLAUDE.md, or undefined if absent |
+| rules           | ClaudeRule[]     | Rules from `.claude/rules/`                     |
+| commands        | ClaudeCommand[]  | Commands from `.claude/commands/`               |
+| skills          | ClaudeSkill[]    | Skills from `.claude/skills/`                   |
+| hasAnyArtifacts | boolean          | True if any of the above are present            |
 
 ## Scanner Contract
 
@@ -50,17 +74,19 @@ ClaudeCodeScanner(workspaceRoot: vscode.Uri)
   watchAll(callback: () => void): vscode.Disposable[]
 ```
 
-**scan()** performs:
-1. Parallel check for `{projectRoot}/CLAUDE.md` (stat only)
-2. Parallel check for `{homeDir}/.claude/CLAUDE.md` (stat only)
+**scan()** performs (all in parallel):
+1. Stat check for `{projectRoot}/CLAUDE.md`
+2. Recursive scan of `{projectRoot}/.claude/rules/` for `.md` and `.mdc` files — reuses `scanRulesCore(fs, projectRoot, userRoot)` with `.claude/` base
 3. Flat scan of `{projectRoot}/.claude/commands/*.md` (excluding README.md)
-4. Flat scan of `{homeDir}/.claude/commands/*.md` (reuses existing agent root scan)
+4. One-level scan of `{projectRoot}/.claude/skills/*/SKILL.md` — reuses `scanSkillsCore(fs, projectRoot, userRoot)` with `.claude/` base
 
 **watchAll()** registers file watchers for:
+- `{workspaceRoot}/.claude/rules/**/*.{mdc,md}`
 - `{workspaceRoot}/.claude/commands/*.md`
+- `{workspaceRoot}/.claude/skills/*/SKILL.md`
 - `{workspaceRoot}/CLAUDE.md`
 
-(Global `~/.claude/` watching is out of scope for this feature.)
+Global `~/.claude/` artifacts are surfaced in the existing Agents view — out of scope for this feature.
 
 ## Tree View Extensions
 
@@ -70,18 +96,22 @@ ClaudeCodeScanner(workspaceRoot: vscode.Uri)
 
 ### New tree item context values
 
-| Context value      | Usage                                        |
-|--------------------|----------------------------------------------|
-| `'claude-md'`      | CLAUDE.md file item (opens file on click)    |
-| `'claude-command'` | Command item (opens file on click)           |
+| Context value        | Usage                                          |
+|----------------------|------------------------------------------------|
+| `'claude-md'`        | CLAUDE.md file item (opens file on click)      |
+| `'claude-rule'`      | Rule item (opens file on click)                |
+| `'claude-command'`   | Command item (opens file on click)             |
+| `'claude-skill'`     | Skill item (opens file on click)               |
 
 ### Display mapping
 
-| Artifact          | Icon          | Label                    | Description       |
-|-------------------|---------------|--------------------------|-------------------|
-| Claude Code group | `symbol-file` | "Claude Code" + count    | —                 |
-| CLAUDE.md (ws)    | `file-text`   | "CLAUDE.md"              | "workspace"       |
-| CLAUDE.md (global)| `file-text`   | "CLAUDE.md"              | "global"          |
-| Commands group    | `terminal`    | "Commands" + count       | —                 |
-| Command (ws)      | `terminal`    | fileName (no .md)        | —                 |
-| Command (global)  | `terminal`    | fileName (no .md)        | "global"          |
+| Artifact             | Icon            | Label                    | Description (tooltip)          |
+|----------------------|-----------------|--------------------------|-------------------------------|
+| Claude Code group    | `symbol-file`   | "Claude Code" + count    | —                             |
+| CLAUDE.md            | `file-text`     | "CLAUDE.md"              | —                             |
+| Rules group          | `bookmark`      | "Rules" + count          | —                             |
+| Rule                 | `bookmark`      | fileName                 | rule.metadata.description      |
+| Commands group       | `terminal`      | "Commands" + count       | —                             |
+| Command              | `terminal`      | fileName (no .md)        | —                             |
+| Skills group         | `play-circle`   | "Skills" + count         | —                             |
+| Skill                | `play-circle`   | skill.metadata?.title or fileName | skill.metadata?.overview |

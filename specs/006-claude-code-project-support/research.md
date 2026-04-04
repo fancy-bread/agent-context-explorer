@@ -1,67 +1,70 @@
 # Research: Claude Code Project-Level Artifact Support
 
 **Feature**: 006-claude-code-project-support
-**Date**: 2026-04-04
+**Date**: 2026-04-04 (updated after clarification)
 
 ## Findings
 
-### 1. Existing Claude Code Infrastructure
+### 1. Artifact Scope (updated)
 
-**Decision**: Significant global-level Claude Code infrastructure already exists; this feature adds project-level coverage.
+**Decision**: Claude Code section includes Rules, Commands, Skills, and CLAUDE.md — fully mirroring the Cursor section's artifact types.
+
+**Rationale**: User clarification confirmed the feature should mirror the Cursor view exactly. The same four artifact categories exist for Claude Code as for Cursor, sourced from `.claude/` instead of `.cursor/`.
+
+### 2. Parser Reuse for Rules and Skills
+
+**Decision**: Reuse `scanRulesCore` and `scanSkillsCore` with `.claude/` base paths. Same YAML frontmatter schemas apply.
+
+**Rationale**: Confirmed in clarification (Option A). Cursor rules use `description`, `globs`, `alwaysApply` frontmatter; Claude Code rules follow the same format. Cursor skills use `SKILL.md` with `title`, `overview`, etc.; Claude Code skills do the same. Reusing the existing vscode-agnostic core functions avoids duplicating tested parsing logic.
+
+**Alternatives considered**: Separate parsers — rejected because the schemas are identical and duplication increases maintenance surface.
+
+### 3. Existing Claude Code Infrastructure
+
+**Decision**: Build on existing partial infrastructure; fill gaps for project-level `.claude/` scanning.
 
 **What already exists**:
-- `extension.ts:resolveAgentRootsWithData()` already scans `~/.claude/commands/` and `~/.claude/skills/` as an "agent root" — surfaced in a separate "Agent Roots" tree section
-- `mcp/server.ts` already scans `~/.claude` for commands, skills, agent definitions (MCP tools)
+- Global `~/.claude` is already recognized in `resolveAgentRootsWithData()` — scans commands and skills for the Agents view
+- MCP server already scans `~/.claude` for commands, skills, agent definitions
 - `AgentDefinitionLocation` type already includes `'claude'`
-- `scanCommandsCore` and `scanSkillsCore` comment-document `~/.claude` as valid agent roots
+- `scanCommandsCore` and `scanSkillsCore` already note `~/.claude` as valid agent roots
 
-**What is missing**:
-- Project-level `.claude/commands/` scanning (no equivalent to `.cursor/commands/`)
-- `CLAUDE.md` at project root — no scanner or tree display
-- A dedicated "Claude Code" section in the per-project tree (separate from the global "Agent Roots" view)
-- File watchers for project-level `.claude/commands/` and `CLAUDE.md`
-- Global `~/.claude/CLAUDE.md` presence check
+**What is new (project-level)**:
+- `.claude/rules/` — no project-level scanner exists; reuse `scanRulesCore(fs, projectRoot, userRoot)` with `.claude/rules/` path
+- `.claude/commands/` — no project-level scanner exists; reuse `scanCommandsCore` pattern
+- `.claude/skills/` — no project-level scanner exists; reuse `scanSkillsCore` pattern
+- `CLAUDE.md` at project root — simple stat check, no parsing
+- A unified `ClaudeCodeScanner` wrapping all four artifact types
 
-**Rationale**: Building on existing infrastructure keeps scope minimal. New scanner mirrors `CommandsScanner`; no new parsing logic needed.
+### 4. Scan Patterns
 
-### 2. CLAUDE.md Scan Pattern
+**Decision**: Mirror exact Cursor scan patterns under `.claude/`:
 
-**Decision**: Scan project root only (`{projectRoot}/CLAUDE.md`); no metadata extraction.
+| Artifact | Path | Pattern | Depth |
+|----------|------|---------|-------|
+| CLAUDE.md | `{root}/CLAUDE.md` | exact match | single file |
+| Rules | `{root}/.claude/rules/` | `*.{mdc,md}` | recursive |
+| Commands | `{root}/.claude/commands/` | `*.md` (excl. README.md) | flat |
+| Skills | `{root}/.claude/skills/` | `*/SKILL.md` | one level |
 
-**Rationale**: The spec explicitly excludes subdirectory CLAUDE.md files. The file is presence-only (no frontmatter or structured sections to parse). Simpler than AGENTS.md parsing.
+### 5. Coexistence of Cursor and Claude Code Sections
 
-**Alternative considered**: Recursive scan for all CLAUDE.md files — rejected because Claude Code itself only reads from specific locations, and the spec Out of Scope section explicitly excludes sub-root files.
+**Decision**: Both sections render independently in the per-project tree; each is shown only when its artifacts are present.
 
-### 3. Commands Scan Pattern
+**Rationale**: A project may use Cursor, Claude Code, or both. The show/hide behavior for each section is independent — no merged or priority-ordered view.
 
-**Decision**: Flat scan of `{projectRoot}/.claude/commands/*.md`, excluding `README.md` — identical to existing `.cursor/commands/` pattern in `scanCommandsCore`.
-
-**Rationale**: `scanCommandsCore` accepts any `projectRoot` and derives `{root}/.cursor/commands/`. A parallel `scanClaudeCommandsCore` (or a generalized refactor) can follow the exact same flat-scan pattern for `{root}/.claude/commands/`. No metadata parsing required — same as Cursor commands.
-
-**Alternative considered**: Reusing `scanCommandsCore` with a configurable subdirectory — possible but adds complexity to existing tested code. Prefer a separate parallel function.
-
-### 4. Tree Section Placement
-
-**Decision**: Add a "Claude Code" group at the same level as the existing "Cursor" group within each project node in `ProjectTreeProvider`.
-
-**Rationale**: Mirrors the Cursor section structure. The existing `category` type system supports adding a new `'claude-code'` category. Count badge and scope labeling patterns already exist and can be reused.
-
-### 5. Global Artifact Reuse
-
-**Decision**: Global `~/.claude/commands/` commands are already scanned in `resolveAgentRootsWithData()`. For the per-project Claude Code tree section, we reuse the existing `scanAgentCommandsCore(fs, homeDir + '/.claude')` call rather than duplicating it.
-
-**Rationale**: Avoids double-scanning. The global data is already in memory; the tree section needs to filter/include it per project view.
-
-**Note**: Global `~/.claude/CLAUDE.md` presence check is new — simple `stat()` call, no parsing.
+**Implementation note**: No new coordination logic needed; `ProjectTreeProvider` already handles multiple sections per project. The Claude Code section is simply added alongside the Cursor section using the same rendering pattern.
 
 ### 6. File Watcher Additions
 
-**Decision**: Add watchers for `{workspaceRoot}/.claude/commands/*.md` and `{workspaceRoot}/CLAUDE.md` in `setupFileWatcher()`, mirroring the existing Cursor commands watcher.
+**Decision**: Add four new project-level watchers mirroring the Cursor watcher set:
+- `{workspaceRoot}/.claude/rules/**/*.{mdc,md}`
+- `{workspaceRoot}/.claude/commands/*.md`
+- `{workspaceRoot}/.claude/skills/*/SKILL.md`
+- `{workspaceRoot}/CLAUDE.md`
 
-**Rationale**: All existing artifact types have file watchers. Parity requires adding these two patterns. Global `~/.claude/` watchers are not added in this feature (global agent root watchers are a separate concern handled outside project-level scope).
+All trigger `refreshData()` on create/change/delete.
 
-### 7. No Settings/Hooks Scanning
+### 7. No Settings/Hooks/Agents Scanning
 
-**Decision**: Out of scope per spec. `.claude/settings.json`, `.claude/settings.local.json`, and hooks are not surfaced.
-
-**Rationale**: Adds complexity for limited viewer value. The spec explicitly excludes these.
+**Decision**: Out of scope. `.claude/settings.json`, hooks, and `.claude/agents/` are excluded from the project-level Claude Code section. The Agents view already covers global agent definitions.
