@@ -9,6 +9,9 @@
 #  Cursor plans are temporary files used by Cursor's build system
 .plans/
 
+# Claude Code (local only, not committed)
+.claude/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

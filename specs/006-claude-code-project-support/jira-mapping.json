@@ -1,0 +1,78 @@
+{
+  "created_at": "2026-04-04T00:00:00Z",
+  "updated_at": "2026-04-04T01:00:00Z",
+  "spec": "006-claude-code-project-support",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "epic": {
+    "key": "FB-136",
+    "summary": "Claude Code Project-Level Artifact Support",
+    "url": "https://fancybread.atlassian.net/browse/FB-136"
+  },
+  "stories": [
+    {
+      "key": "FB-137",
+      "summary": "Phase 1: Foundational — Types & Core Scanner",
+      "url": "https://fancybread.atlassian.net/browse/FB-137",
+      "embedded_tasks": [
+        { "id": "T001", "summary": "Add ClaudeMdFile, ClaudeRule, ClaudeCommand, ClaudeSkill, ClaudeCodeArtifacts types to src/types.ts; extend TreeItemCategory; add context values", "status": "pending" },
+        { "id": "T002", "summary": "Implement scanClaudeCodeCore in src/scanner/core/scanClaudeCodeCore.ts", "status": "pending" },
+        { "id": "T003", "summary": "Implement ClaudeCodeScanner class in src/scanner/claudeCodeScanner.ts", "status": "pending" },
+        { "id": "T004", "summary": "Write unit tests for scanClaudeCodeCore in test/suite/scanner/scanClaudeCodeCore.test.ts", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-138",
+      "summary": "Phase 2: US1 — View Claude Code Artifacts in Tree (P1 MVP)",
+      "url": "https://fancybread.atlassian.net/browse/FB-138",
+      "embedded_tasks": [
+        { "id": "T005", "summary": "Extend ProjectTreeItem with claudeMdData, claudeRuleData, claudeCommandData, claudeSkillData fields", "status": "pending" },
+        { "id": "T006", "summary": "Accept ClaudeCodeArtifacts in ProjectTreeProvider; add Claude Code group node hidden when hasAnyArtifacts === false", "status": "pending" },
+        { "id": "T007", "summary": "Render CLAUDE.md child item in src/providers/projectTreeProvider.ts", "status": "pending" },
+        { "id": "T008", "summary": "Render Rules group and rule leaf items in src/providers/projectTreeProvider.ts", "status": "pending" },
+        { "id": "T009", "summary": "Render Commands group and command leaf items in src/providers/projectTreeProvider.ts", "status": "pending" },
+        { "id": "T010", "summary": "Render Skills group and skill leaf items in src/providers/projectTreeProvider.ts", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-139",
+      "summary": "Phase 3: US2 — Open Artifact Files from Tree (P2)",
+      "url": "https://fancybread.atlassian.net/browse/FB-139",
+      "embedded_tasks": [
+        { "id": "T011", "summary": "Wire open-file commands in src/extension.ts for all four Claude Code context values", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-140",
+      "summary": "Phase 4: US3 — Tree Refreshes on File Changes (P3)",
+      "url": "https://fancybread.atlassian.net/browse/FB-140",
+      "embedded_tasks": [
+        { "id": "T012", "summary": "Add four file watchers in setupFileWatcher() in src/extension.ts for .claude/ paths", "status": "pending" },
+        { "id": "T013", "summary": "Register new watcher disposables in context.subscriptions in src/extension.ts", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-141",
+      "summary": "Phase 5: Polish & Extension Wiring",
+      "url": "https://fancybread.atlassian.net/browse/FB-141",
+      "embedded_tasks": [
+        { "id": "T014", "summary": "Instantiate ClaudeCodeScanner in src/extension.ts activate()", "status": "pending" },
+        { "id": "T015", "summary": "Include claudeCodeScanner.scan() in refreshData() in src/extension.ts", "status": "pending" },
+        { "id": "T016", "summary": "Register ClaudeCodeScanner in context.subscriptions; verify deactivate() disposes cleanly", "status": "pending" },
+        { "id": "T017", "summary": "Manual smoke test: Cursor-only, Claude-only, and both-artifact workspaces", "status": "pending" }
+      ]
+    }
+  ],
+  "superseded": {
+    "note": "FB-129 through FB-135 reflect the old scope (CLAUDE.md + Commands only, global artifacts included). Those issues are stale and can be closed.",
+    "old_epic": "FB-129",
+    "old_stories": ["FB-130", "FB-131", "FB-132", "FB-133", "FB-134", "FB-135"]
+  },
+  "summary": {
+    "total_stories": 5,
+    "total_embedded_tasks": 17,
+    "completed_tasks": 0,
+    "pending_tasks": 17
+  }
+}
