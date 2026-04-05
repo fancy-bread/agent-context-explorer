@@ -558,7 +558,7 @@ describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
 		const children = await provider.getChildren(projectItem as ProjectTreeItem);
 
 		const labels = children.map(c => c.label);
-		assert.ok(labels.includes('Claude Code'), 'Claude Code section should be present');
+		assert.ok(labels.includes('Claude'), 'Claude section should be present');
 		assert.strictEqual(children.length, 3);
 	});
 
@@ -592,7 +592,7 @@ describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
 		assert.ok(!children.map(c => c.label).includes('Claude Code'));
 	});
 
-	it('Claude Code section item has symbol-file icon', async () => {
+	it('Claude section item has device-desktop icon', async () => {
 		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
 		provider.setDataLoaded(true);
@@ -602,10 +602,10 @@ describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
 		(projectItem as ProjectTreeItem).project = mockProject;
 
 		const children = await provider.getChildren(projectItem as ProjectTreeItem);
-		const claudeCodeItem = children.find(c => c.label === 'Claude Code');
+		const claudeItem = children.find(c => c.label === 'Claude');
 
-		assert.ok(claudeCodeItem);
-		assert.strictEqual((claudeCodeItem!.iconPath as { id: string }).id, 'symbol-file');
+		assert.ok(claudeItem);
+		assert.strictEqual((claudeItem!.iconPath as { id: string }).id, 'device-desktop');
 	});
 });
 

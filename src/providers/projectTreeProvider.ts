@@ -162,14 +162,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			const skillsCount = workspaceSkillsCount + globalSkillsCount;
 
 			const sections: { name: string; id: string; icon: string; description: string }[] = [
-				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
+				{ name: 'Cursor', id: 'cursor-agent', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
 				{ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' }
 			];
 
 			const claudeCodeArtifacts = currentProjectData?.claudeCodeArtifacts;
 			if (claudeCodeArtifacts?.hasAnyArtifacts) {
-				sections.push({ name: 'Claude Code', id: 'claude-code', icon: 'symbol-file', description: 'Claude Code artifacts' });
+				sections.push({ name: 'Claude', id: 'claude-code', icon: 'device-desktop', description: 'Claude Code artifacts' });
 			}
+
+			sections.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
 			const items = sections.map((section) => {
 				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Expanded) as ProjectTreeItem;

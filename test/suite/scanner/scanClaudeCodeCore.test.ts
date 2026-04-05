@@ -4,6 +4,30 @@ import * as os from 'os';
 import * as path from 'path';
 import { NodeFsAdapter } from '../../../src/scanner/adapters/nodeFsAdapter';
 import { scanClaudeCodeCore } from '../../../src/scanner/core/scanClaudeCodeCore';
+import type { IFileSystem, FileTypeValue } from '../../../src/scanner/core/types';
+import { FileType } from '../../../src/scanner/core/types';
+
+/** Mock fs that lists files but throws on readFile — exercises error catch paths */
+class ReadFileThrowingFs implements IFileSystem {
+	constructor(
+		private rulesEntries: [string, FileTypeValue][] = [],
+		private commandsEntries: [string, FileTypeValue][] = []
+	) {}
+
+	async readFile(_p: string): Promise<Buffer> {
+		throw new Error('Permission denied');
+	}
+
+	async readDirectory(dirPath: string): Promise<[string, FileTypeValue][]> {
+		if (dirPath.endsWith(path.join('.claude', 'rules'))) { return this.rulesEntries; }
+		if (dirPath.endsWith(path.join('.claude', 'commands'))) { return this.commandsEntries; }
+		return [];
+	}
+
+	async stat(_p: string): Promise<{ type: FileTypeValue }> {
+		throw new Error('not found');
+	}
+}
 
 describe('scanClaudeCodeCore', () => {
 	let tmpDir: string;
@@ -340,5 +364,43 @@ describe('scanClaudeCodeCore', () => {
 			assert.equal(result.skills.length, 1);
 			assert.equal(result.hasAnyArtifacts, true);
 		});
+	});
+});
+
+describe('scanClaudeCodeCore — readFile error paths (mock fs)', () => {
+	it('rule readFile error: pushes fallback entry with "Error parsing file" description', async () => {
+		const mockFs = new ReadFileThrowingFs(
+			[['fail.mdc', FileType.File]],
+			[]
+		);
+		const result = await scanClaudeCodeCore(mockFs, '/root');
+		assert.equal(result.rules.length, 1);
+		assert.equal(result.rules[0].metadata.description, 'Error parsing file');
+		assert.equal(result.rules[0].content, 'Error reading file content');
+		assert.equal(result.rules[0].fileName, 'fail.mdc');
+	});
+
+	it('command readFile error: pushes fallback entry with error content', async () => {
+		const mockFs = new ReadFileThrowingFs(
+			[],
+			[['fail.md', FileType.File]]
+		);
+		const result = await scanClaudeCodeCore(mockFs, '/root');
+		assert.equal(result.commands.length, 1);
+		assert.equal(result.commands[0].content, 'Error reading file content');
+		assert.equal(result.commands[0].fileName, 'fail');
+		assert.equal(result.commands[0].location, 'workspace');
+	});
+
+	it('both rule and command readFile errors in one scan', async () => {
+		const mockFs = new ReadFileThrowingFs(
+			[['r.mdc', FileType.File]],
+			[['c.md', FileType.File]]
+		);
+		const result = await scanClaudeCodeCore(mockFs, '/root');
+		assert.equal(result.rules.length, 1);
+		assert.equal(result.commands.length, 1);
+		assert.equal(result.rules[0].metadata.description, 'Error parsing file');
+		assert.equal(result.commands[0].content, 'Error reading file content');
 	});
 });
