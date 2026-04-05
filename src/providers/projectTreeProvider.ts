@@ -161,14 +161,19 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			const globalSkillsCount = currentProjectData?.globalSkills.length || 0;
 			const skillsCount = workspaceSkillsCount + globalSkillsCount;
 
-			const sections = [
+			const sections: { name: string; id: string; icon: string; description: string }[] = [
 				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
 				{ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' }
 			];
 
+			const claudeCodeArtifacts = currentProjectData?.claudeCodeArtifacts;
+			if (claudeCodeArtifacts?.hasAnyArtifacts) {
+				sections.push({ name: 'Claude Code', id: 'claude-code', icon: 'symbol-file', description: 'Claude Code artifacts' });
+			}
+
 			const items = sections.map((section) => {
 				const item = new vscode.TreeItem(section.name, vscode.TreeItemCollapsibleState.Expanded) as ProjectTreeItem;
-				item.category = section.id as 'cursor' | 'agents';
+				item.category = section.id as 'cursor' | 'agents' | 'claude-code';
 				item.project = project;
 				item.description = section.description;
 				item.iconPath = new vscode.ThemeIcon(section.icon);
@@ -361,6 +366,99 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					title: 'Open Rule',
 					arguments: [rule.uri]
 				};
+				return item;
+			});
+		} else if (element.category === 'claude-code' && element.project) {
+			// Claude Code section: CLAUDE.md item + Rules/Commands/Skills group nodes
+			const projectData = this.projectData.get(element.project.id);
+			const artifacts = projectData?.claudeCodeArtifacts;
+			const items: ProjectTreeItem[] = [];
+
+			if (artifacts?.claudeMd) {
+				const item = new vscode.TreeItem('CLAUDE.md', vscode.TreeItemCollapsibleState.None) as ProjectTreeItem;
+				item.claudeMdData = artifacts.claudeMd;
+				item.category = 'claude-md';
+				item.project = element.project;
+				item.iconPath = new vscode.ThemeIcon('file-text');
+				item.contextValue = 'claude-md';
+				item.command = { command: 'vscode.open', title: 'Open CLAUDE.md', arguments: [artifacts.claudeMd.uri] };
+				items.push(item);
+			}
+
+			const rulesCount = artifacts?.rules.length || 0;
+			if (rulesCount > 0) {
+				const item = new vscode.TreeItem(`Rules (${rulesCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.category = 'claude-rules';
+				item.project = element.project;
+				item.iconPath = new vscode.ThemeIcon('bookmark');
+				items.push(item);
+			}
+
+			const commandsCount = artifacts?.commands.length || 0;
+			if (commandsCount > 0) {
+				const item = new vscode.TreeItem(`Commands (${commandsCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.category = 'claude-commands';
+				item.project = element.project;
+				item.iconPath = new vscode.ThemeIcon('terminal');
+				items.push(item);
+			}
+
+			const skillsCount = artifacts?.skills.length || 0;
+			if (skillsCount > 0) {
+				const item = new vscode.TreeItem(`Skills (${skillsCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.category = 'claude-skills';
+				item.project = element.project;
+				item.iconPath = new vscode.ThemeIcon('play-circle');
+				items.push(item);
+			}
+
+			return items;
+		} else if (element.category === 'claude-rules' && element.project) {
+			const projectData = this.projectData.get(element.project.id);
+			const rules = projectData?.claudeCodeArtifacts?.rules || [];
+
+			return rules.map((rule: Rule) => {
+				const item = new vscode.TreeItem(rule.fileName, vscode.TreeItemCollapsibleState.None) as ProjectTreeItem;
+				item.claudeRuleData = rule;
+				item.category = 'claude-rule';
+				item.project = element.project;
+				item.tooltip = rule.metadata.description;
+				item.contextValue = 'claude-rule';
+				item.iconPath = new vscode.ThemeIcon('bookmark');
+				item.command = { command: 'vscode.open', title: 'Open Rule', arguments: [rule.uri] };
+				return item;
+			});
+		} else if (element.category === 'claude-commands' && element.project) {
+			const projectData = this.projectData.get(element.project.id);
+			const commands = projectData?.claudeCodeArtifacts?.commands || [];
+
+			return commands.map((cmd: Command) => {
+				const label = cmd.fileName.endsWith('.md') ? cmd.fileName.slice(0, -3) : cmd.fileName;
+				const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None) as ProjectTreeItem;
+				item.claudeCommandData = cmd;
+				item.category = 'claude-command';
+				item.project = element.project;
+				item.contextValue = 'claude-command';
+				item.iconPath = new vscode.ThemeIcon('terminal');
+				item.command = { command: 'vscode.open', title: 'Open Command', arguments: [cmd.uri] };
+				return item;
+			});
+		} else if (element.category === 'claude-skills' && element.project) {
+			const projectData = this.projectData.get(element.project.id);
+			const skills = projectData?.claudeCodeArtifacts?.skills || [];
+
+			return skills.map((skill: Skill) => {
+				const item = new vscode.TreeItem(
+					skill.metadata?.title ?? skill.fileName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.claudeSkillData = skill;
+				item.category = 'claude-skill';
+				item.project = element.project;
+				item.tooltip = skill.metadata?.overview;
+				item.contextValue = 'claude-skill';
+				item.iconPath = new vscode.ThemeIcon('play-circle');
+				item.command = { command: 'vscode.open', title: 'Open Skill', arguments: [skill.uri] };
 				return item;
 			});
 		}

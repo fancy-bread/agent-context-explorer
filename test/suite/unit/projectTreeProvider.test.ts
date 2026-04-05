@@ -9,6 +9,7 @@ import { Command } from '../../../src/scanner/commandsScanner';
 import { Skill } from '../../../src/scanner/skillsScanner';
 import type { AgentDefinition } from '../../../src/scanner/agentsScanner';
 import { AsdlcArtifacts } from '../../../src/scanner/types';
+import type { ClaudeCodeArtifacts, ClaudeMdFile } from '../../../src/scanner/claudeCodeScanner';
 
 // Mock vscode module
 const mockVscode = {
@@ -54,6 +55,7 @@ function createProjectData(overrides: Partial<{
 	globalSkills: Skill[];
 	agentDefinitions: AgentDefinition[];
 	asdlcArtifacts: AsdlcArtifacts;
+	claudeCodeArtifacts: ClaudeCodeArtifacts;
 }> = {}) {
 	const defaultArtifacts: AsdlcArtifacts = {
 		agentsMd: { exists: false, sections: [] },
@@ -70,7 +72,8 @@ function createProjectData(overrides: Partial<{
 			skills: overrides.skills ?? [],
 			globalSkills: overrides.globalSkills ?? [],
 			agentDefinitions: overrides.agentDefinitions ?? [],
-			asdlcArtifacts: overrides.asdlcArtifacts ?? defaultArtifacts
+			asdlcArtifacts: overrides.asdlcArtifacts ?? defaultArtifacts,
+			claudeCodeArtifacts: overrides.claudeCodeArtifacts
 		}]
 	]);
 }
@@ -527,5 +530,260 @@ describe('ProjectTreeProvider edge cases', () => {
 		const children = await provider.getChildren(noCategoryItem);
 
 		assert.strictEqual(children.length, 0);
+	});
+});
+
+// --- Claude Code section tests ---
+
+function makeClaudeCodeArtifacts(overrides: Partial<ClaudeCodeArtifacts> = {}): ClaudeCodeArtifacts {
+	return {
+		claudeMd: overrides.claudeMd,
+		rules: overrides.rules ?? [],
+		commands: overrides.commands ?? [],
+		skills: overrides.skills ?? [],
+		hasAnyArtifacts: overrides.hasAnyArtifacts ?? false
+	};
+}
+
+describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
+	it('project -> includes Claude Code section when hasAnyArtifacts is true', async () => {
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+
+		const labels = children.map(c => c.label);
+		assert.ok(labels.includes('Claude Code'), 'Claude Code section should be present');
+		assert.strictEqual(children.length, 3);
+	});
+
+	it('project -> no Claude Code section when hasAnyArtifacts is false', async () => {
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: false });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+
+		const labels = children.map(c => c.label);
+		assert.ok(!labels.includes('Claude Code'), 'Claude Code section should be absent');
+		assert.strictEqual(children.length, 2);
+	});
+
+	it('project -> no Claude Code section when claudeCodeArtifacts is undefined', async () => {
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+
+		assert.strictEqual(children.length, 2);
+		assert.ok(!children.map(c => c.label).includes('Claude Code'));
+	});
+
+	it('Claude Code section item has symbol-file icon', async () => {
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const claudeCodeItem = children.find(c => c.label === 'Claude Code');
+
+		assert.ok(claudeCodeItem);
+		assert.strictEqual((claudeCodeItem!.iconPath as { id: string }).id, 'symbol-file');
+	});
+});
+
+describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
+	const claudeCodeItem: ProjectTreeItem = {
+		label: 'Claude Code',
+		collapsibleState: 2,
+		category: 'claude-code',
+		project: mockProject
+	} as ProjectTreeItem;
+
+	it('T007: renders CLAUDE.md child item with file-text icon and vscode.open', async () => {
+		const claudeMd: ClaudeMdFile = { uri: vscode.Uri.file('/test/CLAUDE.md'), path: '/test/CLAUDE.md' };
+		const artifacts = makeClaudeCodeArtifacts({ claudeMd, hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		const mdItem = children.find(c => c.label === 'CLAUDE.md');
+		assert.ok(mdItem, 'CLAUDE.md item should be present');
+		assert.strictEqual((mdItem!.iconPath as { id: string }).id, 'file-text');
+		assert.strictEqual(mdItem!.contextValue, 'claude-md');
+		assert.strictEqual(mdItem!.command?.command, 'vscode.open');
+	});
+
+	it('T007: no CLAUDE.md item when claudeMd is undefined', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		assert.ok(!children.some(c => c.label === 'CLAUDE.md'));
+	});
+
+	it('T008: renders Rules group with count and bookmark icon', async () => {
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'desc', globs: [], alwaysApply: false }, content: '' };
+		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		const rulesGroup = children.find(c => (c.label as string).startsWith('Rules'));
+		assert.ok(rulesGroup, 'Rules group should be present');
+		assert.strictEqual(rulesGroup!.label, 'Rules (1)');
+		assert.strictEqual((rulesGroup!.iconPath as { id: string }).id, 'bookmark');
+		assert.strictEqual((rulesGroup as ProjectTreeItem).category, 'claude-rules');
+	});
+
+	it('T008: no Rules group when rules array is empty', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		assert.ok(!children.some(c => (c.label as string).startsWith('Rules')));
+	});
+
+	it('T009: renders Commands group with count and terminal icon', async () => {
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/foo.md'), fileName: 'foo.md', content: '', location: 'workspace' };
+		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		const cmdGroup = children.find(c => (c.label as string).startsWith('Commands'));
+		assert.ok(cmdGroup, 'Commands group should be present');
+		assert.strictEqual(cmdGroup!.label, 'Commands (1)');
+		assert.strictEqual((cmdGroup!.iconPath as { id: string }).id, 'terminal');
+		assert.strictEqual((cmdGroup as ProjectTreeItem).category, 'claude-commands');
+	});
+
+	it('T009: no Commands group when commands array is empty', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		assert.ok(!children.some(c => (c.label as string).startsWith('Commands')));
+	});
+
+	it('T010: renders Skills group with count and play-circle icon', async () => {
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'Foo', overview: 'Overview' } };
+		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		const skillsGroup = children.find(c => (c.label as string).startsWith('Skills'));
+		assert.ok(skillsGroup, 'Skills group should be present');
+		assert.strictEqual(skillsGroup!.label, 'Skills (1)');
+		assert.strictEqual((skillsGroup!.iconPath as { id: string }).id, 'play-circle');
+		assert.strictEqual((skillsGroup as ProjectTreeItem).category, 'claude-skills');
+	});
+
+	it('T010: no Skills group when skills array is empty', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+
+		assert.ok(!children.some(c => (c.label as string).startsWith('Skills')));
+	});
+});
+
+describe('ProjectTreeProvider claude-rules leaf items (T008)', () => {
+	it('returns rule leaf items with correct properties', async () => {
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/my-rule.md'), fileName: 'my-rule.md', metadata: { description: 'My rule desc', globs: [], alwaysApply: false }, content: '' };
+		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const rulesItem: ProjectTreeItem = { label: 'Rules (1)', collapsibleState: 1, category: 'claude-rules', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(rulesItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'my-rule.md');
+		assert.strictEqual(children[0].contextValue, 'claude-rule');
+		assert.strictEqual(children[0].tooltip, 'My rule desc');
+		assert.strictEqual((children[0].iconPath as { id: string }).id, 'bookmark');
+		assert.strictEqual(children[0].command?.command, 'vscode.open');
+		assert.strictEqual((children[0] as ProjectTreeItem).claudeRuleData, rule);
+	});
+});
+
+describe('ProjectTreeProvider claude-commands leaf items (T009)', () => {
+	it('strips .md extension from command label', async () => {
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/deploy.md'), fileName: 'deploy.md', content: '', location: 'workspace' };
+		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const commandsItem: ProjectTreeItem = { label: 'Commands (1)', collapsibleState: 1, category: 'claude-commands', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(commandsItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'deploy');
+		assert.strictEqual(children[0].contextValue, 'claude-command');
+		assert.strictEqual((children[0].iconPath as { id: string }).id, 'terminal');
+		assert.strictEqual(children[0].command?.command, 'vscode.open');
+		assert.strictEqual((children[0] as ProjectTreeItem).claudeCommandData, cmd);
+	});
+
+	it('uses fileName as-is when it has no .md extension', async () => {
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/review'), fileName: 'review', content: '', location: 'workspace' };
+		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const commandsItem: ProjectTreeItem = { label: 'Commands (1)', collapsibleState: 1, category: 'claude-commands', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(commandsItem);
+
+		assert.strictEqual(children[0].label, 'review');
+	});
+});
+
+describe('ProjectTreeProvider claude-skills leaf items (T010)', () => {
+	it('uses metadata.title as label when present', async () => {
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'My Skill', overview: 'Does stuff' } };
+		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const skillsItem: ProjectTreeItem = { label: 'Skills (1)', collapsibleState: 1, category: 'claude-skills', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(skillsItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'My Skill');
+		assert.strictEqual(children[0].tooltip, 'Does stuff');
+		assert.strictEqual(children[0].contextValue, 'claude-skill');
+		assert.strictEqual((children[0].iconPath as { id: string }).id, 'play-circle');
+		assert.strictEqual(children[0].command?.command, 'vscode.open');
+		assert.strictEqual((children[0] as ProjectTreeItem).claudeSkillData, skill);
+	});
+
+	it('falls back to fileName when metadata.title is absent', async () => {
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/bar/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: undefined };
+		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const skillsItem: ProjectTreeItem = { label: 'Skills (1)', collapsibleState: 1, category: 'claude-skills', project: mockProject } as ProjectTreeItem;
+
+		const children = await provider.getChildren(skillsItem);
+
+		assert.strictEqual(children[0].label, 'SKILL.md');
 	});
 });
