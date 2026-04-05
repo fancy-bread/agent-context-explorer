@@ -22,6 +22,8 @@ import { scanAgentCommandsCore } from './scanner/core/scanCommandsCore';
 import { scanAgentSkillsCore } from './scanner/core/scanSkillsCore';
 import type { AgentRootDefinition } from './providers/agentsTreeProvider';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
+import { ClaudeCodeScanner } from './scanner/claudeCodeScanner';
+import type { ClaudeCodeArtifacts } from './scanner/claudeCodeScanner';
 
 let treeProvider: ProjectTreeProvider;
 let agentsTreeProvider: AgentsTreeProvider | undefined;
@@ -30,6 +32,7 @@ let commandsScanner: CommandsScanner;
 let skillsScanner: SkillsScanner;
 let agentsScanner: AgentsScanner | undefined;
 let asdlcArtifactScanner: AsdlcArtifactScanner;
+let claudeCodeScanner: ClaudeCodeScanner | undefined;
 let projectManager: ProjectManager;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -65,6 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 		skillsScanner = new SkillsScanner(workspaceRoot);
 		agentsScanner = new AgentsScanner(workspaceRoot);
 		asdlcArtifactScanner = new AsdlcArtifactScanner(workspaceRoot);
+		claudeCodeScanner = new ClaudeCodeScanner(workspaceRoot);
 	} else {
 		outputChannel.appendLine('No workspace root found');
 	}
@@ -185,7 +189,8 @@ async function refreshData() {
 			skills: Skill[],
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
-			asdlcArtifacts: AsdlcArtifacts
+			asdlcArtifacts: AsdlcArtifacts,
+			claudeCodeArtifacts?: ClaudeCodeArtifacts
 		}>();
 
 		// Scan global commands and skills once (shared across all projects)
@@ -199,12 +204,13 @@ async function refreshData() {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
 			// Scan current workspace rules, state, commands, skills, and specs/schemas index
-			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs] = await Promise.all([
+			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs, currentClaudeCode] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
 				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
 				skillsScanner?.scanWorkspaceSkills() || Promise.resolve([]),
 				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false }),
-				agentsScanner?.scanWorkspaceAgentDefinitions() || Promise.resolve([])
+				agentsScanner?.scanWorkspaceAgentDefinitions() || Promise.resolve([]),
+				claudeCodeScanner?.scan() || Promise.resolve({ claudeMd: undefined, rules: [], commands: [], skills: [], hasAnyArtifacts: false })
 			]);
 
 			// Use workspace path as the key for current workspace
@@ -217,10 +223,11 @@ async function refreshData() {
 				skills: currentSkills,
 				globalSkills,
 				agentDefinitions: currentAgentDefs,
-				asdlcArtifacts: currentAsdlcArtifacts
+				asdlcArtifacts: currentAsdlcArtifacts,
+				claudeCodeArtifacts: currentClaudeCode
 			});
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, specs/schemas: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, specs/schemas: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}, Claude Code: ${currentClaudeCode.hasAnyArtifacts ? 'Yes' : 'No'}`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -244,14 +251,16 @@ async function refreshData() {
 				const projectSkillsScanner = new SkillsScanner(projectUri);
 				const projectAgentsScanner = new AgentsScanner(projectUri);
 				const projectAsdlcScanner = new AsdlcArtifactScanner(projectUri);
+				const projectClaudeCodeScanner = new ClaudeCodeScanner(projectUri);
 
-				// Scan rules, commands, skills, agent definitions, and specs/schemas for this project
-				const [rules, commands, skills, asdlcArtifacts, agentDefinitions] = await Promise.all([
+				// Scan rules, commands, skills, agent definitions, specs/schemas, and Claude Code artifacts
+				const [rules, commands, skills, asdlcArtifacts, agentDefinitions, claudeCodeArtifacts] = await Promise.all([
 					projectRulesScanner.scanRules(),
 					projectCommandsScanner.scanWorkspaceCommands(),
 					projectSkillsScanner.scanWorkspaceSkills(),
 					projectAsdlcScanner.scanAll(),
-					projectAgentsScanner.scanWorkspaceAgentDefinitions()
+					projectAgentsScanner.scanWorkspaceAgentDefinitions(),
+					projectClaudeCodeScanner.scan()
 				]);
 
 				projectData.set(project.id, {
@@ -262,7 +271,8 @@ async function refreshData() {
 					skills,
 					globalSkills,
 					agentDefinitions,
-					asdlcArtifacts
+					asdlcArtifacts,
+					claudeCodeArtifacts
 				});
 				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${commands.length} commands, ${skills.length} skills, ${agentDefinitions.length} agent definitions`;
 				outputChannel.appendLine(logMessage);

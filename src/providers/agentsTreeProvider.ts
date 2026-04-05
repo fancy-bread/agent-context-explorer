@@ -52,7 +52,7 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 				];
 			}
 
-			return this.agentRoots.map((root) => {
+			return [...this.agentRoots].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })).map((root) => {
 				const item = new vscode.TreeItem(
 					root.label,
 					vscode.TreeItemCollapsibleState.Collapsed
