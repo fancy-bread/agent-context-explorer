@@ -7,18 +7,25 @@ import { Skill } from '../scanner/skillsScanner';
 import type { AgentDefinition } from '../scanner/agentsScanner';
 import { ProjectDefinition } from '../types/project';
 import { AsdlcArtifacts } from '../scanner/types';
+import type { ClaudeMdFile, ClaudeCodeArtifacts } from '../scanner/claudeCodeScanner';
 
 export interface ProjectTreeItem extends vscode.TreeItem {
 	rule?: Rule;
 	commandData?: Command; // Command data (avoiding conflict with TreeItem's command property)
 	skillData?: Skill; // Skill data
 	agentDefinitionData?: AgentDefinition;
+	claudeMdData?: ClaudeMdFile;
+	claudeRuleData?: Rule;
+	claudeCommandData?: Command;
+	claudeSkillData?: Skill;
 	stateItem?: any;
 	ruleType?: any;
 	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands'
 		| 'cursor' | 'agents' | 'skills'
 		| 'specs'
-		| 'agent-definitions' | 'agent-definition';
+		| 'agent-definitions' | 'agent-definition'
+		| 'claude-code' | 'claude-md' | 'claude-rule' | 'claude-command' | 'claude-skill'
+		| 'claude-rules' | 'claude-commands' | 'claude-skills';
 	directory?: string;
 	project?: ProjectDefinition;
 	agentRootId?: string;
@@ -42,7 +49,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			skills: Skill[],
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
-			asdlcArtifacts: AsdlcArtifacts
+			asdlcArtifacts: AsdlcArtifacts,
+			claudeCodeArtifacts?: ClaudeCodeArtifacts
 		}> = new Map(),
 		private projects: ProjectDefinition[] = [],
 		private currentProject: ProjectDefinition | null = null,
@@ -76,7 +84,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			skills: Skill[],
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
-			asdlcArtifacts: AsdlcArtifacts
+			asdlcArtifacts: AsdlcArtifacts,
+			claudeCodeArtifacts?: ClaudeCodeArtifacts
 		}>,
 		projects: ProjectDefinition[],
 		currentProject: ProjectDefinition | null
