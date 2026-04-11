@@ -141,6 +141,11 @@ async function ensureDataLoaded(): Promise<void> {
 			if (fileWatcher) {
 				extensionContext.subscriptions.push(fileWatcher);
 			}
+			// Register Claude Code project-level artifact watchers
+			if (claudeCodeScanner) {
+				const claudeWatchers = claudeCodeScanner.watchAll(() => refreshData());
+				extensionContext.subscriptions.push(...claudeWatchers);
+			}
 		}
 		const globalCommandsWatcher = setupGlobalCommandsWatcher();
 		if (globalCommandsWatcher) {
@@ -449,22 +454,6 @@ function setupFileWatcher() {
 	const agentsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/agents/**/*.md');
 	const agentsWatcher = vscode.workspace.createFileSystemWatcher(agentsPattern);
 
-	// Watch for changes in .claude/rules (recursive scan, same schema as Cursor rules)
-	const claudeRulesPattern = new vscode.RelativePattern(workspaceRoot, '.claude/rules/**/*.{mdc,md}');
-	const claudeRulesWatcher = vscode.workspace.createFileSystemWatcher(claudeRulesPattern);
-
-	// Watch for changes in .claude/commands (flat structure)
-	const claudeCommandsPattern = new vscode.RelativePattern(workspaceRoot, '.claude/commands/*.md');
-	const claudeCommandsWatcher = vscode.workspace.createFileSystemWatcher(claudeCommandsPattern);
-
-	// Watch for changes in .claude/skills (one-level scan, SKILL.md files)
-	const claudeSkillsPattern = new vscode.RelativePattern(workspaceRoot, '.claude/skills/*/SKILL.md');
-	const claudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(claudeSkillsPattern);
-
-	// Watch for changes to CLAUDE.md at workspace root
-	const claudeMdPattern = new vscode.RelativePattern(workspaceRoot, 'CLAUDE.md');
-	const claudeMdWatcher = vscode.workspace.createFileSystemWatcher(claudeMdPattern);
-
 	// Rules watcher handlers
 	rulesWatcher.onDidCreate(() => {
 		outputChannel.appendLine('Rule file created, refreshing...');
@@ -529,70 +518,6 @@ function setupFileWatcher() {
 		refreshData();
 	});
 
-	// Claude Code rules watcher handlers
-	claudeRulesWatcher.onDidCreate(() => {
-		outputChannel.appendLine('Claude Code rule file created, refreshing...');
-		refreshData();
-	});
-
-	claudeRulesWatcher.onDidChange(() => {
-		outputChannel.appendLine('Claude Code rule file changed, refreshing...');
-		refreshData();
-	});
-
-	claudeRulesWatcher.onDidDelete(() => {
-		outputChannel.appendLine('Claude Code rule file deleted, refreshing...');
-		refreshData();
-	});
-
-	// Claude Code commands watcher handlers
-	claudeCommandsWatcher.onDidCreate(() => {
-		outputChannel.appendLine('Claude Code command file created, refreshing...');
-		refreshData();
-	});
-
-	claudeCommandsWatcher.onDidChange(() => {
-		outputChannel.appendLine('Claude Code command file changed, refreshing...');
-		refreshData();
-	});
-
-	claudeCommandsWatcher.onDidDelete(() => {
-		outputChannel.appendLine('Claude Code command file deleted, refreshing...');
-		refreshData();
-	});
-
-	// Claude Code skills watcher handlers
-	claudeSkillsWatcher.onDidCreate(() => {
-		outputChannel.appendLine('Claude Code skill file created, refreshing...');
-		refreshData();
-	});
-
-	claudeSkillsWatcher.onDidChange(() => {
-		outputChannel.appendLine('Claude Code skill file changed, refreshing...');
-		refreshData();
-	});
-
-	claudeSkillsWatcher.onDidDelete(() => {
-		outputChannel.appendLine('Claude Code skill file deleted, refreshing...');
-		refreshData();
-	});
-
-	// CLAUDE.md watcher handlers
-	claudeMdWatcher.onDidCreate(() => {
-		outputChannel.appendLine('CLAUDE.md created, refreshing...');
-		refreshData();
-	});
-
-	claudeMdWatcher.onDidChange(() => {
-		outputChannel.appendLine('CLAUDE.md changed, refreshing...');
-		refreshData();
-	});
-
-	claudeMdWatcher.onDidDelete(() => {
-		outputChannel.appendLine('CLAUDE.md deleted, refreshing...');
-		refreshData();
-	});
-
 	// Combine watchers for disposal
 	fileWatcher = {
 		...rulesWatcher,
@@ -601,10 +526,6 @@ function setupFileWatcher() {
 			commandsWatcher.dispose();
 			skillsWatcher.dispose();
 			agentsWatcher.dispose();
-			claudeRulesWatcher.dispose();
-			claudeCommandsWatcher.dispose();
-			claudeSkillsWatcher.dispose();
-			claudeMdWatcher.dispose();
 		}
 	} as vscode.FileSystemWatcher;
 }
