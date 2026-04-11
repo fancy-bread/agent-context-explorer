@@ -1,0 +1,53 @@
+{
+  "created_at": "2026-04-11T00:00:00Z",
+  "spec": "007-agents-view-watchers",
+  "project": "FB",
+  "jira_base_url": "https://fancybread.atlassian.net",
+  "mode": "2-level",
+  "epic": {
+    "key": "FB-142",
+    "summary": "Agents View File Watchers",
+    "url": "https://fancybread.atlassian.net/browse/FB-142"
+  },
+  "stories": [
+    {
+      "key": "FB-143",
+      "summary": "Phase 3: User Story 1 — Claude Global Watchers (P1)",
+      "url": "https://fancybread.atlassian.net/browse/FB-143",
+      "embedded_tasks": [
+        { "id": "T001", "summary": "Read existing watcher pattern in src/extension.ts", "status": "pending" },
+        { "id": "T002", "summary": "Add setupGlobalClaudeCommandsWatcher()", "status": "pending" },
+        { "id": "T003", "summary": "Add setupGlobalClaudeSkillsWatcher()", "status": "pending" },
+        { "id": "T004", "summary": "Add setupGlobalClaudeAgentDefinitionsWatcher()", "status": "pending" },
+        { "id": "T005", "summary": "Wire Claude watchers into ensureDataLoaded()", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-144",
+      "summary": "Phase 4: User Story 2 — Global (.agents) Watchers (P2)",
+      "url": "https://fancybread.atlassian.net/browse/FB-144",
+      "embedded_tasks": [
+        { "id": "T006", "summary": "Add setupGlobalDotAgentsCommandsWatcher()", "status": "pending" },
+        { "id": "T007", "summary": "Add setupGlobalDotAgentsSkillsWatcher()", "status": "pending" },
+        { "id": "T008", "summary": "Add setupGlobalDotAgentsAgentDefinitionsWatcher()", "status": "pending" },
+        { "id": "T009", "summary": "Wire DotAgents watchers into ensureDataLoaded()", "status": "pending" }
+      ]
+    },
+    {
+      "key": "FB-145",
+      "summary": "Phase 5: User Story 3 — Consistent Watcher Pattern (P3)",
+      "url": "https://fancybread.atlassian.net/browse/FB-145",
+      "embedded_tasks": [
+        { "id": "T010", "summary": "Add integration tests for six new watcher patterns", "status": "pending" },
+        { "id": "T011", "summary": "Run full test suite (npm test)", "status": "pending" },
+        { "id": "T012", "summary": "Run quickstart.md manual validation", "status": "pending" }
+      ]
+    }
+  ],
+  "summary": {
+    "total_stories": 3,
+    "total_embedded_tasks": 12,
+    "completed_tasks": 0,
+    "pending_tasks": 12
+  }
+}
