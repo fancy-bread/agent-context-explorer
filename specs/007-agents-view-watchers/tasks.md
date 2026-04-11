@@ -12,25 +12,6 @@
 
 ---
 
-## Phase 1: Setup
-
-No new project structure required. All changes are confined to existing files.
-`src/extension.ts` and `test/suite/integration/fileWatcherSetup.test.ts` already exist.
-
-**Checkpoint**: Confirm you can locate the three existing `setupGlobal*Watcher()` functions in `src/extension.ts` and the existing watcher pattern tests in `test/suite/integration/fileWatcherSetup.test.ts` before starting Phase 2.
-
----
-
-## Phase 2: Foundational (Blocking Prerequisites)
-
-**Purpose**: Read the existing watcher implementations to ensure new functions match the exact pattern (error handling shape, log messages, return type). No code changes in this phase.
-
-- [ ] T001 Read the three existing global watcher functions (`setupGlobalCommandsWatcher`, `setupGlobalSkillsWatcher`, `setupGlobalAgentsWatcher`) in `src/extension.ts` and confirm the implementation pattern to replicate
-
-**Checkpoint**: Pattern confirmed — proceed to Phase 3.
-
----
-
 ## Phase 3: User Story 1 — Claude Global Watchers (Priority: P1) 🎯 MVP
 
 **Goal**: The Agents view auto-refreshes when files change under `~/.claude/commands/`, `~/.claude/skills/`, or `~/.claude/agents/`.
@@ -39,6 +20,7 @@ No new project structure required. All changes are confined to existing files.
 
 ### Implementation for User Story 1
 
+- [ ] T001 Read the three existing global watcher functions (`setupGlobalCommandsWatcher`, `setupGlobalSkillsWatcher`, `setupGlobalAgentsWatcher`) in `src/extension.ts` and confirm the implementation pattern to replicate
 - [ ] T002 [P] [US1] Add `setupGlobalClaudeCommandsWatcher()` function to `src/extension.ts`, watching `~/.claude/commands/*.md`, mirroring `setupGlobalCommandsWatcher` exactly
 - [ ] T003 [P] [US1] Add `setupGlobalClaudeSkillsWatcher()` function to `src/extension.ts`, watching `~/.claude/skills/*/SKILL.md`, mirroring `setupGlobalSkillsWatcher` exactly
 - [ ] T004 [P] [US1] Add `setupGlobalClaudeAgentDefinitionsWatcher()` function to `src/extension.ts`, watching `~/.claude/agents/*.md`, mirroring `setupGlobalAgentsWatcher` exactly
@@ -75,14 +57,9 @@ No new project structure required. All changes are confined to existing files.
 
 - [ ] T010 [US3] Add integration tests for all six new watcher patterns (Claude: commands, skills, agents; DotAgents: commands, skills, agents) in `test/suite/integration/fileWatcherSetup.test.ts`, following the existing watcher test structure (T005 and T009 must be complete)
 - [ ] T011 [US3] Run the full test suite (`npm test`) and confirm all tests pass including the new watcher tests
+- [ ] T012 [US3] Run the manual quickstart test scenarios from `specs/007-agents-view-watchers/quickstart.md` to confirm graceful handling of missing directories and no regression in Cursor watcher behaviour
 
 **Checkpoint**: All three roots have symmetric watcher coverage. All user stories complete and independently verifiable.
-
----
-
-## Phase 6: Polish & Cross-Cutting Concerns
-
-- [ ] T012 Run the manual quickstart test scenarios from `specs/007-agents-view-watchers/quickstart.md` to confirm graceful handling of missing directories and no regression in Cursor watcher behaviour
 
 ---
 
@@ -90,12 +67,9 @@ No new project structure required. All changes are confined to existing files.
 
 ### Phase Dependencies
 
-- **Phase 1 (Setup)**: No code changes — read only. Can start immediately.
-- **Phase 2 (Foundational)**: Depends on Phase 1. Confirms pattern before writing code.
-- **Phase 3 (US1)**: Depends on Phase 2. T002–T004 can run in parallel. T005 depends on T002–T004.
-- **Phase 4 (US2)**: Depends on Phase 2. T006–T008 can run in parallel. T009 depends on T005, T006–T008.
-- **Phase 5 (US3)**: Depends on Phase 4 (T009 complete). T010–T011 are sequential.
-- **Phase 6 (Polish)**: Depends on Phase 5.
+- **Phase 3 (US1)**: T001 read-only. T002–T004 can run in parallel after T001. T005 depends on T002–T004.
+- **Phase 4 (US2)**: T006–T008 can run in parallel after T001. T009 depends on T005, T006–T008.
+- **Phase 5 (US3)**: Depends on Phase 4 (T009 complete). T010–T012 are sequential.
 
 ### User Story Dependencies
 
