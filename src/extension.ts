@@ -159,6 +159,18 @@ async function ensureDataLoaded(): Promise<void> {
 		if (globalAgentsWatcher) {
 			extensionContext.subscriptions.push(globalAgentsWatcher);
 		}
+		const globalClaudeCommandsWatcher = setupGlobalClaudeCommandsWatcher();
+		if (globalClaudeCommandsWatcher) {
+			extensionContext.subscriptions.push(globalClaudeCommandsWatcher);
+		}
+		const globalClaudeSkillsWatcher = setupGlobalClaudeSkillsWatcher();
+		if (globalClaudeSkillsWatcher) {
+			extensionContext.subscriptions.push(globalClaudeSkillsWatcher);
+		}
+		const globalClaudeAgentsWatcher = setupGlobalClaudeAgentDefinitionsWatcher();
+		if (globalClaudeAgentsWatcher) {
+			extensionContext.subscriptions.push(globalClaudeAgentsWatcher);
+		}
 		outputChannel.appendLine('File watchers registered (lazy setup)');
 	}
 }
@@ -620,6 +632,96 @@ function setupGlobalAgentsWatcher(): vscode.FileSystemWatcher | undefined {
 		return globalAgentsWatcher;
 	} catch (error) {
 		outputChannel.appendLine(`Unable to watch global agents directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalClaudeCommandsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .claude/commands directory
+	try {
+		const homeDir = os.homedir();
+		const globalClaudeCommandsPattern = path.join(homeDir, '.claude', 'commands', '*.md');
+		const globalClaudeCommandsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeCommandsPattern);
+
+		globalClaudeCommandsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global Claude command file created, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeCommandsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global Claude command file changed, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeCommandsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global Claude command file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global Claude commands file watcher created successfully');
+		return globalClaudeCommandsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global Claude commands directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalClaudeSkillsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .claude/skills directory
+	try {
+		const homeDir = os.homedir();
+		const globalClaudeSkillsPattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+		const globalClaudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeSkillsPattern);
+
+		globalClaudeSkillsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global Claude skill file created, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeSkillsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global Claude skill file changed, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeSkillsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global Claude skill file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global Claude skills file watcher created successfully');
+		return globalClaudeSkillsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global Claude skills directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalClaudeAgentDefinitionsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .claude/agents directory
+	try {
+		const homeDir = os.homedir();
+		const globalClaudeAgentsPattern = path.join(homeDir, '.claude', 'agents', '*.md');
+		const globalClaudeAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeAgentsPattern);
+
+		globalClaudeAgentsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global Claude agent definition file created, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeAgentsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global Claude agent definition file changed, refreshing...');
+			refreshData();
+		});
+
+		globalClaudeAgentsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global Claude agent definition file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global Claude agents file watcher created successfully');
+		return globalClaudeAgentsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global Claude agents directory: ${error instanceof Error ? error.message : String(error)}`);
 		return undefined;
 	}
 }
