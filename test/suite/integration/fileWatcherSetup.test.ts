@@ -362,6 +362,139 @@ suite('File Watcher Setup Integration Tests', () => {
 		});
 	});
 
+	describe('Claude Code File Watcher Patterns', () => {
+		test('should create Claude Code rules watcher with recursive pattern', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+			const pattern = new vscode.RelativePattern(workspaceRoot, '.claude/rules/**/*.{mdc,md}');
+
+			assert.ok(pattern);
+			assert.strictEqual(pattern.pattern, '.claude/rules/**/*.{mdc,md}');
+			assert.ok(pattern.pattern.includes('**'), 'Should be recursive');
+			assert.ok(pattern.pattern.includes('.claude/rules'), 'Should watch .claude/rules');
+		});
+
+		test('should create Claude Code commands watcher with flat pattern', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+			const pattern = new vscode.RelativePattern(workspaceRoot, '.claude/commands/*.md');
+
+			assert.ok(pattern);
+			assert.strictEqual(pattern.pattern, '.claude/commands/*.md');
+			assert.ok(!pattern.pattern.includes('**'), 'Commands pattern should be flat, not recursive');
+			assert.ok(pattern.pattern.includes('.claude/commands'), 'Should watch .claude/commands');
+		});
+
+		test('should create Claude Code skills watcher with one-level pattern', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+			const pattern = new vscode.RelativePattern(workspaceRoot, '.claude/skills/*/SKILL.md');
+
+			assert.ok(pattern);
+			assert.strictEqual(pattern.pattern, '.claude/skills/*/SKILL.md');
+			assert.ok(pattern.pattern.includes('.claude/skills'), 'Should watch .claude/skills');
+			assert.ok(pattern.pattern.includes('SKILL.md'), 'Should match SKILL.md files');
+		});
+
+		test('should create CLAUDE.md watcher at workspace root', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+			const pattern = new vscode.RelativePattern(workspaceRoot, 'CLAUDE.md');
+
+			assert.ok(pattern);
+			assert.strictEqual(pattern.pattern, 'CLAUDE.md');
+		});
+
+		test('should create all four Claude Code watchers successfully', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+
+			const claudeRulesWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/rules/**/*.{mdc,md}')
+			);
+			const claudeCommandsWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/commands/*.md')
+			);
+			const claudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/skills/*/SKILL.md')
+			);
+			const claudeMdWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, 'CLAUDE.md')
+			);
+
+			assert.ok(claudeRulesWatcher, 'Claude Code rules watcher should be created');
+			assert.ok(claudeCommandsWatcher, 'Claude Code commands watcher should be created');
+			assert.ok(claudeSkillsWatcher, 'Claude Code skills watcher should be created');
+			assert.ok(claudeMdWatcher, 'CLAUDE.md watcher should be created');
+
+			claudeRulesWatcher.dispose();
+			claudeCommandsWatcher.dispose();
+			claudeSkillsWatcher.dispose();
+			claudeMdWatcher.dispose();
+		});
+
+		test('should register create/change/delete handlers on all Claude Code watchers', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+
+			const watchers = [
+				vscode.workspace.createFileSystemWatcher(
+					new vscode.RelativePattern(workspaceRoot, '.claude/rules/**/*.{mdc,md}')
+				),
+				vscode.workspace.createFileSystemWatcher(
+					new vscode.RelativePattern(workspaceRoot, '.claude/commands/*.md')
+				),
+				vscode.workspace.createFileSystemWatcher(
+					new vscode.RelativePattern(workspaceRoot, '.claude/skills/*/SKILL.md')
+				),
+				vscode.workspace.createFileSystemWatcher(
+					new vscode.RelativePattern(workspaceRoot, 'CLAUDE.md')
+				)
+			];
+
+			for (const watcher of watchers) {
+				watcher.onDidCreate(() => {});
+				watcher.onDidChange(() => {});
+				watcher.onDidDelete(() => {});
+				assert.ok(watcher, 'Watcher should exist after handler registration');
+			}
+
+			watchers.forEach(w => w.dispose());
+		});
+
+		test('should dispose all Claude Code watchers when combined watcher is disposed', () => {
+			const workspaceRoot = testWorkspaceFolder.uri;
+
+			const claudeRulesWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/rules/**/*.{mdc,md}')
+			);
+			const claudeCommandsWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/commands/*.md')
+			);
+			const claudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, '.claude/skills/*/SKILL.md')
+			);
+			const claudeMdWatcher = vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(workspaceRoot, 'CLAUDE.md')
+			);
+
+			let disposeCount = 0;
+			const trackDispose = (watcher: vscode.FileSystemWatcher) => {
+				const orig = watcher.dispose.bind(watcher);
+				watcher.dispose = () => { disposeCount++; orig(); };
+			};
+
+			trackDispose(claudeRulesWatcher);
+			trackDispose(claudeCommandsWatcher);
+			trackDispose(claudeSkillsWatcher);
+			trackDispose(claudeMdWatcher);
+
+			const combinedDispose = () => {
+				claudeRulesWatcher.dispose();
+				claudeCommandsWatcher.dispose();
+				claudeSkillsWatcher.dispose();
+				claudeMdWatcher.dispose();
+			};
+
+			combinedDispose();
+			assert.strictEqual(disposeCount, 4, 'All four Claude Code watchers should be disposed');
+		});
+	});
+
 	describe('Global Commands File Watcher', () => {
 		test('should create global commands watcher with correct pattern', () => {
 			const os = require('os');
