@@ -427,4 +427,72 @@ describe('ProjectCommands', () => {
 		assert.ok(errMsg.includes('Failed to add project'));
 		assert.ok(errMsg.includes('already exists'));
 	});
+
+	it('ace.removeProject shows error when called with no item', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => { errMsg = msg; };
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.removeProject'] as (x: any) => Promise<void>)(undefined);
+		assert.ok(errMsg.includes('Unable to identify project to remove'));
+	});
+
+	it('ace.removeProject shows error when item has no project property', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => { errMsg = msg; };
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.removeProject'] as (x: any) => Promise<void>)({});
+		assert.ok(errMsg.includes('Unable to identify project to remove'));
+	});
+
+	it('ace.editProject shows error when called with no item', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => { errMsg = msg; };
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.editProject'] as (x: any) => Promise<void>)(undefined);
+		assert.ok(errMsg.includes('Unable to identify project to edit'));
+	});
+
+	it('ace.editProject shows error when item has no project property', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		let errMsg = '';
+		vscode.window.showErrorMessage = (msg: string) => { errMsg = msg; };
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.editProject'] as (x: any) => Promise<void>)({});
+		assert.ok(errMsg.includes('Unable to identify project to edit'));
+	});
+
+	it('ace.listProjects marks current project in list', async () => {
+		patchVscodeForCommands();
+		const ctx = makeContext();
+		const pm = new ProjectManager(ctx);
+		const p1 = await pm.addProject({ name: 'Alpha', path: '/workspace/alpha' });
+		await pm.addProject({ name: 'Beta', path: '/workspace/beta' });
+		// Mark p1 as active by storing it as currentProject via state
+		const store = (ctx.workspaceState as any)._store ?? new Map();
+		const data = ctx.workspaceState.get('aceExplorer.projects') as any;
+		data.currentProject = p1;
+		await ctx.workspaceState.update('aceExplorer.projects', data);
+
+		let openedContent = '';
+		vscode.workspace.openTextDocument = async (opts: { content: string }) => {
+			openedContent = opts.content;
+			return {};
+		};
+
+		ProjectCommands.registerCommands(ctx);
+		await (registered['ace.listProjects'] as () => Promise<void>)();
+		assert.ok(openedContent.includes('Alpha'));
+		assert.ok(openedContent.includes('Beta'));
+	});
 });
