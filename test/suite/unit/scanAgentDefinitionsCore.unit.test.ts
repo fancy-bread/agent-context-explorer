@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import {
+	agentRootAgentsDirectory,
 	scanAgentDefinitionsInDirectory,
 	scanWorkspaceAgentDefinitionsCore,
 	workspaceAgentsDirectory
@@ -33,6 +34,13 @@ describe('scanner/core/scanAgentDefinitionsCore', () => {
 
 	it('workspaceAgentsDirectory points to .cursor/agents', () => {
 		assert.strictEqual(workspaceAgentsDirectory(proj), path.join(proj, '.cursor', 'agents'));
+	});
+
+	it('agentRootAgentsDirectory returns <agentRoot>/agents', () => {
+		assert.strictEqual(
+			agentRootAgentsDirectory('/home/user/.agents'),
+			path.join('/home/user/.agents', 'agents')
+		);
 	});
 
 	it('scanWorkspaceAgentDefinitionsCore reads flat .md and sorts by basename', async () => {
@@ -72,5 +80,28 @@ describe('scanner/core/scanAgentDefinitionsCore', () => {
 		const out = await scanAgentDefinitionsInDirectory(fs, dir);
 		assert.strictEqual(out.length, 1);
 		assert.strictEqual(out[0].fileName, 'x');
+	});
+
+	it('scanAgentDefinitionsInDirectory uses error placeholder when readFile throws', async () => {
+		const dir = path.join(proj, '.cursor', 'agents');
+		const failingPath = path.join(dir, 'broken.md');
+		const badFs: IFileSystem = {
+			async stat(p: string) {
+				if (p === dir) return { type: FileType.Directory };
+				if (p === failingPath) return { type: FileType.File };
+				throw new Error(`ENOENT: ${p}`);
+			},
+			async readFile() {
+				throw new Error('permission denied');
+			},
+			async readDirectory(p: string) {
+				if (p === dir) return [['broken.md', FileType.File]];
+				throw new Error(`ENOENT: ${p}`);
+			}
+		};
+		const out = await scanAgentDefinitionsInDirectory(badFs, dir);
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].fileName, 'broken');
+		assert.ok(out[0].content.includes('Error reading file content'));
 	});
 });

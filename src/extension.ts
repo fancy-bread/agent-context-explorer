@@ -171,6 +171,18 @@ async function ensureDataLoaded(): Promise<void> {
 		if (globalClaudeAgentsWatcher) {
 			extensionContext.subscriptions.push(globalClaudeAgentsWatcher);
 		}
+		const globalDotAgentsCommandsWatcher = setupGlobalDotAgentsCommandsWatcher();
+		if (globalDotAgentsCommandsWatcher) {
+			extensionContext.subscriptions.push(globalDotAgentsCommandsWatcher);
+		}
+		const globalDotAgentsSkillsWatcher = setupGlobalDotAgentsSkillsWatcher();
+		if (globalDotAgentsSkillsWatcher) {
+			extensionContext.subscriptions.push(globalDotAgentsSkillsWatcher);
+		}
+		const globalDotAgentsAgentsWatcher = setupGlobalDotAgentsAgentDefinitionsWatcher();
+		if (globalDotAgentsAgentsWatcher) {
+			extensionContext.subscriptions.push(globalDotAgentsAgentsWatcher);
+		}
 		outputChannel.appendLine('File watchers registered (lazy setup)');
 	}
 }
@@ -722,6 +734,96 @@ function setupGlobalClaudeAgentDefinitionsWatcher(): vscode.FileSystemWatcher | 
 		return globalClaudeAgentsWatcher;
 	} catch (error) {
 		outputChannel.appendLine(`Unable to watch global Claude agents directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalDotAgentsCommandsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .agents/commands directory
+	try {
+		const homeDir = os.homedir();
+		const globalDotAgentsCommandsPattern = path.join(homeDir, '.agents', 'commands', '*.md');
+		const globalDotAgentsCommandsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsCommandsPattern);
+
+		globalDotAgentsCommandsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global .agents command file created, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsCommandsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global .agents command file changed, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsCommandsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global .agents command file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global .agents commands file watcher created successfully');
+		return globalDotAgentsCommandsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global .agents commands directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalDotAgentsSkillsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .agents/skills directory
+	try {
+		const homeDir = os.homedir();
+		const globalDotAgentsSkillsPattern = path.join(homeDir, '.agents', 'skills', '*', 'SKILL.md');
+		const globalDotAgentsSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsSkillsPattern);
+
+		globalDotAgentsSkillsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global .agents skill file created, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsSkillsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global .agents skill file changed, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsSkillsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global .agents skill file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global .agents skills file watcher created successfully');
+		return globalDotAgentsSkillsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global .agents skills directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupGlobalDotAgentsAgentDefinitionsWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch for changes in global .agents/agents directory
+	try {
+		const homeDir = os.homedir();
+		const globalDotAgentsAgentsPattern = path.join(homeDir, '.agents', 'agents', '*.md');
+		const globalDotAgentsAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsAgentsPattern);
+
+		globalDotAgentsAgentsWatcher.onDidCreate(() => {
+			outputChannel.appendLine('Global .agents agent definition file created, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsAgentsWatcher.onDidChange(() => {
+			outputChannel.appendLine('Global .agents agent definition file changed, refreshing...');
+			refreshData();
+		});
+
+		globalDotAgentsAgentsWatcher.onDidDelete(() => {
+			outputChannel.appendLine('Global .agents agent definition file deleted, refreshing...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('Global .agents agent definitions file watcher created successfully');
+		return globalDotAgentsAgentsWatcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch global .agents agents directory: ${error instanceof Error ? error.message : String(error)}`);
 		return undefined;
 	}
 }

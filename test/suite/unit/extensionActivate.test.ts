@@ -179,7 +179,7 @@ describe('extension activate / deactivate', () => {
 		assert.ok(refresh);
 		await refresh();
 		const list = (vscode.workspace as unknown as { __watcherHooksList?: WatcherHookSet[] }).__watcherHooksList;
-		assert.ok(list && list.length >= 7, 'workspace×4 + global×3 watchers');
+		assert.ok(list && list.length >= 7, 'workspace×4 + global×9 (cursor×3 + claude×3 + dotAgents×3) watchers');
 		// All watchers: exercise create/change/delete on each
 		for (let i = 0; i < list!.length; i++) {
 			const h = list![i];
@@ -385,6 +385,112 @@ describe('extension activate / deactivate', () => {
 			await refresh();
 		} finally {
 			vscode.workspace.createFileSystemWatcher = origCreate;
+			extension.deactivate();
+		}
+	});
+
+	it('DotAgents commands watcher failure is logged and extension continues', async function () {
+		if (!extension) { this.skip(); }
+		const origCreate = vscode.workspace.createFileSystemWatcher;
+		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
+			const patternStr = typeof pattern === 'string' ? pattern : '';
+			if (patternStr.includes('.agents') && patternStr.includes('commands')) {
+				throw new Error('.agents commands watcher unavailable');
+			}
+			return origCreate.call(vscode.workspace, pattern as any);
+		}) as typeof vscode.workspace.createFileSystemWatcher;
+
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+		} finally {
+			vscode.workspace.createFileSystemWatcher = origCreate;
+			extension.deactivate();
+		}
+	});
+
+	it('DotAgents skills watcher failure is logged and extension continues', async function () {
+		if (!extension) { this.skip(); }
+		const origCreate = vscode.workspace.createFileSystemWatcher;
+		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
+			const patternStr = typeof pattern === 'string' ? pattern : '';
+			if (patternStr.includes('.agents') && patternStr.includes('skills')) {
+				throw new Error('.agents skills watcher unavailable');
+			}
+			return origCreate.call(vscode.workspace, pattern as any);
+		}) as typeof vscode.workspace.createFileSystemWatcher;
+
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+		} finally {
+			vscode.workspace.createFileSystemWatcher = origCreate;
+			extension.deactivate();
+		}
+	});
+
+	it('DotAgents agent definitions watcher failure is logged and extension continues', async function () {
+		if (!extension) { this.skip(); }
+		const origCreate = vscode.workspace.createFileSystemWatcher;
+		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
+			const patternStr = typeof pattern === 'string' ? pattern : '';
+			if (patternStr.includes('.agents') && patternStr.includes('agents') && !patternStr.includes('skills')) {
+				throw new Error('.agents agent definitions watcher unavailable');
+			}
+			return origCreate.call(vscode.workspace, pattern as any);
+		}) as typeof vscode.workspace.createFileSystemWatcher;
+
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+		} finally {
+			vscode.workspace.createFileSystemWatcher = origCreate;
+			extension.deactivate();
+		}
+	});
+
+	it('resolveAgentRootsWithData skips non-directory stat results', async function () {
+		if (!extension) { this.skip(); }
+		// stat returns FileType.File (1) instead of Directory (2) — should skip the root
+		const origStat = vscode.__overrides.stat;
+		vscode.__overrides.stat = async () => ({ type: 1 }); // FileType.File
+
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			await refresh();
+			// Extension should continue normally with zero agent roots resolved
+		} finally {
+			vscode.__overrides.stat = origStat;
+			extension.deactivate();
+		}
+	});
+
+	it('ensureDataLoaded with no workspace skips file watchers but registers global watchers', async function () {
+		if (!extension) { this.skip(); }
+		const prev = vscode.workspace.workspaceFolders;
+		vscode.workspace.workspaceFolders = undefined;
+
+		try {
+			const ctx = makeContext();
+			extension.activate(ctx as any);
+			const refresh = commandHandlers['ace.refresh'];
+			assert.ok(refresh);
+			// Should complete without error; no workspace means no setupFileWatcher/claudeCodeScanner branches
+			await refresh();
+		} finally {
+			vscode.workspace.workspaceFolders = prev;
 			extension.deactivate();
 		}
 	});
