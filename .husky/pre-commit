@@ -1,0 +1,6 @@
+# Skip hooks in CI environments
+[ -n "$CI" ] && exit 0
+
+npx --no-install tsc --noEmit
+npm run test:unit
+npx lint-staged
