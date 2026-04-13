@@ -597,6 +597,129 @@ suite('File Watcher Setup Integration Tests', () => {
 		});
 	});
 
+	describe('Global Claude Commands File Watcher', () => {
+		test('should build correct pattern for ~/.claude/commands', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'commands', '*.md');
+
+			assert.ok(pattern.startsWith(homeDir));
+			assert.ok(pattern.includes('.claude'));
+			assert.ok(pattern.includes('commands'));
+			assert.ok(pattern.endsWith('*.md'));
+		});
+
+		test('should create Claude commands watcher successfully', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'commands', '*.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.ok(watcher, 'Claude commands watcher should be created');
+			assert.strictEqual(typeof watcher.dispose, 'function');
+			watcher.dispose();
+		});
+
+		test('should register all three handlers for Claude commands watcher', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'commands', '*.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.doesNotThrow(() => {
+				watcher.onDidCreate(() => {});
+				watcher.onDidChange(() => {});
+				watcher.onDidDelete(() => {});
+			});
+			watcher.dispose();
+		});
+	});
+
+	describe('Global Claude Skills File Watcher', () => {
+		test('should build correct pattern for ~/.claude/skills/*/SKILL.md', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+
+			assert.ok(pattern.startsWith(homeDir));
+			assert.ok(pattern.includes('.claude'));
+			assert.ok(pattern.includes('skills'));
+			assert.ok(pattern.endsWith('SKILL.md'));
+		});
+
+		test('should create Claude skills watcher successfully', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.ok(watcher, 'Claude skills watcher should be created');
+			assert.strictEqual(typeof watcher.dispose, 'function');
+			watcher.dispose();
+		});
+
+		test('should register all three handlers for Claude skills watcher', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.doesNotThrow(() => {
+				watcher.onDidCreate(() => {});
+				watcher.onDidChange(() => {});
+				watcher.onDidDelete(() => {});
+			});
+			watcher.dispose();
+		});
+	});
+
+	describe('Global Claude Agent Definitions File Watcher', () => {
+		test('should build correct pattern for ~/.claude/agents', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'agents', '*.md');
+
+			assert.ok(pattern.startsWith(homeDir));
+			assert.ok(pattern.includes('.claude'));
+			assert.ok(pattern.includes('agents'));
+			assert.ok(pattern.endsWith('*.md'));
+		});
+
+		test('should create Claude agent definitions watcher successfully', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'agents', '*.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.ok(watcher, 'Claude agent definitions watcher should be created');
+			assert.strictEqual(typeof watcher.dispose, 'function');
+			watcher.dispose();
+		});
+
+		test('should register all three handlers for Claude agent definitions watcher', () => {
+			const os = require('os');
+			const path = require('path');
+			const homeDir = os.homedir();
+			const pattern = path.join(homeDir, '.claude', 'agents', '*.md');
+			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+			assert.doesNotThrow(() => {
+				watcher.onDidCreate(() => {});
+				watcher.onDidChange(() => {});
+				watcher.onDidDelete(() => {});
+			});
+			watcher.dispose();
+		});
+	});
+
 	describe('Global .agents Agent Definitions File Watcher', () => {
 		test('should build correct pattern for ~/.agents/agents', () => {
 			const os = require('os');

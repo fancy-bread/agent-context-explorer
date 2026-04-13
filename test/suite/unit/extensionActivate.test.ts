@@ -393,8 +393,8 @@ describe('extension activate / deactivate', () => {
 		if (!extension) { this.skip(); }
 		const origCreate = vscode.workspace.createFileSystemWatcher;
 		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
-			const patternStr = typeof pattern === 'string' ? pattern : '';
-			if (patternStr.includes('.agents') && patternStr.includes('commands')) {
+			const base = (pattern as any)?.workspaceRoot?.fsPath ?? (typeof pattern === 'string' ? pattern : '');
+			if (base.includes('.agents') && base.includes('commands')) {
 				throw new Error('.agents commands watcher unavailable');
 			}
 			return origCreate.call(vscode.workspace, pattern as any);
@@ -416,8 +416,8 @@ describe('extension activate / deactivate', () => {
 		if (!extension) { this.skip(); }
 		const origCreate = vscode.workspace.createFileSystemWatcher;
 		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
-			const patternStr = typeof pattern === 'string' ? pattern : '';
-			if (patternStr.includes('.agents') && patternStr.includes('skills')) {
+			const base = (pattern as any)?.workspaceRoot?.fsPath ?? (typeof pattern === 'string' ? pattern : '');
+			if (base.includes('.agents') && base.includes('skills')) {
 				throw new Error('.agents skills watcher unavailable');
 			}
 			return origCreate.call(vscode.workspace, pattern as any);
@@ -439,8 +439,8 @@ describe('extension activate / deactivate', () => {
 		if (!extension) { this.skip(); }
 		const origCreate = vscode.workspace.createFileSystemWatcher;
 		vscode.workspace.createFileSystemWatcher = ((pattern: unknown) => {
-			const patternStr = typeof pattern === 'string' ? pattern : '';
-			if (patternStr.includes('.agents') && patternStr.includes('agents') && !patternStr.includes('skills')) {
+			const base = (pattern as any)?.workspaceRoot?.fsPath ?? (typeof pattern === 'string' ? pattern : '');
+			if (base.includes('.agents') && base.includes('agents') && !base.includes('skills')) {
 				throw new Error('.agents agent definitions watcher unavailable');
 			}
 			return origCreate.call(vscode.workspace, pattern as any);
