@@ -558,7 +558,8 @@ function setupGlobalCommandsWatcher(): vscode.FileSystemWatcher | undefined {
 	// Watch for changes in global .cursor/commands directory
 	try {
 		const homeDir = os.homedir();
-		const globalCommandsPattern = path.join(homeDir, '.cursor', 'commands', '*.md');
+		const globalCommandsDir = vscode.Uri.file(path.join(homeDir, '.cursor', 'commands'));
+		const globalCommandsPattern = new vscode.RelativePattern(globalCommandsDir, '*.md');
 		const globalCommandsWatcher = vscode.workspace.createFileSystemWatcher(globalCommandsPattern);
 
 		// Global commands watcher handlers
@@ -590,7 +591,8 @@ function setupGlobalSkillsWatcher(): vscode.FileSystemWatcher | undefined {
 	// Watch for changes in global .cursor/skills directory
 	try {
 		const homeDir = os.homedir();
-		const globalSkillsPattern = path.join(homeDir, '.cursor', 'skills', '*', 'SKILL.md');
+		const globalSkillsDir = vscode.Uri.file(path.join(homeDir, '.cursor', 'skills'));
+		const globalSkillsPattern = new vscode.RelativePattern(globalSkillsDir, '*/SKILL.md');
 		const globalSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalSkillsPattern);
 
 		// Global skills watcher handlers
@@ -622,7 +624,8 @@ function setupGlobalAgentsWatcher(): vscode.FileSystemWatcher | undefined {
 	// Watch ~/.cursor/agents/*.md (mirrors global commands/skills; Agents view Cursor root)
 	try {
 		const homeDir = os.homedir();
-		const globalAgentsPattern = path.join(homeDir, '.cursor', 'agents', '*.md');
+		const globalAgentsDir = vscode.Uri.file(path.join(homeDir, '.cursor', 'agents'));
+		const globalAgentsPattern = new vscode.RelativePattern(globalAgentsDir, '*.md');
 		const globalAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalAgentsPattern);
 
 		globalAgentsWatcher.onDidCreate(() => {
@@ -652,7 +655,8 @@ function setupGlobalClaudeCommandsWatcher(): vscode.FileSystemWatcher | undefine
 	// Watch for changes in global .claude/commands directory
 	try {
 		const homeDir = os.homedir();
-		const globalClaudeCommandsPattern = path.join(homeDir, '.claude', 'commands', '*.md');
+		const globalClaudeCommandsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'commands'));
+		const globalClaudeCommandsPattern = new vscode.RelativePattern(globalClaudeCommandsDir, '*.md');
 		const globalClaudeCommandsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeCommandsPattern);
 
 		globalClaudeCommandsWatcher.onDidCreate(() => {
@@ -682,7 +686,8 @@ function setupGlobalClaudeSkillsWatcher(): vscode.FileSystemWatcher | undefined 
 	// Watch for changes in global .claude/skills directory
 	try {
 		const homeDir = os.homedir();
-		const globalClaudeSkillsPattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+		const globalClaudeSkillsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'skills'));
+		const globalClaudeSkillsPattern = new vscode.RelativePattern(globalClaudeSkillsDir, '*/SKILL.md');
 		const globalClaudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeSkillsPattern);
 
 		globalClaudeSkillsWatcher.onDidCreate(() => {
@@ -712,7 +717,8 @@ function setupGlobalClaudeAgentDefinitionsWatcher(): vscode.FileSystemWatcher | 
 	// Watch for changes in global .claude/agents directory
 	try {
 		const homeDir = os.homedir();
-		const globalClaudeAgentsPattern = path.join(homeDir, '.claude', 'agents', '*.md');
+		const globalClaudeAgentsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'agents'));
+		const globalClaudeAgentsPattern = new vscode.RelativePattern(globalClaudeAgentsDir, '*.md');
 		const globalClaudeAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeAgentsPattern);
 
 		globalClaudeAgentsWatcher.onDidCreate(() => {
@@ -742,7 +748,8 @@ function setupGlobalDotAgentsCommandsWatcher(): vscode.FileSystemWatcher | undef
 	// Watch for changes in global .agents/commands directory
 	try {
 		const homeDir = os.homedir();
-		const globalDotAgentsCommandsPattern = path.join(homeDir, '.agents', 'commands', '*.md');
+		const globalDotAgentsCommandsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'commands'));
+		const globalDotAgentsCommandsPattern = new vscode.RelativePattern(globalDotAgentsCommandsDir, '*.md');
 		const globalDotAgentsCommandsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsCommandsPattern);
 
 		globalDotAgentsCommandsWatcher.onDidCreate(() => {
@@ -772,7 +779,8 @@ function setupGlobalDotAgentsSkillsWatcher(): vscode.FileSystemWatcher | undefin
 	// Watch for changes in global .agents/skills directory
 	try {
 		const homeDir = os.homedir();
-		const globalDotAgentsSkillsPattern = path.join(homeDir, '.agents', 'skills', '*', 'SKILL.md');
+		const globalDotAgentsSkillsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'skills'));
+		const globalDotAgentsSkillsPattern = new vscode.RelativePattern(globalDotAgentsSkillsDir, '*/SKILL.md');
 		const globalDotAgentsSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsSkillsPattern);
 
 		globalDotAgentsSkillsWatcher.onDidCreate(() => {
@@ -802,7 +810,8 @@ function setupGlobalDotAgentsAgentDefinitionsWatcher(): vscode.FileSystemWatcher
 	// Watch for changes in global .agents/agents directory
 	try {
 		const homeDir = os.homedir();
-		const globalDotAgentsAgentsPattern = path.join(homeDir, '.agents', 'agents', '*.md');
+		const globalDotAgentsAgentsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'agents'));
+		const globalDotAgentsAgentsPattern = new vscode.RelativePattern(globalDotAgentsAgentsDir, '*.md');
 		const globalDotAgentsAgentsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsAgentsPattern);
 
 		globalDotAgentsAgentsWatcher.onDidCreate(() => {

@@ -2,7 +2,7 @@
 	"name": "agent-context-explorer",
 	"displayName": "Agent Context Explorer (ACE)",
 	"description": "Provide rich project context to AI agents across multiple workspaces. And Agents view to browse global agent definitions from `~/.agents/*` and any other configured agent roots.",
-	"version": "1.0.3",
+	"version": "1.1.0",
 	"publisher": "fancy-bread",
 	"icon": "ace.png",
 	"repository": {
