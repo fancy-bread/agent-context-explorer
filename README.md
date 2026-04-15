@@ -8,12 +8,18 @@
 - **Workspaces** node lists your current workspace and any added external projects.
 
 **Agents view** (`aceAgents`)
-- A view into **user-level AI agent configuration**: browses global agent definitions from `~/.agents/*` and any other configured agent roots. Lets you see the agents, commands, and skills available to your AI tools without leaving the IDE.
+- A view into **user-level AI agent configuration**: browses global agent definitions from `~/.cursor/`, `~/.claude/`, `~/.agents/`, and any other configured agent roots. Lets you see the agents, commands, and skills available to your AI tools without leaving the IDE. The view auto-refreshes when global artifact files change.
 
 **Cursor** (IDE artifacts per workspace)
 - **Rules** — `.cursor/rules/*.{mdc,md}`
 - **Commands** — `.cursor/commands/*.md` (workspace) and `~/.cursor/commands/*.md` (global)
 - **Skills** — `.cursor/skills/*/SKILL.md` (workspace) and `~/.cursor/skills/*/SKILL.md` (global)
+
+**Claude Code** (project-level artifacts per workspace)
+- **CLAUDE.md** — root-level project instructions file
+- **Rules** — `.claude/rules/*.{mdc,md}`
+- **Commands** — `.claude/commands/*.md`
+- **Skills** — `.claude/skills/*/SKILL.md`
 
 **Specs** (per project)
 - Flat list of feature specs — `specs/*/spec.md` (no separate Schemas node in the tree)
@@ -21,8 +27,8 @@
 ## Quick Start
 
 1. Open the ACE icon in the sidebar (or Activity Bar).
-2. Expand **Workspaces** to browse project-level Cursor + Specs artifacts.
-3. Expand **Agents** to browse your global agent configuration (`~/.agents/*`) and in-IDE AI agent tools.
+2. Expand **Workspaces** to browse project-level Cursor, Claude Code, and Specs artifacts.
+3. Expand **Agents** to browse your global agent configuration (`~/.cursor/`, `~/.claude/`, `~/.agents/`) and in-IDE AI agent tools.
 4. Click any item to open it in your editor (read-only).
 
 ## Multi-Project
@@ -64,7 +70,10 @@ Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-
 | Commands missing | `.cursor/commands/` (workspace) or `~/.cursor/commands/` (global) |
 | Skills missing | `.cursor/skills/*/SKILL.md` (workspace) or `~/.cursor/skills/*/SKILL.md` (global) |
 | Specs missing | `specs/` directory with feature folders under the project |
-| Agents view empty | `~/.agents/` directory exists and contains agent definition files |
+| Claude Code artifacts missing | `CLAUDE.md` or `.claude/` directory exists in project root |
+| Claude commands missing | `.claude/commands/*.md` exists in project root |
+| Claude skills missing | `.claude/skills/*/SKILL.md` exists in project root |
+| Agents view empty | `~/.cursor/`, `~/.claude/`, or `~/.agents/` directory exists with agent definitions |
 | Tree stale | Click refresh (↻) in the tree header |
 
 ## License
