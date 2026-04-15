@@ -1,45 +1,43 @@
 # Agent Context Explorer (ACE)
 
-**View project context for AI agents** — Cursor rules, commands, skills, and project specs in one tree. Browse across multiple workspaces. ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
+**View project context for AI agents** — Cursor and Claude Code rules, commands, skills, and project specs in one tree. Browse across multiple workspaces. ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
 
 ## What You See
 
-**Workspaces view** (`aceProjects`)
-- **Workspaces** node lists your current workspace and any added external projects.
+**Workspaces view** — project-level artifacts for every workspace and added project:
 
-**Agents view** (`aceAgents`)
-- A view into **user-level AI agent configuration**: browses global agent definitions from `~/.cursor/`, `~/.claude/`, `~/.agents/`, and any other configured agent roots. Lets you see the agents, commands, and skills available to your AI tools without leaving the IDE. The view auto-refreshes when global artifact files change.
+- **Cursor** — `.cursor/rules/*.{mdc,md}`, `.cursor/commands/*.md`, `.cursor/skills/*/SKILL.md`
+- **Claude Code** — `CLAUDE.md`, `.claude/rules/*.{mdc,md}`, `.claude/commands/*.md`, `.claude/skills/*/SKILL.md`
+- **Specs** — `specs/*/spec.md` feature specifications
 
-**Cursor** (IDE artifacts per workspace)
-- **Rules** — `.cursor/rules/*.{mdc,md}`
-- **Commands** — `.cursor/commands/*.md` (workspace) and `~/.cursor/commands/*.md` (global)
-- **Skills** — `.cursor/skills/*/SKILL.md` (workspace) and `~/.cursor/skills/*/SKILL.md` (global)
+Global commands and skills (`~/.cursor/commands/`, `~/.cursor/skills/`) are shown alongside workspace artifacts in the Cursor section.
 
-**Claude Code** (project-level artifacts per workspace)
-- **CLAUDE.md** — root-level project instructions file
-- **Rules** — `.claude/rules/*.{mdc,md}`
-- **Commands** — `.claude/commands/*.md`
-- **Skills** — `.claude/skills/*/SKILL.md`
+**Agents view** — user-level agent configuration across all three global roots:
 
-**Specs** (per project)
-- Flat list of feature specs — `specs/*/spec.md` (no separate Schemas node in the tree)
+| Root | Watches |
+|------|---------|
+| `~/.cursor/` | commands, skills, agent definitions |
+| `~/.claude/` | commands, skills, agent definitions |
+| `~/.agents/` | commands, skills, agent definitions |
+
+The view auto-refreshes within seconds when files are added, changed, or removed from any watched path.
 
 ## Quick Start
 
-1. Open the ACE icon in the sidebar (or Activity Bar).
-2. Expand **Workspaces** to browse project-level Cursor, Claude Code, and Specs artifacts.
-3. Expand **Agents** to browse your global agent configuration (`~/.cursor/`, `~/.claude/`, `~/.agents/`) and in-IDE AI agent tools.
-4. Click any item to open it in your editor (read-only).
+1. Open the ACE icon in the Activity Bar.
+2. Expand **Workspaces** to browse Cursor and Claude Code artifacts for your project.
+3. Expand **Agents** to browse your global agent configuration across `~/.cursor/`, `~/.claude/`, and `~/.agents/`.
+4. Click any item to open it read-only in your editor.
 
 ## Multi-Project
 
-Use the `+` button to add external projects. Each project shows its own rules, commands, skills, and specs.
+Use the `+` button to add external projects. Each project shows its own rules, commands, skills, and specs independently.
 
 ## MCP: AI Agent Access
 
-ACE exposes an MCP server so AI agents can read project context on demand.
+ACE exposes an MCP server so AI agents can query project context on demand.
 
-**In Cursor:** ACE registers automatically via the MCP Extension API — no setup needed.
+**In Cursor:** ACE registers automatically via the VS Code MCP Extension API — no setup needed.
 
 **Standalone / fallback:** Add to `.cursor/mcp.json` or `~/.cursor/mcp.json`:
 
@@ -54,27 +52,24 @@ ACE exposes an MCP server so AI agents can read project context on demand.
 }
 ```
 
-Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-explorer-x.y.z`) and `<workspace-root>`.
+Replace `<extension-dir>` (e.g. `~/.cursor/extensions/fancy-bread.agent-context-explorer-x.y.z`) and `<workspace-root>` with your actual paths.
 
-**Tools only** — Agents get context by calling tools only (no MCP resources). Tools: `list_projects`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `list_specs`, `get_spec`, `get_project`.
+**Available tools:** `list_projects`, `get_project`, `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `list_specs`, `get_spec`
 
 ## Requirements
 
-- VS Code/Cursor compatible with extension engine requirement: `vscode` `^1.105.0` (see `package.json` `engines.vscode`).
+VS Code or Cursor `^1.105.0` (see `engines.vscode` in `package.json`).
 
 ## Troubleshooting
 
-| Issue | Check |
-|-------|-------|
-| Rules missing | `.cursor/rules/` exists, files are `.mdc` or `.md` |
-| Commands missing | `.cursor/commands/` (workspace) or `~/.cursor/commands/` (global) |
-| Skills missing | `.cursor/skills/*/SKILL.md` (workspace) or `~/.cursor/skills/*/SKILL.md` (global) |
-| Specs missing | `specs/` directory with feature folders under the project |
-| Claude Code artifacts missing | `CLAUDE.md` or `.claude/` directory exists in project root |
-| Claude commands missing | `.claude/commands/*.md` exists in project root |
-| Claude skills missing | `.claude/skills/*/SKILL.md` exists in project root |
-| Agents view empty | `~/.cursor/`, `~/.claude/`, or `~/.agents/` directory exists with agent definitions |
-| Tree stale | Click refresh (↻) in the tree header |
+| Symptom | Check |
+|---------|-------|
+| Cursor rules missing | `.cursor/rules/` exists and contains `.mdc` or `.md` files |
+| Cursor commands/skills missing | `.cursor/commands/` or `.cursor/skills/*/SKILL.md` exists in the workspace or home directory |
+| Claude Code artifacts missing | `CLAUDE.md` or `.claude/` directory exists in the project root |
+| Specs missing | `specs/` exists with at least one subdirectory containing `spec.md` |
+| Agents view empty | At least one of `~/.cursor/`, `~/.claude/`, or `~/.agents/` exists with artifact files |
+| Tree not updating | Files should appear within ~3 seconds; click refresh (↻) if stale |
 
 ## License
 
