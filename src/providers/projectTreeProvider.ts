@@ -152,17 +152,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			const project = element.project;
 			const currentProjectData = this.projectData.get(project.id);
 
-			// Count artifacts
-			const rulesCount = currentProjectData?.rules.length || 0;
-			const workspaceCommandsCount = currentProjectData?.commands.length || 0;
-			const globalCommandsCount = currentProjectData?.globalCommands.length || 0;
-			const commandsCount = workspaceCommandsCount + globalCommandsCount;
-			const workspaceSkillsCount = currentProjectData?.skills.length || 0;
-			const globalSkillsCount = currentProjectData?.globalSkills.length || 0;
-			const skillsCount = workspaceSkillsCount + globalSkillsCount;
-
 			const sections: { name: string; id: string; icon: string; description: string }[] = [
-				{ name: 'Cursor', id: 'cursor-agent', icon: 'device-desktop', description: 'Cursor IDE artifacts (workspace only)' },
+				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts' },
 				{ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' }
 			];
 
@@ -389,7 +380,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			const rulesCount = artifacts?.rules.length || 0;
 			if (rulesCount > 0) {
-				const item = new vscode.TreeItem(`Rules (${rulesCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				const item = new vscode.TreeItem('Rules', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.description = `${rulesCount} ${rulesCount === 1 ? 'rule' : 'rules'}`;
 				item.category = 'claude-rules';
 				item.project = element.project;
 				item.iconPath = new vscode.ThemeIcon('bookmark');
@@ -398,7 +390,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			const commandsCount = artifacts?.commands.length || 0;
 			if (commandsCount > 0) {
-				const item = new vscode.TreeItem(`Commands (${commandsCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				const item = new vscode.TreeItem('Commands', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.description = `${commandsCount} ${commandsCount === 1 ? 'command' : 'commands'}`;
 				item.category = 'claude-commands';
 				item.project = element.project;
 				item.iconPath = new vscode.ThemeIcon('terminal');
@@ -407,7 +400,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 
 			const skillsCount = artifacts?.skills.length || 0;
 			if (skillsCount > 0) {
-				const item = new vscode.TreeItem(`Skills (${skillsCount})`, vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				const item = new vscode.TreeItem('Skills', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.description = `${skillsCount} ${skillsCount === 1 ? 'skill' : 'skills'}`;
 				item.category = 'claude-skills';
 				item.project = element.project;
 				item.iconPath = new vscode.ThemeIcon('play-circle');

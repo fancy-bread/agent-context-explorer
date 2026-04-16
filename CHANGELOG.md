@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-15
+
+### Fixed
+- Cursor artifacts (Rules, Commands, Skills, Agents) no longer fail to render in the Workspaces tree — a category id mismatch introduced in 1.1.0 caused the Cursor section to show empty
+- Claude Code artifact groups (Rules, Commands, Skills) now display counts in the description column, matching Cursor's style
+
 ## [1.1.0] - 2026-04-13
 
 ### Added
