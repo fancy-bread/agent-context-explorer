@@ -649,7 +649,8 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 
 		const rulesGroup = children.find(c => (c.label as string).startsWith('Rules'));
 		assert.ok(rulesGroup, 'Rules group should be present');
-		assert.strictEqual(rulesGroup!.label, 'Rules (1)');
+		assert.strictEqual(rulesGroup!.label, 'Rules');
+		assert.strictEqual(rulesGroup!.description, '1 rule');
 		assert.strictEqual((rulesGroup!.iconPath as { id: string }).id, 'bookmark');
 		assert.strictEqual((rulesGroup as ProjectTreeItem).category, 'claude-rules');
 	});
@@ -672,7 +673,8 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 
 		const cmdGroup = children.find(c => (c.label as string).startsWith('Commands'));
 		assert.ok(cmdGroup, 'Commands group should be present');
-		assert.strictEqual(cmdGroup!.label, 'Commands (1)');
+		assert.strictEqual(cmdGroup!.label, 'Commands');
+		assert.strictEqual(cmdGroup!.description, '1 command');
 		assert.strictEqual((cmdGroup!.iconPath as { id: string }).id, 'terminal');
 		assert.strictEqual((cmdGroup as ProjectTreeItem).category, 'claude-commands');
 	});
@@ -695,7 +697,8 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 
 		const skillsGroup = children.find(c => (c.label as string).startsWith('Skills'));
 		assert.ok(skillsGroup, 'Skills group should be present');
-		assert.strictEqual(skillsGroup!.label, 'Skills (1)');
+		assert.strictEqual(skillsGroup!.label, 'Skills');
+		assert.strictEqual(skillsGroup!.description, '1 skill');
 		assert.strictEqual((skillsGroup!.iconPath as { id: string }).id, 'play-circle');
 		assert.strictEqual((skillsGroup as ProjectTreeItem).category, 'claude-skills');
 	});
