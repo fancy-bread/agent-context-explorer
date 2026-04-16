@@ -158,7 +158,7 @@
 		"src/**/*.ts": "eslint --fix"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.27.1",
+		"@modelcontextprotocol/sdk": "^1.29.0",
 		"gray-matter": "^4.0.3",
 		"yaml": "^2.3.0",
 		"zod": "^3.25.76"
