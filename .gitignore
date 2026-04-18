@@ -9,6 +9,9 @@
 #  Cursor plans are temporary files used by Cursor's build system
 .plans/
 
+# Speckit
+.specify/
+
 # Claude Code (local only, not committed)
 .claude/
 
