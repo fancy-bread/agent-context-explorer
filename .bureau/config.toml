@@ -1,0 +1,16 @@
+[runtime]
+language    = "typescript"
+base_image  = "node:24-slim"
+install_cmd = "npm install"
+build_cmd   = "npm run compile"
+lint_cmd    = "npm run lint"
+test_cmd    = "npm run test:coverage"
+
+[ralph_loop]
+max_builder_attempts = 3
+max_rounds           = 3
+command_timeout      = 300
+
+[bureau]
+builder_model   = "claude-sonnet-4-6"
+reviewer_model  = "claude-opus-4-7"
