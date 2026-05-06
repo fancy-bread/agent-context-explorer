@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-05
+
+### Added
+- **Claude project agent definitions** — `.claude/agents/*.md` files are now scanned and displayed in the Workspaces tree under the Claude section as an "Agents" subsection (hubot icon, alphabetical, click-to-open). Mirrors the existing Cursor → Agents behaviour for project-level agent definitions.
+- **File watcher for `.claude/agents/`** — the Workspaces tree automatically reflects additions, modifications, and deletions to project-level Claude agent files without a manual refresh.
+
+### Changed
+- **Conditional platform section display** — the Cursor section now appears in the Workspaces tree only when a `.cursor/` directory exists at the project root; the Claude section appears only when `.claude/` exists. Projects using a single agent platform no longer show an empty section for the other. The Specs node is unaffected and remains visible regardless of platform folder presence.
+- Folder existence is detected via async `vscode.workspace.fs.stat()` in parallel with artifact scanning — no added latency to tree load.
+- Living specs updated: `specs/providers/spec.md`, `specs/tree-view/spec.md`, `specs/scanners/spec.md` reflect the new category types and platform-gating behaviour.
+
 ## [1.1.1] - 2026-04-15
 
 ### Fixed
