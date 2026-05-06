@@ -2,6 +2,13 @@
 .vscode/**
 .vscode-test/**
 .plans/**
+.bureau/**
+.claude/**
+.cursor/**
+.specify/**
+.husky/**
+.nyc_output/**
+coverage/**
 src/**
 test/**
 out/test/**
