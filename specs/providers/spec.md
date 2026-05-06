@@ -146,11 +146,21 @@ Categories define tree node types and determine children resolution:
 
 | Category | Parent | Children | Purpose |
 |----------|--------|----------|---------|
-| `'projects'` | Root | `'cursor'`, `'agents'` | Top-level project node (Workspaces view) |
-| `'cursor'` | `'projects'` | `'commands'`, `'rules'`, `'skills'`, `'agent-definitions'` (alphabetical labels) | Cursor IDE section |
-| `'agents'` | `'projects'` | `'specs'` (leaves) | **Specs** node (internal id `agents`): flat `specs/*/spec.md` leaves |
-| `'agent-definitions'` | `'cursor'` | `'agent-definition'` leaves or empty placeholder | Workspace agent definitions (`.cursor/agents/*.md`) |
-| `'agent-definition'` | `'agent-definitions'` | — | Single agent file; opens with `vscode.open` |
+| `'projects'` | Root | `'cursor'` (if `.cursor/` exists), `'agents'`, `'claude-code'` (if `.claude/` exists) | Top-level project node (Workspaces view) |
+| `'cursor'` | `'projects'` | `'commands'`, `'rules'`, `'skills'`, `'agent-definitions'` (alphabetical labels) | Cursor IDE section — shown only when `.cursor/` folder exists at project root |
+| `'agents'` | `'projects'` | `'specs'` (leaves) | **Specs** node (internal id `agents`): flat `specs/*/spec.md` leaves; always shown, not platform-gated |
+| `'claude-code'` | `'projects'` | `'claude-md'` leaf, `'claude-agent-definitions'`, `'claude-rules'`, `'claude-commands'`, `'claude-skills'` (alphabetical; CLAUDE.md first) | Claude Code section — shown only when `.claude/` folder exists at project root |
+| `'agent-definitions'` | `'cursor'` | `'agent-definition'` leaves or empty placeholder | Workspace Cursor agent definitions (`.cursor/agents/*.md`) |
+| `'agent-definition'` | `'agent-definitions'` | — | Single Cursor agent file; opens with `vscode.open` |
+| `'claude-agent-definitions'` | `'claude-code'` | `'claude-agent-definition'` leaves or empty placeholder | Claude project agent definitions (`.claude/agents/*.md`); hubot icon |
+| `'claude-agent-definition'` | `'claude-agent-definitions'` | — | Single Claude agent file; hubot icon; opens with `vscode.open` |
+| `'claude-md'` | `'claude-code'` | — | CLAUDE.md leaf; file-text icon; opens with `vscode.open` |
+| `'claude-rules'` | `'claude-code'` | `'claude-rule'` leaves | Claude rules group (`.claude/rules/`) |
+| `'claude-rule'` | `'claude-rules'` | — | Single Claude rule leaf |
+| `'claude-commands'` | `'claude-code'` | `'claude-command'` leaves | Claude commands group (`.claude/commands/`) |
+| `'claude-command'` | `'claude-commands'` | — | Single Claude command leaf |
+| `'claude-skills'` | `'claude-code'` | `'claude-skill'` leaves | Claude skills group (`.claude/skills/`) |
+| `'claude-skill'` | `'claude-skills'` | — | Single Claude skill leaf |
 | `'commands'` | `'cursor'` | `'commands-workspace'`, `'commands-global'` | Commands section |
 | `'skills'` | `'cursor'` | `'skills-workspace'`, `'skills-global'` | Skills section |
 | `'rules'` | `'cursor'` | `'always'`, `'glob'`, `'manual'` rule types | Rules section |
@@ -236,7 +246,7 @@ skillsWatcher.onDidChange(() => refreshData());
 
 4. **Event-driven refresh**: Tree MUST refresh via `onDidChangeTreeData` event, not polling.
 
-5. **Empty gracefully**: Missing artifacts MUST show empty state, not hide section entirely.
+5. **Platform gating vs. empty state**: Platform sections (Cursor, Claude) are **hidden entirely** when their root folder is absent (`.cursor/` or `.claude/` not found — folder existence is the gate). Artifact-level nodes **within** a present platform section MUST show empty state (e.g. "No agents found") rather than hide. The Specs node is never platform-gated.
 
 ### Scenarios
 

@@ -18,6 +18,7 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 	claudeRuleData?: Rule;
 	claudeCommandData?: Command;
 	claudeSkillData?: Skill;
+	claudeAgentDefinitionData?: AgentDefinition;
 	stateItem?: any;
 	ruleType?: any;
 	category?: 'rules' | 'state' | 'projects' | 'ruleType' | 'commands'
@@ -25,7 +26,8 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 		| 'specs'
 		| 'agent-definitions' | 'agent-definition'
 		| 'claude-code' | 'claude-md' | 'claude-rule' | 'claude-command' | 'claude-skill'
-		| 'claude-rules' | 'claude-commands' | 'claude-skills';
+		| 'claude-rules' | 'claude-commands' | 'claude-skills'
+		| 'claude-agent-definitions' | 'claude-agent-definition';
 	directory?: string;
 	project?: ProjectDefinition;
 	agentRootId?: string;
@@ -50,7 +52,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts,
-			claudeCodeArtifacts?: ClaudeCodeArtifacts
+			claudeCodeArtifacts?: ClaudeCodeArtifacts,
+			cursorFolderExists?: boolean
 		}> = new Map(),
 		private projects: ProjectDefinition[] = [],
 		private currentProject: ProjectDefinition | null = null,
@@ -85,7 +88,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts,
-			claudeCodeArtifacts?: ClaudeCodeArtifacts
+			claudeCodeArtifacts?: ClaudeCodeArtifacts,
+			cursorFolderExists?: boolean
 		}>,
 		projects: ProjectDefinition[],
 		currentProject: ProjectDefinition | null
@@ -148,17 +152,23 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 					return item;
 				});
 		} else if (element.category === 'projects' && element.project) {
-			// Project level: show Cursor and Specs (living specs under specs/ only)
+			// Project level: show platform sections (Cursor, Claude) only when their folder exists; Specs always shown
 			const project = element.project;
 			const currentProjectData = this.projectData.get(project.id);
 
-			const sections: { name: string; id: string; icon: string; description: string }[] = [
-				{ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts' },
-				{ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' }
-			];
+			const sections: { name: string; id: string; icon: string; description: string }[] = [];
 
+			// Cursor section: shown only if .cursor/ folder exists at project root
+			if (currentProjectData?.cursorFolderExists === true) {
+				sections.push({ name: 'Cursor', id: 'cursor', icon: 'device-desktop', description: 'Cursor IDE artifacts' });
+			}
+
+			// Specs section: always shown (not platform-gated)
+			sections.push({ name: 'Specs', id: 'agents', icon: 'library', description: 'specs/' });
+
+			// Claude section: shown only if .claude/ folder exists at project root
 			const claudeCodeArtifacts = currentProjectData?.claudeCodeArtifacts;
-			if (claudeCodeArtifacts?.hasAnyArtifacts) {
+			if (claudeCodeArtifacts?.claudeFolderExists === true) {
 				sections.push({ name: 'Claude', id: 'claude-code', icon: 'device-desktop', description: 'Claude Code artifacts' });
 			}
 
@@ -362,7 +372,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				return item;
 			});
 		} else if (element.category === 'claude-code' && element.project) {
-			// Claude Code section: CLAUDE.md item + Rules/Commands/Skills group nodes
+			// Claude Code section: CLAUDE.md item + Agents/Rules/Commands/Skills group nodes
 			const projectData = this.projectData.get(element.project.id);
 			const artifacts = projectData?.claudeCodeArtifacts;
 			const items: ProjectTreeItem[] = [];
@@ -375,6 +385,17 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				item.iconPath = new vscode.ThemeIcon('file-text');
 				item.contextValue = 'claude-md';
 				item.command = { command: 'vscode.open', title: 'Open CLAUDE.md', arguments: [artifacts.claudeMd.uri] };
+				items.push(item);
+			}
+
+			// Agents group — always shown (empty state when no files)
+			const agentsCount = artifacts?.agentDefinitions.length || 0;
+			{
+				const item = new vscode.TreeItem('Agents', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+				item.description = `${agentsCount} ${agentsCount === 1 ? 'agent' : 'agents'}`;
+				item.category = 'claude-agent-definitions';
+				item.project = element.project;
+				item.iconPath = new vscode.ThemeIcon('hubot');
 				items.push(item);
 			}
 
@@ -408,7 +429,45 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
 				items.push(item);
 			}
 
-			return items;
+			// Sort group items (excluding CLAUDE.md leaf) alphabetically by label
+			const claudeMdItem = items.find(i => i.category === 'claude-md');
+			const groupItems = items.filter(i => i.category !== 'claude-md');
+			groupItems.sort((a, b) =>
+				(a.label as string).localeCompare(b.label as string, undefined, { sensitivity: 'base' })
+			);
+
+			return claudeMdItem ? [claudeMdItem, ...groupItems] : groupItems;
+		} else if (element.category === 'claude-agent-definitions' && element.project) {
+			// Claude → Agents subsection: list .claude/agents/*.md leaves
+			const projectData = this.projectData.get(element.project.id);
+			const defs = projectData?.claudeCodeArtifacts?.agentDefinitions || [];
+
+			if (defs.length === 0) {
+				return [{
+					label: 'No agents found',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Add Markdown files to .claude/agents/'
+				} as ProjectTreeItem];
+			}
+
+			return defs.map((ad: AgentDefinition) => {
+				const item = new vscode.TreeItem(
+					ad.displayName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.claudeAgentDefinitionData = ad;
+				item.category = 'claude-agent-definition';
+				item.project = element.project;
+				item.tooltip = `${ad.uri.fsPath}\n\n${this.getCommandPreview(ad.content)}`;
+				item.contextValue = 'claude-agent-definition';
+				item.iconPath = new vscode.ThemeIcon('hubot');
+				item.command = {
+					command: 'vscode.open',
+					title: 'Open Agent Definition',
+					arguments: [ad.uri]
+				};
+				return item;
+			});
 		} else if (element.category === 'claude-rules' && element.project) {
 			const projectData = this.projectData.get(element.project.id);
 			const rules = projectData?.claudeCodeArtifacts?.rules || [];

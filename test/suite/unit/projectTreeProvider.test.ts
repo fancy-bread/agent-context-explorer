@@ -241,8 +241,45 @@ describe('ProjectTreeProvider getTreeItem and lifecycle', () => {
 });
 
 describe('ProjectTreeProvider tree hierarchy', () => {
-	it('project -> Cursor and Specs sections', async () => {
+	it('project -> only Specs when neither .cursor/ nor .claude/ exists', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+
+		// cursorFolderExists not set (undefined) → Cursor hidden; claudeFolderExists false → Claude hidden
+		assert.strictEqual(children.length, 1);
+		const labels = children.map(c => c.label);
+		assert.deepStrictEqual(labels, ['Specs']);
+	});
+
+	it('project -> Cursor and Specs when cursorFolderExists is true and no .claude/', async () => {
+		// Build projectData with cursorFolderExists = true
+		const defaultArtifacts: AsdlcArtifacts = {
+			agentsMd: { exists: false, sections: [] },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: false
+		};
+		const data = new Map([
+			['test-project', {
+				rules: [] as any[],
+				state: EMPTY_PROJECT_STATE,
+				commands: [] as any[],
+				globalCommands: [] as any[],
+				skills: [] as any[],
+				globalSkills: [] as any[],
+				agentDefinitions: [] as any[],
+				asdlcArtifacts: defaultArtifacts,
+				claudeCodeArtifacts: undefined,
+				cursorFolderExists: true
+			}]
+		]);
+		const provider = new ProjectTreeProvider(data, [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
 		const projectItem = projects[0];
@@ -541,13 +578,15 @@ function makeClaudeCodeArtifacts(overrides: Partial<ClaudeCodeArtifacts> = {}): 
 		rules: overrides.rules ?? [],
 		commands: overrides.commands ?? [],
 		skills: overrides.skills ?? [],
+		agentDefinitions: overrides.agentDefinitions ?? [],
+		claudeFolderExists: overrides.claudeFolderExists ?? false,
 		hasAnyArtifacts: overrides.hasAnyArtifacts ?? false
 	};
 }
 
-describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
-	it('project -> includes Claude Code section when hasAnyArtifacts is true', async () => {
-		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+describe('ProjectTreeProvider Claude Code section visibility (T006 / spec008)', () => {
+	it('project -> includes Claude section when claudeFolderExists is true', async () => {
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
@@ -558,27 +597,27 @@ describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
 		const children = await provider.getChildren(projectItem as ProjectTreeItem);
 
 		const labels = children.map(c => c.label);
-		assert.ok(labels.includes('Claude'), 'Claude section should be present');
-		assert.strictEqual(children.length, 3);
-	});
-
-	it('project -> no Claude Code section when hasAnyArtifacts is false', async () => {
-		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: false });
-		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
-		provider.setDataLoaded(true);
-		const projects = await provider.getChildren(undefined);
-		const projectItem = projects[0];
-		(projectItem as ProjectTreeItem).category = 'projects';
-		(projectItem as ProjectTreeItem).project = mockProject;
-
-		const children = await provider.getChildren(projectItem as ProjectTreeItem);
-
-		const labels = children.map(c => c.label);
-		assert.ok(!labels.includes('Claude Code'), 'Claude Code section should be absent');
+		assert.ok(labels.includes('Claude'), 'Claude section should be present when .claude/ exists');
+		// Specs always shown; Cursor absent (no cursorFolderExists); Claude present
 		assert.strictEqual(children.length, 2);
 	});
 
-	it('project -> no Claude Code section when claudeCodeArtifacts is undefined', async () => {
+	it('project -> no Claude section when claudeFolderExists is false', async () => {
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ claudeFolderExists: false, hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+
+		const labels = children.map(c => c.label);
+		assert.ok(!labels.includes('Claude'), 'Claude section should be absent when .claude/ absent');
+	});
+
+	it('project -> no Claude section when claudeCodeArtifacts is undefined', async () => {
 		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
@@ -588,12 +627,11 @@ describe('ProjectTreeProvider Claude Code section visibility (T006)', () => {
 
 		const children = await provider.getChildren(projectItem as ProjectTreeItem);
 
-		assert.strictEqual(children.length, 2);
-		assert.ok(!children.map(c => c.label).includes('Claude Code'));
+		assert.ok(!children.map(c => c.label).includes('Claude'));
 	});
 
 	it('Claude section item has device-desktop icon', async () => {
-		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ hasAnyArtifacts: true });
+		const claudeCodeArtifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts }), [mockProject], mockProject);
 		provider.setDataLoaded(true);
 		const projects = await provider.getChildren(undefined);
@@ -788,5 +826,217 @@ describe('ProjectTreeProvider claude-skills leaf items (T010)', () => {
 		const children = await provider.getChildren(skillsItem);
 
 		assert.strictEqual(children[0].label, 'SKILL.md');
+	});
+});
+
+// --- spec 008: Claude project agent definitions + conditional display ---
+
+describe('ProjectTreeProvider spec008 — conditional platform display', () => {
+	it('Cursor section absent when cursorFolderExists is false/undefined', async () => {
+		// No cursorFolderExists in data → Cursor section must not appear
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const labels = children.map(c => c.label);
+		assert.ok(!labels.includes('Cursor'), 'Cursor should be absent when cursorFolderExists is falsy');
+	});
+
+	it('Cursor section present when cursorFolderExists is true', async () => {
+		const defaultArtifacts: AsdlcArtifacts = {
+			agentsMd: { exists: false, sections: [] },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: false
+		};
+		const data = new Map([['test-project', {
+			rules: [] as any[], state: EMPTY_PROJECT_STATE, commands: [] as any[],
+			globalCommands: [] as any[], skills: [] as any[], globalSkills: [] as any[],
+			agentDefinitions: [] as any[], asdlcArtifacts: defaultArtifacts,
+			claudeCodeArtifacts: undefined, cursorFolderExists: true
+		}]]);
+		const provider = new ProjectTreeProvider(data, [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const labels = children.map(c => c.label);
+		assert.ok(labels.includes('Cursor'), 'Cursor should be present when cursorFolderExists is true');
+	});
+
+	it('Claude section absent when claudeFolderExists is false', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ claudeFolderExists: false, hasAnyArtifacts: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const labels = children.map(c => c.label);
+		assert.ok(!labels.includes('Claude'), 'Claude section must be absent when .claude/ folder does not exist');
+	});
+
+	it('both Cursor and Claude shown when both folders exist', async () => {
+		const claudeArtifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true });
+		const defaultArtifacts: AsdlcArtifacts = {
+			agentsMd: { exists: false, sections: [] },
+			specs: { exists: false, specs: [] },
+			schemas: { exists: false, schemas: [] },
+			hasAnyArtifacts: false
+		};
+		const data = new Map([['test-project', {
+			rules: [] as any[], state: EMPTY_PROJECT_STATE, commands: [] as any[],
+			globalCommands: [] as any[], skills: [] as any[], globalSkills: [] as any[],
+			agentDefinitions: [] as any[], asdlcArtifacts: defaultArtifacts,
+			claudeCodeArtifacts: claudeArtifacts, cursorFolderExists: true
+		}]]);
+		const provider = new ProjectTreeProvider(data, [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const labels = children.map(c => c.label);
+		assert.ok(labels.includes('Cursor'), 'Cursor should be present');
+		assert.ok(labels.includes('Claude'), 'Claude should be present');
+		assert.ok(labels.includes('Specs'), 'Specs always present');
+		assert.strictEqual(children.length, 3);
+	});
+
+	it('Specs node shown even when neither .cursor/ nor .claude/ exists (FR-008)', async () => {
+		const provider = new ProjectTreeProvider(createProjectData(), [mockProject], mockProject);
+		provider.setDataLoaded(true);
+		const projects = await provider.getChildren(undefined);
+		const projectItem = projects[0];
+		(projectItem as ProjectTreeItem).category = 'projects';
+		(projectItem as ProjectTreeItem).project = mockProject;
+
+		const children = await provider.getChildren(projectItem as ProjectTreeItem);
+		const labels = children.map(c => c.label);
+		assert.ok(labels.includes('Specs'), 'Specs must always be shown regardless of platform folders');
+	});
+});
+
+describe('ProjectTreeProvider spec008 — Claude → Agents subsection (claude-code children)', () => {
+	const claudeCodeItem: ProjectTreeItem = {
+		label: 'Claude',
+		collapsibleState: 2,
+		category: 'claude-code',
+		project: mockProject
+	} as ProjectTreeItem;
+
+	it('claude-code always has an Agents subsection (even when agentDefinitions empty)', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+		const agentsGroup = children.find(c => c.label === 'Agents');
+		assert.ok(agentsGroup, 'Agents subsection must always appear in Claude section');
+		assert.strictEqual((agentsGroup!.iconPath as { id: string }).id, 'hubot');
+		assert.strictEqual((agentsGroup as ProjectTreeItem).category, 'claude-agent-definitions');
+	});
+
+	it('claude-code Agents shows count in description', async () => {
+		const ad: AgentDefinition = {
+			uri: vscode.Uri.file('/test/.claude/agents/my-agent.md'),
+			content: '# My Agent',
+			fileName: 'my-agent',
+			displayName: 'my-agent'
+		};
+		const artifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true, agentDefinitions: [ad] });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+		const agentsGroup = children.find(c => c.label === 'Agents');
+		assert.ok(agentsGroup);
+		assert.strictEqual(agentsGroup!.description, '1 agent');
+	});
+
+	it('claude-code groups are sorted alphabetically (Agents, Commands, Rules, Skills after CLAUDE.md)', async () => {
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'r', globs: [], alwaysApply: false }, content: '' };
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/c.md'), fileName: 'c.md', content: '', location: 'workspace' };
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/s/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'S', overview: '' } };
+		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], commands: [cmd], skills: [skill], claudeFolderExists: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+
+		const children = await provider.getChildren(claudeCodeItem);
+		// Should be: Agents, Commands, Rules, Skills (alphabetical)
+		const labels = children.map(c => c.label as string);
+		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'Rules', 'Skills']);
+	});
+});
+
+describe('ProjectTreeProvider spec008 — claude-agent-definitions handler', () => {
+	it('returns placeholder when agentDefinitions is empty', async () => {
+		const artifacts = makeClaudeCodeArtifacts({ claudeFolderExists: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const agentDefsItem: ProjectTreeItem = {
+			label: 'Agents',
+			collapsibleState: 1,
+			category: 'claude-agent-definitions',
+			project: mockProject
+		} as ProjectTreeItem;
+
+		const children = await provider.getChildren(agentDefsItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'No agents found');
+		assert.strictEqual(children[0].description, 'Add Markdown files to .claude/agents/');
+	});
+
+	it('returns agent leaf items with hubot icon and vscode.open when non-empty', async () => {
+		const ad: AgentDefinition = {
+			uri: vscode.Uri.file('/test/.claude/agents/my-agent.md'),
+			content: '# My Agent',
+			fileName: 'my-agent',
+			displayName: 'my-agent'
+		};
+		const artifacts = makeClaudeCodeArtifacts({ agentDefinitions: [ad], claudeFolderExists: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const agentDefsItem: ProjectTreeItem = {
+			label: 'Agents',
+			collapsibleState: 1,
+			category: 'claude-agent-definitions',
+			project: mockProject
+		} as ProjectTreeItem;
+
+		const children = await provider.getChildren(agentDefsItem);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'my-agent');
+		assert.strictEqual((children[0].iconPath as { id: string }).id, 'hubot');
+		assert.strictEqual(children[0].contextValue, 'claude-agent-definition');
+		assert.strictEqual(children[0].command?.command, 'vscode.open');
+		assert.strictEqual((children[0] as ProjectTreeItem).category, 'claude-agent-definition');
+		assert.strictEqual((children[0] as ProjectTreeItem).claudeAgentDefinitionData, ad);
+	});
+
+	it('agent leaf tooltip includes file path', async () => {
+		const ad: AgentDefinition = {
+			uri: vscode.Uri.file('/test/.claude/agents/coder.md'),
+			content: '# Coder\n\nDoes coding.',
+			fileName: 'coder',
+			displayName: 'coder'
+		};
+		const artifacts = makeClaudeCodeArtifacts({ agentDefinitions: [ad], claudeFolderExists: true });
+		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
+		const agentDefsItem: ProjectTreeItem = {
+			label: 'Agents', collapsibleState: 1, category: 'claude-agent-definitions', project: mockProject
+		} as ProjectTreeItem;
+
+		const children = await provider.getChildren(agentDefsItem);
+
+		assert.ok((children[0].tooltip as string).includes('/test/.claude/agents/coder.md'));
 	});
 });

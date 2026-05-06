@@ -203,6 +203,20 @@ export function deactivate() {
 	}
 }
 
+/**
+ * Check whether a subdirectory exists under a workspace root using vscode.workspace.fs.
+ * Returns true only if the path exists and is a directory. Returns false on any error.
+ */
+async function statFolderExists(root: vscode.Uri, subdir: string): Promise<boolean> {
+	try {
+		const uri = vscode.Uri.joinPath(root, subdir);
+		const stat = await vscode.workspace.fs.stat(uri);
+		return stat.type === vscode.FileType.Directory;
+	} catch {
+		return false;
+	}
+}
+
 async function refreshData() {
 	try {
 		treeProvider.setLoading(true);
@@ -219,7 +233,8 @@ async function refreshData() {
 			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts,
-			claudeCodeArtifacts?: ClaudeCodeArtifacts
+			claudeCodeArtifacts?: ClaudeCodeArtifacts,
+			cursorFolderExists?: boolean
 		}>();
 
 		// Scan global commands and skills once (shared across all projects)
@@ -233,13 +248,14 @@ async function refreshData() {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
 
 			// Scan current workspace rules, state, commands, skills, and specs/schemas index
-			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs, currentClaudeCode] = await Promise.all([
+			const [currentRules, currentCommands, currentSkills, currentAsdlcArtifacts, currentAgentDefs, currentClaudeCode, currentCursorFolderExists] = await Promise.all([
 				rulesScanner?.scanRules() || Promise.resolve([]),
 				commandsScanner?.scanWorkspaceCommands() || Promise.resolve([]),
 				skillsScanner?.scanWorkspaceSkills() || Promise.resolve([]),
 				asdlcArtifactScanner?.scanAll() || Promise.resolve({ agentsMd: { exists: false, sections: [] }, specs: { exists: false, specs: [] }, schemas: { exists: false, schemas: [] }, hasAnyArtifacts: false }),
 				agentsScanner?.scanWorkspaceAgentDefinitions() || Promise.resolve([]),
-				claudeCodeScanner?.scan() || Promise.resolve({ claudeMd: undefined, rules: [], commands: [], skills: [], hasAnyArtifacts: false })
+				claudeCodeScanner?.scan() || Promise.resolve({ claudeMd: undefined, rules: [], commands: [], skills: [], agentDefinitions: [], claudeFolderExists: false, hasAnyArtifacts: false }),
+				statFolderExists(currentWorkspaceRoot, '.cursor')
 			]);
 
 			// Use workspace path as the key for current workspace
@@ -253,10 +269,11 @@ async function refreshData() {
 				globalSkills,
 				agentDefinitions: currentAgentDefs,
 				asdlcArtifacts: currentAsdlcArtifacts,
-				claudeCodeArtifacts: currentClaudeCode
+				claudeCodeArtifacts: currentClaudeCode,
+				cursorFolderExists: currentCursorFolderExists
 			});
 
-			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, specs/schemas: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}, Claude Code: ${currentClaudeCode.hasAnyArtifacts ? 'Yes' : 'No'}`;
+			const logMessage = `Scanned current workspace: ${currentRules.length} rules, ${currentCommands.length} commands, ${currentSkills.length} skills, ${currentAgentDefs.length} agent definitions, specs/schemas: ${currentAsdlcArtifacts.hasAnyArtifacts ? 'Yes' : 'No'}, Claude Code: ${currentClaudeCode.hasAnyArtifacts ? 'Yes' : 'No'}, .cursor/ exists: ${currentCursorFolderExists}`;
 			outputChannel.appendLine(logMessage);
 		}
 
@@ -283,13 +300,14 @@ async function refreshData() {
 				const projectClaudeCodeScanner = new ClaudeCodeScanner(projectUri);
 
 				// Scan rules, commands, skills, agent definitions, specs/schemas, and Claude Code artifacts
-				const [rules, commands, skills, asdlcArtifacts, agentDefinitions, claudeCodeArtifacts] = await Promise.all([
+				const [rules, commands, skills, asdlcArtifacts, agentDefinitions, claudeCodeArtifacts, cursorFolderExists] = await Promise.all([
 					projectRulesScanner.scanRules(),
 					projectCommandsScanner.scanWorkspaceCommands(),
 					projectSkillsScanner.scanWorkspaceSkills(),
 					projectAsdlcScanner.scanAll(),
 					projectAgentsScanner.scanWorkspaceAgentDefinitions(),
-					projectClaudeCodeScanner.scan()
+					projectClaudeCodeScanner.scan(),
+					statFolderExists(projectUri, '.cursor')
 				]);
 
 				projectData.set(project.id, {
@@ -301,7 +319,8 @@ async function refreshData() {
 					globalSkills,
 					agentDefinitions,
 					asdlcArtifacts,
-					claudeCodeArtifacts
+					claudeCodeArtifacts,
+					cursorFolderExists
 				});
 				const logMessage = `Scanned project ${project.name}: ${rules.length} rules, ${commands.length} commands, ${skills.length} skills, ${agentDefinitions.length} agent definitions`;
 				outputChannel.appendLine(logMessage);
