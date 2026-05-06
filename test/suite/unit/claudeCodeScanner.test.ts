@@ -138,11 +138,11 @@ describe('ClaudeCodeScanner.scan() — error handling', () => {
 });
 
 describe('ClaudeCodeScanner.watchAll()', () => {
-	it('returns one disposable per pattern (4 total)', () => {
+	it('returns one disposable per pattern (5 total — includes .claude/agents/*.md)', () => {
 		const scanner = new ClaudeCodeScanner(testUri as any);
 		const disposables = scanner.watchAll(() => {});
 
-		assert.strictEqual(disposables.length, 4);
+		assert.strictEqual(disposables.length, 5);
 		disposables.forEach(d => assert.strictEqual(typeof d.dispose, 'function'));
 	});
 

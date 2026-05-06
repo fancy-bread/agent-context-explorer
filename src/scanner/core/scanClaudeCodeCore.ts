@@ -1,6 +1,6 @@
 // Shared Claude Code project-level scanning - NO vscode dependency
 import * as path from 'path';
-import type { IFileSystem, CoreRule, CoreCommand, CoreSkill } from './types';
+import type { IFileSystem, CoreRule, CoreCommand, CoreSkill, CoreAgentDefinition } from './types';
 import { FileType } from './types';
 import { listFilesRecursive, listFilesFlat } from './listFiles';
 import { parseRuleFromString } from './ruleParsing';
@@ -11,31 +11,88 @@ export interface CoreClaudeCodeArtifacts {
 	rules: CoreRule[];
 	commands: CoreCommand[];
 	skills: CoreSkill[];
+	agentDefinitions: CoreAgentDefinition[];
+	claudeFolderExists: boolean;
 	hasAnyArtifacts: boolean;
 }
 
 /**
  * Scan for Claude Code project-level artifacts in {projectRoot}/.claude/ and CLAUDE.md.
- * All four scans run in parallel. Missing directories are silently skipped.
+ * All scans run in parallel. Missing directories are silently skipped.
  */
 export async function scanClaudeCodeCore(
 	fs: IFileSystem,
 	projectRoot: string
 ): Promise<CoreClaudeCodeArtifacts> {
-	const [claudeMdPath, rules, commands, skills] = await Promise.all([
+	const [claudeMdPath, rules, commands, skills, agentDefinitions, claudeFolderExists] = await Promise.all([
 		statClaudeMd(fs, projectRoot),
 		scanClaudeRules(fs, projectRoot),
 		scanClaudeCommands(fs, projectRoot),
-		scanClaudeSkills(fs, projectRoot)
+		scanClaudeSkills(fs, projectRoot),
+		scanClaudeAgentDefs(fs, projectRoot),
+		statClaudeFolder(fs, projectRoot)
 	]);
 
 	const hasAnyArtifacts =
 		claudeMdPath !== undefined ||
 		rules.length > 0 ||
 		commands.length > 0 ||
-		skills.length > 0;
+		skills.length > 0 ||
+		agentDefinitions.length > 0;
 
-	return { claudeMdPath, rules, commands, skills, hasAnyArtifacts };
+	return { claudeMdPath, rules, commands, skills, agentDefinitions, claudeFolderExists, hasAnyArtifacts };
+}
+
+/**
+ * Check whether `.claude/` directory exists at the project root.
+ * Returns false on any error (directory missing, permission denied, etc.).
+ */
+async function statClaudeFolder(fs: IFileSystem, projectRoot: string): Promise<boolean> {
+	const claudeDir = path.join(projectRoot, '.claude');
+	try {
+		const stat = await fs.stat(claudeDir);
+		return stat.type === FileType.Directory;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Scan `.claude/agents/*.md` (flat, no recursion) for project-level agent definitions.
+ */
+async function scanClaudeAgentDefs(fs: IFileSystem, projectRoot: string): Promise<CoreAgentDefinition[]> {
+	const agentsDir = path.join(projectRoot, '.claude', 'agents');
+	const filePaths = await listFilesFlat(fs, agentsDir, ['.md'], ['README.md']);
+
+	const sorted = [...filePaths].sort((a, b) => {
+		const na = path.basename(a, '.md');
+		const nb = path.basename(b, '.md');
+		return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+	});
+
+	const results: CoreAgentDefinition[] = [];
+	for (const filePath of sorted) {
+		const base = path.basename(filePath);
+		const displayName = path.basename(base, '.md');
+		try {
+			const content = await fs.readFile(filePath);
+			const text = content.toString('utf8');
+			results.push({
+				path: filePath,
+				content: text,
+				fileName: displayName,
+				displayName
+			});
+		} catch {
+			results.push({
+				path: filePath,
+				content: 'Error reading file content',
+				fileName: displayName,
+				displayName
+			});
+		}
+	}
+	return results;
 }
 
 async function statClaudeMd(fs: IFileSystem, projectRoot: string): Promise<string | undefined> {

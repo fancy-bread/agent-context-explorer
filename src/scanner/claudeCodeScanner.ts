@@ -1,11 +1,12 @@
 // Claude Code project-level artifact scanner
-// Scans CLAUDE.md, .claude/rules/, .claude/commands/, .claude/skills/
+// Scans CLAUDE.md, .claude/rules/, .claude/commands/, .claude/skills/, .claude/agents/
 import * as vscode from 'vscode';
 import { VSCodeFsAdapter } from './adapters/vscodeFsAdapter';
 import { scanClaudeCodeCore } from './core/scanClaudeCodeCore';
 import type { Rule } from './rulesScanner';
 import type { Command } from './commandsScanner';
 import type { Skill } from './skillsScanner';
+import type { AgentDefinition } from './agentsScanner';
 
 export interface ClaudeMdFile {
 	uri: vscode.Uri;
@@ -17,6 +18,8 @@ export interface ClaudeCodeArtifacts {
 	rules: Rule[];
 	commands: Command[];
 	skills: Skill[];
+	agentDefinitions: AgentDefinition[];
+	claudeFolderExists: boolean;
 	hasAnyArtifacts: boolean;
 }
 
@@ -51,10 +54,25 @@ export class ClaudeCodeScanner {
 					location: 'workspace' as const,
 					metadata: s.metadata
 				})),
+				agentDefinitions: core.agentDefinitions.map(ad => ({
+					uri: vscode.Uri.file(ad.path),
+					content: ad.content,
+					fileName: ad.fileName,
+					displayName: ad.displayName
+				})),
+				claudeFolderExists: core.claudeFolderExists,
 				hasAnyArtifacts: core.hasAnyArtifacts
 			};
 		} catch {
-			return { claudeMd: undefined, rules: [], commands: [], skills: [], hasAnyArtifacts: false };
+			return {
+				claudeMd: undefined,
+				rules: [],
+				commands: [],
+				skills: [],
+				agentDefinitions: [],
+				claudeFolderExists: false,
+				hasAnyArtifacts: false
+			};
 		}
 	}
 
@@ -63,6 +81,7 @@ export class ClaudeCodeScanner {
 			'.claude/rules/**/*.{mdc,md}',
 			'.claude/commands/*.md',
 			'.claude/skills/*/SKILL.md',
+			'.claude/agents/*.md',
 			'CLAUDE.md'
 		];
 

@@ -404,3 +404,121 @@ describe('scanClaudeCodeCore — readFile error paths (mock fs)', () => {
 		assert.equal(result.commands[0].content, 'Error reading file content');
 	});
 });
+
+describe('scanClaudeCodeCore — agentDefinitions (spec 008)', () => {
+	let tmpDir: string;
+	const fs = new NodeFsAdapter();
+
+	beforeEach(async () => {
+		tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'ace-claude-agents-'));
+	});
+
+	afterEach(async () => {
+		await fsp.rm(tmpDir, { recursive: true, force: true });
+	});
+
+	it('scans .claude/agents/ for flat .md files', async () => {
+		const agentsDir = path.join(tmpDir, '.claude', 'agents');
+		await fsp.mkdir(agentsDir, { recursive: true });
+		await fsp.writeFile(path.join(agentsDir, 'my-agent.md'), '# My Agent\n\nDoes things.');
+		await fsp.writeFile(path.join(agentsDir, 'another-agent.md'), '# Another Agent\n');
+
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.agentDefinitions.length, 2);
+		const names = result.agentDefinitions.map(a => a.fileName).sort();
+		assert.deepEqual(names, ['another-agent', 'my-agent']);
+	});
+
+	it('agent definitions are sorted alphabetically by displayName', async () => {
+		const agentsDir = path.join(tmpDir, '.claude', 'agents');
+		await fsp.mkdir(agentsDir, { recursive: true });
+		await fsp.writeFile(path.join(agentsDir, 'zebra.md'), '# Zebra');
+		await fsp.writeFile(path.join(agentsDir, 'alpha.md'), '# Alpha');
+		await fsp.writeFile(path.join(agentsDir, 'mango.md'), '# Mango');
+
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		const names = result.agentDefinitions.map(a => a.fileName);
+		assert.deepEqual(names, ['alpha', 'mango', 'zebra']);
+	});
+
+	it('reads agent definition content correctly', async () => {
+		const agentsDir = path.join(tmpDir, '.claude', 'agents');
+		await fsp.mkdir(agentsDir, { recursive: true });
+		const body = '# My Agent\n\nDoes useful things.';
+		await fsp.writeFile(path.join(agentsDir, 'my-agent.md'), body);
+
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.agentDefinitions[0].content, body);
+		assert.equal(result.agentDefinitions[0].displayName, 'my-agent');
+	});
+
+	it('excludes README.md from agent definitions', async () => {
+		const agentsDir = path.join(tmpDir, '.claude', 'agents');
+		await fsp.mkdir(agentsDir, { recursive: true });
+		await fsp.writeFile(path.join(agentsDir, 'README.md'), '# Readme');
+		await fsp.writeFile(path.join(agentsDir, 'real-agent.md'), '# Real Agent');
+
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.agentDefinitions.length, 1);
+		assert.equal(result.agentDefinitions[0].fileName, 'real-agent');
+	});
+
+	it('returns empty array when .claude/agents/ is absent', async () => {
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.deepEqual(result.agentDefinitions, []);
+	});
+
+	it('returns empty array when .claude/agents/ exists but is empty', async () => {
+		await fsp.mkdir(path.join(tmpDir, '.claude', 'agents'), { recursive: true });
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.deepEqual(result.agentDefinitions, []);
+	});
+
+	it('hasAnyArtifacts is true when only agentDefinitions are present', async () => {
+		const agentsDir = path.join(tmpDir, '.claude', 'agents');
+		await fsp.mkdir(agentsDir, { recursive: true });
+		await fsp.writeFile(path.join(agentsDir, 'agent.md'), '# Agent');
+
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.hasAnyArtifacts, true);
+	});
+});
+
+describe('scanClaudeCodeCore — claudeFolderExists (spec 008)', () => {
+	let tmpDir: string;
+	const fs = new NodeFsAdapter();
+
+	beforeEach(async () => {
+		tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'ace-claude-folder-'));
+	});
+
+	afterEach(async () => {
+		await fsp.rm(tmpDir, { recursive: true, force: true });
+	});
+
+	it('claudeFolderExists is true when .claude/ directory exists', async () => {
+		await fsp.mkdir(path.join(tmpDir, '.claude'), { recursive: true });
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.claudeFolderExists, true);
+	});
+
+	it('claudeFolderExists is false when .claude/ directory is absent', async () => {
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.claudeFolderExists, false);
+	});
+
+	it('claudeFolderExists is false when .claude is a file (not a directory)', async () => {
+		await fsp.writeFile(path.join(tmpDir, '.claude'), 'not a dir');
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.claudeFolderExists, false);
+	});
+
+	it('claudeFolderExists is true even if .claude/ is empty (no artifacts inside)', async () => {
+		await fsp.mkdir(path.join(tmpDir, '.claude'), { recursive: true });
+		const result = await scanClaudeCodeCore(fs, tmpDir);
+		assert.equal(result.claudeFolderExists, true);
+		// Folder present, artifacts may still be empty
+		assert.deepEqual(result.agentDefinitions, []);
+		assert.deepEqual(result.rules, []);
+	});
+});

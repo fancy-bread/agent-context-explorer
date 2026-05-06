@@ -48,6 +48,7 @@ class XxxScanner {
 | `CommandsScanner` | `.md` files | `.cursor/commands/`, `~/.cursor/commands/` | Workspace and global commands |
 | `SkillsScanner` | `SKILL.md` files | `.cursor/skills/*/`, `~/.cursor/skills/*/` | Workspace and global skills (structured workflows) |
 | `AgentsScanner` + `scanAgentDefinitionsCore` | Flat `*.md` (non-recursive) | `{root}/.cursor/agents/` (workspace); per agent root `agents/` (e.g. `~/.cursor/agents`, `~/.claude/agents`, `~/.agents/agents`) | Agent definition files for tree + MCP ([004](../004-agents-view-scan/contracts/agent-definitions.md)) |
+| `ClaudeCodeScanner` + `scanClaudeCodeCore` | `CLAUDE.md`, `.mdc`/`.md` rules, `.md` commands, `SKILL.md` skills, flat `*.md` agents | `{root}/CLAUDE.md`, `{root}/.claude/rules/` (recursive), `{root}/.claude/commands/` (flat), `{root}/.claude/skills/*/` (one level), `{root}/.claude/agents/` (flat) | Claude Code project-level artifacts (spec 006); project-level Claude agent definitions (spec 008) |
 | `AsdlcArtifactScanner` | `AGENTS.md`, `spec.md`, `.json` | Root, `specs/`, `schemas/` | Explicit project context artifacts |
 
 #### Unified Scanning (FB-75)
@@ -65,7 +66,8 @@ Extension and MCP standalone share a **scanner core** behind a filesystem abstra
 - Rules: `{projectRoot}/.cursor/rules/` only (recursive within rules/)
 - Commands: `{projectRoot}/.cursor/commands/` and `~/.cursor/commands/` (flat)
 - Skills: `{projectRoot}/.cursor/skills/` and `~/.cursor/skills/` (one level)
-- Agent definitions: `{projectRoot}/.cursor/agents/*.md` (flat); agent roots use each root’s `agents/*.md` (see [004 research](../004-agents-view-scan/research.md))
+- Agent definitions (Cursor workspace): `{projectRoot}/.cursor/agents/*.md` (flat); agent roots use each root’s `agents/*.md` (see [004 research](../004-agents-view-scan/research.md))
+- Agent definitions (Claude project-level): `{projectRoot}/.claude/agents/*.md` (flat, same convention as Cursor agents; scanned by `scanClaudeCodeCore` as part of Claude Code project artifacts)
 - ASDLC: `{projectRoot}/AGENTS.md`, `specs/`, `schemas/`
 
 **Exclusions**: Paths under `test/fixtures/` or outside project/user `.cursor` are never scanned.

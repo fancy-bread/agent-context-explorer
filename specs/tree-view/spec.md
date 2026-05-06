@@ -34,30 +34,40 @@ graph TB
     subgraph WorkspaceView["Workspaces (view 1)"]
         WRoot["Project list (root)"]
         Proj["Project A"]
-        Cursor["Cursor"]
-        Specs["Specs (flat)"]
+        Cursor["Cursor (if .cursor/ exists)"]
+        Claude["Claude (if .claude/ exists)"]
+        Specs["Specs (flat, always shown)"]
         Proj --> Cursor
+        Proj --> Claude
         Proj --> Specs
         WRoot --> Proj
     end
 
     subgraph AgentsView["Agents (view 2)"]
         ARoot["Agent roots (root)"]
-        CursorNode["Cursor"]
-        ClaudeNode["Claude"]
-        GlobalNode["Global"]
+        CursorNode["Cursor (if ~/.cursor/ exists)"]
+        ClaudeNode["Claude (if ~/.claude/ exists)"]
+        GlobalNode["Global (if ~/.agents/ exists)"]
         ARoot --> CursorNode
         ARoot --> ClaudeNode
         ARoot --> GlobalNode
     end
 ```
 
-- **Workspaces**: Root = list of added projects (no “Workspaces” wrapper). Per project: **Cursor** (local commands, rules, skills, **Agents** / agent definitions), **Specs** (flat list of `specs/*/spec.md`). Toolbar: Add (add project), Refresh.
+- **Workspaces**: Root = list of added projects (no “Workspaces” wrapper). Per project: **Cursor** (local commands, rules, skills, **Agents** / agent definitions — shown only if `.cursor/` folder exists), **Claude** (CLAUDE.md, agents, rules, commands, skills from `.claude/` — shown only if `.claude/` folder exists), **Specs** (flat list of `specs/*/spec.md`, always shown regardless of platform folders). Toolbar: Add (add project), Refresh.
 - **Agents**: Root = one node per existing agent root (e.g. Cursor, Claude) plus Global when that directory exists. Under each: same structure (Commands, Skills, **Agents**, etc.). Toolbar: Refresh only.
+
+#### Platform Section Gating
+
+In the Workspaces view, platform sections (Cursor, Claude) are shown **if and only if their root folder exists** at the project root — folder presence is the gate, not artifact presence. If `.cursor/` is absent, the Cursor section is hidden entirely. If `.claude/` is absent, the Claude section is hidden entirely. The Specs node is **not** platform-gated — it appears independently when `specs/*/spec.md` files exist.
+
+Artifact-level subsections *within* a present platform (e.g. Claude → Agents when `.claude/` exists but `.claude/agents/` is empty) use **empty-state messaging** rather than hiding.
+
+Existence is checked via `vscode.workspace.fs.stat()` at scan time (parallel with other scans, no sequential blocking). Dynamic detection of new root folders requires a manual Refresh.
 
 #### Workspace Branch (per project)
 
-Under each project, the tree does not show global commands or skills. **Cursor** shows Commands, Rules, Skills, and **Agents** (agent-definition files) from that project only, ordered alphabetically by section label. The **Specs** node is a **single collapsible sibling** beside Cursor; expanding it lists spec domains (`specs/<domain>/spec.md`) directly — no intermediate nested folders and no `schemas/` in the tree.
+Under each project, the tree does not show global commands or skills. **Cursor** shows Commands, Rules, Skills, and **Agents** (agent-definition files from `.cursor/agents/`) — all from that project only, ordered alphabetically by section label. **Claude** shows CLAUDE.md (if present), Agents (`.claude/agents/`, always shown within the Claude section), Rules, Commands, and Skills — ordered alphabetically with CLAUDE.md first. The **Specs** node is a **single collapsible sibling** beside Cursor and Claude; expanding it lists spec domains (`specs/<domain>/spec.md`) directly — no intermediate nested folders and no `schemas/` in the tree.
 
 #### Agents Branch
 
@@ -93,7 +103,7 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 
 - [ ] Two distinct sidebar views: Workspaces and Agents (separate trees).
 - [ ] Workspace view root shows the project list only; toolbar has Add and Refresh.
-- [ ] Under each project: Cursor (local commands, rules, skills, **Agents** / agent definitions only), Specs (flat `specs/` list).
+- [ ] Under each project: Cursor (local commands, rules, skills, **Agents** / agent definitions only — shown iff `.cursor/` exists), Claude (CLAUDE.md, agents, rules, commands, skills — shown iff `.claude/` exists), Specs (flat `specs/` list, always shown).
 - [ ] Agents view root shows agent roots (e.g. Cursor, Claude) + Global when directories exist; toolbar has Refresh only.
 - [ ] Under each agent root and Global: same structural categories (Commands, Skills, **Agents**, etc.).
 - [ ] Empty and missing-artifact cases show clear empty/unavailable state, no user-facing errors.
@@ -109,6 +119,8 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 
 3. **Agents view is additive.** Only show agent roots and Global when the corresponding directories exist. Missing directories MUST NOT produce errors.
 
+6. **Platform section gating.** In the Workspaces view, the Cursor section MUST be hidden when `.cursor/` is absent; the Claude section MUST be hidden when `.claude/` is absent. The Specs section MUST remain visible regardless of platform folder presence. Existence checks MUST use `vscode.workspace.fs.stat()`, not `fs.existsSync()`.
+
 4. **Toolbar split.** Add (add project) MUST NOT appear in the Agents view. Refresh MAY appear in both views and MUST refresh only the data for that view.
 
 5. **Viewer-only.** Tree MUST NOT offer create, edit, or delete for rules, commands, skills, or specs.
@@ -118,7 +130,7 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 **Scenario: User opens Workspace view**
 - **Given**: At least one project is added
 - **When**: User opens the Workspaces view
-- **Then**: Root shows the project list (no wrapper node); expanding a project shows Cursor and Specs
+- **Then**: Root shows the project list (no wrapper node); expanding a project shows Cursor (if `.cursor/` exists), Claude (if `.claude/` exists), and Specs
 
 **Scenario: User expands Cursor under a project**
 - **Given**: Project has local commands, rules, skills, and optional `.cursor/agents/*.md`
@@ -144,6 +156,26 @@ Agent roots (e.g. Cursor, Claude) and Global are known directories; each is show
 - **Given**: e.g. Claude directory is missing
 - **When**: User opens Agents view
 - **Then**: Claude node is not shown (or is clearly unavailable); no error
+
+**Scenario: Cursor section hidden when .cursor/ absent**
+- **Given**: Project has `.claude/` present but no `.cursor/` directory
+- **When**: User expands that project in the Workspaces view
+- **Then**: The Claude section is shown; the Cursor section is absent; the Specs node is shown if specs exist
+
+**Scenario: Claude section hidden when .claude/ absent**
+- **Given**: Project has `.cursor/` present but no `.claude/` directory
+- **When**: User expands that project in the Workspaces view
+- **Then**: The Cursor section is shown; the Claude section is absent
+
+**Scenario: Project with neither .cursor/ nor .claude/**
+- **Given**: Project has neither `.cursor/` nor `.claude/` directories
+- **When**: User expands that project in the Workspaces view
+- **Then**: Only the Specs section is shown (if specs exist); no Cursor or Claude section; no error
+
+**Scenario: Claude Agents subsection shows files**
+- **Given**: Project has `.claude/` present and `.claude/agents/my-agent.md` exists
+- **When**: User expands Claude → Agents
+- **Then**: `my-agent` leaf appears with hubot icon; clicking opens the file in the editor
 
 **Scenario: No projects added**
 - **Given**: No projects in the list
