@@ -52,12 +52,15 @@ export function findAgentDefinitionByName(items: TaggedAgentDefinition[], name: 
 	});
 }
 
-/** Find a spec domain folder by `list_specs` domain or path fragment (MCP get_spec). */
+/** Find a spec domain folder by `list_specs` domain or path fragment (MCP get_spec).
+ * Exact domain match is always preferred over path-fragment fallback to avoid
+ * ambiguous substring matches (e.g. domain "mcp" matching path "009-single-mcp-server"). */
 export function findSpecByName(specs: SpecFile[], name: string): SpecFile | undefined {
 	const normalized = name.toLowerCase().replace(/\.md$/, '').replace(/\/spec\.md$/i, '');
 	const needle = name.toLowerCase();
-	return specs.find((s) => {
+	const exact = specs.find((s) => {
 		const domain = s.domain.toLowerCase();
-		return domain === normalized || domain === needle || s.path.toLowerCase().includes(needle);
+		return domain === normalized || domain === needle;
 	});
+	return exact ?? specs.find((s) => s.path.toLowerCase().includes(needle));
 }
