@@ -70,7 +70,7 @@ describe('mcp/mcpServerProvider', () => {
 		vscodeMod.McpStdioServerDefinition = originalMcpStdio;
 	});
 
-	it('provideMcpServerDefinitions returns one definition per workspace folder', async () => {
+	it('provideMcpServerDefinitions returns exactly one definition for 2 workspace folders', async () => {
 		const { McpServerProvider } = requireProviderModule();
 		const ctx = makeContext();
 		const getProjects = async (): Promise<ProjectDefinition[]> => [];
@@ -82,10 +82,11 @@ describe('mcp/mcpServerProvider', () => {
 		]);
 
 		const defs = await provider.provideMcpServerDefinitions();
-		assert.strictEqual(defs.length, 2);
+		assert.strictEqual(defs.length, 1);
 		const d0: any = defs[0];
+		assert.strictEqual(d0.name, 'Agent Context Explorer');
 		assert.ok(d0.args[0].endsWith('/out/mcp/server.js'));
-		assert.ok(d0.env.ACE_WORKSPACE_PATH);
+		assert.strictEqual(d0.env.ACE_WORKSPACE_PATH, undefined);
 	});
 
 	it('provideMcpServerDefinitions returns minimal definition when no workspaceFolders (undefined)', async () => {
@@ -168,7 +169,7 @@ describe('mcp/mcpServerProvider', () => {
 		assert.deepStrictEqual(registered, ['ace']);
 	});
 
-	it('syncCursorRegistration uses ace-<folder> when multiple roots', async () => {
+	it('syncCursorRegistration registers exactly one ace server for multiple roots', async () => {
 		const { McpServerProvider } = requireProviderModule();
 		const registered: string[] = [];
 		vscodeMod.cursor = {
@@ -186,7 +187,7 @@ describe('mcp/mcpServerProvider', () => {
 
 		const provider = new McpServerProvider(makeContext() as any, async () => []);
 		await provider.syncCursorRegistration();
-		assert.deepStrictEqual(registered.sort(), ['ace-A', 'ace-B'].sort());
+		assert.deepStrictEqual(registered, ['ace']);
 	});
 
 	it('dispose unregisters cursor servers when API present', async () => {
@@ -296,6 +297,81 @@ describe('mcp/mcpServerProvider', () => {
 		const server = new vscodeMod.McpStdioServerDefinition('ACE', 'node', [], {}, '1.0.0');
 		const out = await provider.resolveMcpServerDefinition(server as any);
 		assert.strictEqual(out, server);
+	});
+
+	// Single-server invariant: SC-005 — exactly one definition for 0, 1, and 2+ folders
+	it('provideMcpServerDefinitions returns exactly 1 definition for 0 workspace folders (empty array)', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		vscodeMod.workspace.workspaceFolders = [];
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		const defs = await provider.provideMcpServerDefinitions();
+		assert.strictEqual(defs.length, 1);
+		assert.strictEqual((defs[0] as any).name, 'Agent Context Explorer');
+		assert.strictEqual((defs[0] as any).env.ACE_WORKSPACE_PATH, undefined);
+	});
+
+	it('provideMcpServerDefinitions returns exactly 1 definition for 1 workspace folder', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		setWorkspaceFolders([{ name: 'Solo', fsPath: '/ws/solo' }]);
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		const defs = await provider.provideMcpServerDefinitions();
+		assert.strictEqual(defs.length, 1);
+		assert.strictEqual((defs[0] as any).name, 'Agent Context Explorer');
+		assert.strictEqual((defs[0] as any).env.ACE_WORKSPACE_PATH, undefined);
+	});
+
+	it('syncCursorRegistration calls registerServer exactly once with name ace for 0 folders', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const calls: unknown[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: unknown) => { calls.push(c); },
+				unregisterServer: () => {}
+			}
+		};
+		vscodeMod.workspace.workspaceFolders = [];
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.strictEqual(calls.length, 1);
+		assert.strictEqual((calls[0] as any).name, 'ace');
+		assert.strictEqual((calls[0] as any).server.env.ACE_WORKSPACE_PATH, undefined);
+	});
+
+	it('syncCursorRegistration calls registerServer exactly once with name ace for 1 folder', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const calls: unknown[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: unknown) => { calls.push(c); },
+				unregisterServer: () => {}
+			}
+		};
+		setWorkspaceFolders([{ name: 'Solo', fsPath: '/ws/solo' }]);
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.strictEqual(calls.length, 1);
+		assert.strictEqual((calls[0] as any).name, 'ace');
+		assert.strictEqual((calls[0] as any).server.env.ACE_WORKSPACE_PATH, undefined);
+	});
+
+	it('syncCursorRegistration calls registerServer exactly once with name ace for 2 folders', async () => {
+		const { McpServerProvider } = requireProviderModule();
+		const calls: unknown[] = [];
+		vscodeMod.cursor = {
+			mcp: {
+				registerServer: (c: unknown) => { calls.push(c); },
+				unregisterServer: () => {}
+			}
+		};
+		setWorkspaceFolders([
+			{ name: 'A', fsPath: '/ws/a' },
+			{ name: 'B', fsPath: '/ws/b' }
+		]);
+		const provider = new McpServerProvider(makeContext() as any, async () => []);
+		await provider.syncCursorRegistration();
+		assert.strictEqual(calls.length, 1);
+		assert.strictEqual((calls[0] as any).name, 'ace');
+		assert.strictEqual((calls[0] as any).server.env.ACE_WORKSPACE_PATH, undefined);
 	});
 
 	it('ensureBackendOrFallback uses ACE_PROJECT_PATHS when backend start fails', async () => {
