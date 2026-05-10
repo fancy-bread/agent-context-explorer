@@ -67,15 +67,7 @@ Automates the mechanical steps of cutting a release so nothing is forgotten and 
   git commit -m "chore: prepare {version} release"
   ```
 
-### 7. Tag locally
-
-- Create an annotated tag on the release commit:
-  ```bash
-  git tag v{version}
-  ```
-- Do NOT push the tag yet.
-
-### 8. Report
+### 7. Report
 
 Print a summary:
 ```
@@ -86,12 +78,10 @@ Files committed:
   package.json
   package-lock.json
 
-Tag v{version} created locally (not pushed).
-
 Next steps:
   1. Push branch and open a PR:   git push -u origin chore/release-{version}
   2. After PR merges, pull main:  git checkout main && git pull
-  3. Retag on main HEAD:          git tag -d v{version} && git tag v{version} && git push origin v{version}
+  3. Tag on main HEAD:            git tag v{version} && git push origin v{version}
   4. Create GitHub release:       gh release create v{version} --title "v{version}" --notes "$(awk '/^## \[{version}\]/{found=1; next} found && /^## \[/{exit} found{print}' CHANGELOG.md)" --latest
   5. CD pipeline fires on release publish and publishes to VS Code Marketplace.
 ```
