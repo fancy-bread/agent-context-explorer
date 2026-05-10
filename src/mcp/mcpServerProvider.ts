@@ -70,45 +70,26 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 	 */
 	async provideMcpServerDefinitions(): Promise<vscode.McpServerDefinition[]> {
 		const serverScript = path.join(this.context.extensionPath, 'out', 'mcp', 'server.js');
-		const workspaceFolders = vscode.workspace.workspaceFolders || [];
 		let envBase: Record<string, string> = {};
 		try {
 			const result = await this.ensureBackendOrFallback();
 			envBase = result.env;
 			const mode = result.port !== undefined ? 'bridge' : 'standalone';
-			this.outputChannel?.appendLine(`MCP: provideMcpServerDefinitions -> ${mode} (${workspaceFolders.length} folder(s))`);
+			this.outputChannel?.appendLine(`MCP: provideMcpServerDefinitions -> ${mode}`);
 		} catch (e) {
 			this.outputChannel?.appendLine(`MCP: provideMcpServerDefinitions error: ${e instanceof Error ? e.message : String(e)}`);
 			envBase = {};
 		}
 
-		const definitions: vscode.McpServerDefinition[] = [];
-		for (const folder of workspaceFolders) {
-			const env: Record<string, string> = { ACE_WORKSPACE_PATH: folder.uri.fsPath, ...envBase };
-			definitions.push(
-				new vscode.McpStdioServerDefinition(
-					`ACE: ${folder.name}`,
-					'node',
-					[serverScript, folder.uri.fsPath],
-					env,
-					'1.0.0'
-				)
-			);
-		}
-
-		if (definitions.length === 0 && vscode.workspace.workspaceFolders === undefined) {
-			definitions.push(
-				new vscode.McpStdioServerDefinition(
-					'Agent Context Explorer',
-					'node',
-					[serverScript],
-					envBase,
-					'1.0.0'
-				)
-			);
-		}
-
-		return definitions;
+		return [
+			new vscode.McpStdioServerDefinition(
+				'Agent Context Explorer',
+				'node',
+				[serverScript],
+				envBase,
+				'1.0.0'
+			)
+		];
 	}
 
 	/**
@@ -152,7 +133,6 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 		}
 		try {
 			const serverScript = path.join(this.context.extensionPath, 'out', 'mcp', 'server.js');
-			const folders = vscode.workspace.workspaceFolders ?? [];
 			const { env: envBase } = await this.ensureBackendOrFallback();
 
 			for (const name of this.cursorServerNames) {
@@ -164,32 +144,15 @@ export class McpServerProvider implements vscode.McpServerDefinitionProvider {
 			}
 			this.cursorServerNames = [];
 
-			if (folders.length === 0) {
-				cursorMcp.registerServer({
-					name: 'ace',
-					server: {
-						command: 'node',
-						args: [serverScript],
-						env: envBase
-					}
-				});
-				this.cursorServerNames.push('ace');
-				return;
-			}
-
-			for (const folder of folders) {
-				const name = folders.length === 1 ? 'ace' : `ace-${folder.name}`;
-				const env: Record<string, string> = { ACE_WORKSPACE_PATH: folder.uri.fsPath, ...envBase };
-				cursorMcp.registerServer({
-					name,
-					server: {
-						command: 'node',
-						args: [serverScript, folder.uri.fsPath],
-						env
-					}
-				});
-				this.cursorServerNames.push(name);
-			}
+			cursorMcp.registerServer({
+				name: 'ace',
+				server: {
+					command: 'node',
+					args: [serverScript],
+					env: envBase
+				}
+			});
+			this.cursorServerNames.push('ace');
 		} catch (err) {
 			console.warn('ACE MCP: syncCursorRegistration failed', err);
 		}

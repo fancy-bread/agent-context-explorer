@@ -170,6 +170,8 @@ RuleContent { ...RuleInfo, content }
 
 6. **Tools-only surface**: The MCP server MUST NOT register MCP resources for rules, commands, skills, AGENTS.md, specs, or schemas. Context is provided only via tool calls.
 
+7. **Single server**: ACE MUST register exactly one MCP server (`ace`) regardless of the number of open workspace folders. Multi-project access is provided via `list_projects` + `projectKey`, not via multiple server registrations.
+
 ### Scenarios
 
 **Scenario: Agent requests all rules**
