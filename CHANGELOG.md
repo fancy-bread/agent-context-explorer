@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-05-10
 
 ### Added
-- Single MCP server consolidation (spec 009): all MCP capabilities now served from a single unified endpoint
 - Release-prep automation skill for cutting releases from a branch without manual steps
 
 ### Fixed
+- Single MCP server consolidation (spec 009): all MCP capabilities now served from a single unified endpoint
 - `get_spec` exact-match priority — spec lookup now correctly prefers exact slug matches before falling back to partial matches
 
 ## [1.2.0] - 2026-05-05

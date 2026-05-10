@@ -32,7 +32,10 @@ Automates the mechanical steps of cutting a release so nothing is forgotten and 
 
 ### 3. Verify package.json and package-lock.json
 
-- Read `version` from `package.json`. If it does not match the target version, stop and tell the user to bump the version first (`npm version {version} --no-git-tag-version`).
+- Read `version` from `package.json`. If it does not match the target version, run:
+  ```bash
+  npm version {version} --no-git-tag-version
+  ```
 - Confirm `package-lock.json` `version` field also matches. If it doesn't, run `npm install --package-lock-only` to sync it.
 - Stage both files: `git add package.json package-lock.json`
 
@@ -91,5 +94,5 @@ Next steps:
 - **NEVER commit directly to main.** Always use `chore/release-{version}` branch.
 - **NEVER push the tag before the PR merges.** The tag must point to the merge commit on main.
 - **NEVER modify existing CHANGELOG sections** — only prepend the new one.
-- If `package.json` version does not match the target, stop immediately and tell the user. Do not bump the version automatically.
+- If `package.json` version does not match the target, bump it automatically with `npm version {version} --no-git-tag-version`.
 - If there are unstaged changes unrelated to the release files, warn the user but do not stage them.
