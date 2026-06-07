@@ -30,7 +30,8 @@ describe('AgentsTreeProvider root level', () => {
 				icon: 'symbol-namespace',
 				commands: [],
 				skills: [],
-				agentDefinitions: []
+				agentDefinitions: [],
+				mcpServers: []
 			},
 			{
 				id: 'global',
@@ -39,7 +40,8 @@ describe('AgentsTreeProvider root level', () => {
 				icon: 'globe',
 				commands: [],
 				skills: [],
-				agentDefinitions: []
+				agentDefinitions: [],
+				mcpServers: []
 			}
 		];
 
@@ -55,8 +57,8 @@ describe('AgentsTreeProvider root level', () => {
 	it('uses globe icon for global root id and desktop icon for others', async () => {
 		const provider = new AgentsTreeProvider();
 		provider.setAgentRoots([
-			{ id: 'cursor', label: 'C', description: '', commands: [], skills: [], agentDefinitions: [] },
-			{ id: 'global', label: 'G', description: '', commands: [], skills: [], agentDefinitions: [] }
+			{ id: 'cursor', label: 'C', description: '', commands: [], skills: [], agentDefinitions: [], mcpServers: [] },
+			{ id: 'global', label: 'G', description: '', commands: [], skills: [], agentDefinitions: [], mcpServers: [] }
 		]);
 		const roots = await provider.getChildren(undefined);
 		const cursorIcon = (roots[0].iconPath as vscode.ThemeIcon).id;
@@ -74,7 +76,7 @@ describe('AgentsTreeProvider sections under agent root', () => {
 		return item;
 	}
 
-	it('returns Agents, Commands, and Skills nodes (alphabetical) for a populated agent root', async () => {
+	it('returns Agents, Commands, MCP, and Skills nodes (alphabetical) for a populated agent root', async () => {
 		const provider = new AgentsTreeProvider();
 		const roots: AgentRootDefinition[] = [
 			{
@@ -84,7 +86,8 @@ describe('AgentsTreeProvider sections under agent root', () => {
 				icon: 'symbol-namespace',
 				commands: [] as Command[],
 				skills: [] as Skill[],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -93,15 +96,17 @@ describe('AgentsTreeProvider sections under agent root', () => {
 
 		const children = await provider.getChildren(rootItem);
 
-		assert.strictEqual(children.length, 3);
+		assert.strictEqual(children.length, 4);
 		const labels = children.map(c => c.label).sort();
-		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'Skills']);
+		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'MCP', 'Skills']);
 		const agentsNode = children.find(c => c.label === 'Agents')!;
 		const commandsNode = children.find(c => c.label === 'Commands')!;
 		const skillsNode = children.find(c => c.label === 'Skills')!;
+		const mcpNode = children.find(c => c.label === 'MCP')!;
 		assert.strictEqual(agentsNode.contextValue, 'agent-agents');
 		assert.strictEqual(commandsNode.contextValue, 'agent-commands');
 		assert.strictEqual(skillsNode.contextValue, 'agent-skills');
+		assert.strictEqual(mcpNode.contextValue, 'agent-mcp');
 	});
 
 	it('uses Collapsed state when commands or skills arrays are non-empty', async () => {
@@ -114,7 +119,8 @@ describe('AgentsTreeProvider sections under agent root', () => {
 			description: '',
 			commands: [{ uri: cmdUri, content: 'x', fileName: 'a.md', location: 'workspace' } as Command],
 			skills: [{ uri: skillUri, content: '', fileName: 'sk', location: 'workspace', metadata: {} } as Skill],
-			agentDefinitions: [] as AgentDefinition[]
+			agentDefinitions: [] as AgentDefinition[],
+			mcpServers: []
 		}]);
 		const sections = await provider.getChildren(createRootItem('cursor'));
 		const commandsNode = sections.find(c => c.label === 'Commands')!;
@@ -125,7 +131,7 @@ describe('AgentsTreeProvider sections under agent root', () => {
 
 	it('returns no children when agentRootId does not match any root', async () => {
 		const provider = new AgentsTreeProvider();
-		provider.setAgentRoots([{ id: 'cursor', label: 'C', description: '', commands: [], skills: [], agentDefinitions: [] }]);
+		provider.setAgentRoots([{ id: 'cursor', label: 'C', description: '', commands: [], skills: [], agentDefinitions: [], mcpServers: [] }]);
 		const stale = createRootItem('missing-id');
 		assert.deepStrictEqual(await provider.getChildren(stale), []);
 	});
@@ -150,7 +156,8 @@ describe('AgentsTreeProvider commands section', () => {
 				icon: 'symbol-namespace',
 				commands: [] as Command[],
 				skills: [] as Skill[],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -179,7 +186,8 @@ describe('AgentsTreeProvider commands section', () => {
 					location: 'global'
 				} as Command],
 				skills: [] as Skill[],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -214,7 +222,8 @@ describe('AgentsTreeProvider skills section', () => {
 				icon: 'symbol-namespace',
 				commands: [] as Command[],
 				skills: [] as Skill[],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -244,7 +253,8 @@ describe('AgentsTreeProvider skills section', () => {
 					location: 'global',
 					metadata: { title: 'Foo Skill', overview: 'Overview' }
 				} as Skill],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -273,7 +283,8 @@ describe('AgentsTreeProvider skills section', () => {
 				location: 'workspace',
 				metadata: { overview: 'O only' }
 			} as Skill],
-			agentDefinitions: []
+			agentDefinitions: [],
+			mcpServers: []
 		}]);
 		const children = await provider.getChildren(createSkillsSection('cursor'));
 		assert.strictEqual(children[0].label, 'named');
@@ -300,7 +311,8 @@ describe('AgentsTreeProvider agents section (agent root)', () => {
 				icon: 'symbol-namespace',
 				commands: [] as Command[],
 				skills: [] as Skill[],
-				agentDefinitions: [] as AgentDefinition[]
+				agentDefinitions: [] as AgentDefinition[],
+				mcpServers: []
 			}
 		];
 
@@ -330,7 +342,8 @@ describe('AgentsTreeProvider agents section (agent root)', () => {
 				icon: 'symbol-namespace',
 				commands: [] as Command[],
 				skills: [] as Skill[],
-				agentDefinitions: [ad]
+				agentDefinitions: [ad],
+				mcpServers: []
 			}
 		];
 
@@ -342,6 +355,121 @@ describe('AgentsTreeProvider agents section (agent root)', () => {
 		assert.strictEqual(children[0].contextValue, 'agent-definition');
 		assert.strictEqual((children[0].iconPath as vscode.ThemeIcon).id, 'hubot');
 		assert.strictEqual(children[0].command?.command, 'vscode.open');
+	});
+});
+
+describe('AgentsTreeProvider MCP section', () => {
+	function createMcpSection(rootId: string): ProjectTreeItem {
+		const item = new vscode.TreeItem('MCP', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+		item.contextValue = 'agent-mcp';
+		item.agentRootId = rootId;
+		item.agentSection = 'mcp';
+		return item;
+	}
+
+	function makeRoot(id: string, mcpServers: string[]): AgentRootDefinition {
+		return {
+			id,
+			label: id === 'claude' ? 'Claude' : 'Cursor',
+			description: '',
+			commands: [],
+			skills: [],
+			agentDefinitions: [],
+			mcpServers
+		};
+	}
+
+	it('sections list includes MCP node alongside Agents, Commands, Skills in alphabetical order', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', [])]);
+
+		const rootItem = new vscode.TreeItem('Claude', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+		rootItem.contextValue = 'agent-root';
+		rootItem.agentRootId = 'claude';
+
+		const sections = await provider.getChildren(rootItem);
+		assert.strictEqual(sections.length, 4);
+		const labels = sections.map(s => s.label as string);
+		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'MCP', 'Skills']);
+	});
+
+	it('MCP section node has contextValue agent-mcp and plug icon', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', ['ace'])]);
+
+		const rootItem = new vscode.TreeItem('Claude', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+		rootItem.contextValue = 'agent-root';
+		rootItem.agentRootId = 'claude';
+
+		const sections = await provider.getChildren(rootItem);
+		const mcpSection = sections.find(s => s.label === 'MCP')!;
+		assert.strictEqual(mcpSection.contextValue, 'agent-mcp');
+		assert.strictEqual((mcpSection.iconPath as vscode.ThemeIcon).id, 'plug');
+	});
+
+	it('MCP section is Collapsed when servers are present, None when empty', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', ['ace', 'other'])]);
+
+		const rootItem = new vscode.TreeItem('Claude', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+		rootItem.contextValue = 'agent-root';
+		rootItem.agentRootId = 'claude';
+
+		const sections = await provider.getChildren(rootItem);
+		const mcpSection = sections.find(s => s.label === 'MCP')!;
+		assert.strictEqual(mcpSection.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+
+		// Empty case
+		provider.setAgentRoots([makeRoot('claude', [])]);
+		const sections2 = await provider.getChildren(rootItem);
+		const mcpSection2 = sections2.find(s => s.label === 'MCP')!;
+		assert.strictEqual(mcpSection2.collapsibleState, vscode.TreeItemCollapsibleState.None);
+	});
+
+	it('MCP section children list server names as mcp-server nodes', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', ['ace', 'my-other-server'])]);
+
+		const mcpSection = createMcpSection('claude');
+		const children = await provider.getChildren(mcpSection);
+
+		assert.strictEqual(children.length, 2);
+		const names = children.map(c => c.label as string).sort();
+		assert.deepStrictEqual(names, ['ace', 'my-other-server']);
+		assert.ok(children.every(c => c.contextValue === 'mcp-server'));
+	});
+
+	it('MCP section children show placeholder when empty', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', [])]);
+
+		const mcpSection = createMcpSection('claude');
+		const children = await provider.getChildren(mcpSection);
+
+		assert.strictEqual(children.length, 1);
+		assert.strictEqual(children[0].label, 'No MCP servers registered');
+	});
+
+	it('MCP section returns empty array when agentRootId does not match', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('claude', ['ace'])]);
+
+		const mcpSection = createMcpSection('nonexistent');
+		const children = await provider.getChildren(mcpSection);
+		assert.deepStrictEqual(children, []);
+	});
+
+	it('MCP section description shows server count', async () => {
+		const provider = new AgentsTreeProvider();
+		provider.setAgentRoots([makeRoot('cursor', ['server-a', 'server-b'])]);
+
+		const rootItem = new vscode.TreeItem('Cursor', vscode.TreeItemCollapsibleState.Collapsed) as ProjectTreeItem;
+		rootItem.contextValue = 'agent-root';
+		rootItem.agentRootId = 'cursor';
+
+		const sections = await provider.getChildren(rootItem);
+		const mcpSection = sections.find(s => s.label === 'MCP')!;
+		assert.strictEqual(mcpSection.description, '2 servers');
 	});
 });
 

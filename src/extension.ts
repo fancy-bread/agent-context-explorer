@@ -24,6 +24,8 @@ import type { AgentRootDefinition } from './providers/agentsTreeProvider';
 import { registerMcpServerProvider, McpServerProvider } from './mcp/mcpServerProvider';
 import { ClaudeCodeScanner } from './scanner/claudeCodeScanner';
 import type { ClaudeCodeArtifacts } from './scanner/claudeCodeScanner';
+import { McpRegistrationScanner } from './scanner/mcpRegistrationScanner';
+import { McpRegistrationService } from './services/mcpRegistrationService';
 
 let treeProvider: ProjectTreeProvider;
 let agentsTreeProvider: AgentsTreeProvider | undefined;
@@ -37,6 +39,7 @@ let projectManager: ProjectManager;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let outputChannel: vscode.OutputChannel;
 let mcpServerProvider: McpServerProvider | undefined;
+let mcpRegistrationService: McpRegistrationService | undefined;
 let isActivated = false;
 let watchersInitialized = false;
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -119,6 +122,30 @@ export function activate(context: vscode.ExtensionContext) {
 	// Lazy scanning: no initial data load, no file watchers at activation.
 	// Watchers and first scan happen when tree view requests data (getChildren).
 
+	// Initialize MCP registration service and show startup prompt if needed.
+	// The prompt only appears if Claude Code is detected (~/.claude/ dir exists) and
+	// ACE is not yet registered (or the registration is stale).
+	const homeDir = os.homedir();
+	const claudeDir = path.join(homeDir, '.claude');
+	mcpRegistrationService = new McpRegistrationService(context.extensionPath, homeDir);
+	void (async () => {
+		try {
+			const stat = await vscode.workspace.fs.stat(vscode.Uri.file(claudeDir));
+			if (stat.type === vscode.FileType.Directory) {
+				await mcpRegistrationService!.promptIfNeeded(() => {
+					// Refresh Agents view after successful registration
+					if (agentsTreeProvider) {
+						resolveAgentRootsWithData().then(roots => {
+							agentsTreeProvider!.setAgentRoots(roots);
+						}).catch(() => { /* silent */ });
+					}
+				});
+			}
+		} catch {
+			// ~/.claude/ does not exist or not accessible — no prompt
+		}
+	})();
+
 	// Add subscriptions
 	context.subscriptions.push(
 		workspacesTreeView,
@@ -170,6 +197,15 @@ async function ensureDataLoaded(): Promise<void> {
 		const globalClaudeAgentsWatcher = setupGlobalClaudeAgentDefinitionsWatcher();
 		if (globalClaudeAgentsWatcher) {
 			extensionContext.subscriptions.push(globalClaudeAgentsWatcher);
+		}
+		// Watchers for MCP config files (FR-009, FR-010)
+		const claudeJsonWatcher = setupClaudeJsonWatcher();
+		if (claudeJsonWatcher) {
+			extensionContext.subscriptions.push(claudeJsonWatcher);
+		}
+		const cursorMcpJsonWatcher = setupCursorMcpJsonWatcher();
+		if (cursorMcpJsonWatcher) {
+			extensionContext.subscriptions.push(cursorMcpJsonWatcher);
 		}
 		const globalDotAgentsCommandsWatcher = setupGlobalDotAgentsCommandsWatcher();
 		if (globalDotAgentsCommandsWatcher) {
@@ -396,6 +432,12 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 	const homeDir = os.homedir();
 	const fsAdapter = new VSCodeFsAdapter();
 
+	// MCP config file paths per agent root
+	const mcpConfigPaths: Record<string, string> = {
+		claude: path.join(homeDir, '.claude.json'),
+		cursor: path.join(homeDir, '.cursor', 'mcp.json')
+	};
+
 	const candidates: Array<{
 		id: string;
 		label: string;
@@ -430,11 +472,15 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				continue;
 			}
 
-			// Scan commands, skills, and agent definitions for this agent root
-			const [coreCommands, coreSkills, agentDefinitions] = await Promise.all([
+			// Scan commands, skills, agent definitions, and MCP servers for this agent root
+			const mcpConfigPath = mcpConfigPaths[candidate.id];
+			const mcpScanner = mcpConfigPath ? new McpRegistrationScanner(mcpConfigPath) : null;
+
+			const [coreCommands, coreSkills, agentDefinitions, mcpServers] = await Promise.all([
 				sampleScanAgentCommands(fsAdapter, candidate.dir),
 				sampleScanAgentSkills(fsAdapter, candidate.dir),
-				scanAgentDefinitionsForAgentRoot(candidate.dir)
+				scanAgentDefinitionsForAgentRoot(candidate.dir),
+				mcpScanner ? mcpScanner.scanServerNames() : Promise.resolve([])
 			]);
 
 			const commands: Command[] = coreCommands.map(c => ({
@@ -459,7 +505,8 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				icon: candidate.icon,
 				commands,
 				skills,
-				agentDefinitions
+				agentDefinitions,
+				mcpServers
 			});
 		} catch {
 			// Directory missing or not accessible; skip this root
@@ -852,6 +899,64 @@ function setupGlobalDotAgentsAgentDefinitionsWatcher(): vscode.FileSystemWatcher
 		return globalDotAgentsAgentsWatcher;
 	} catch (error) {
 		outputChannel.appendLine(`Unable to watch global .agents agents directory: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupClaudeJsonWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch ~/.claude.json for MCP registration changes (FR-009)
+	try {
+		const homeDir = os.homedir();
+		const homeDirUri = vscode.Uri.file(homeDir);
+		const pattern = new vscode.RelativePattern(homeDirUri, '.claude.json');
+		const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+		watcher.onDidCreate(() => {
+			outputChannel.appendLine('~/.claude.json created, refreshing Agents view...');
+			refreshData();
+		});
+		watcher.onDidChange(() => {
+			outputChannel.appendLine('~/.claude.json changed, refreshing Agents view...');
+			refreshData();
+		});
+		watcher.onDidDelete(() => {
+			outputChannel.appendLine('~/.claude.json deleted, refreshing Agents view...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('~/.claude.json file watcher created successfully');
+		return watcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch ~/.claude.json: ${error instanceof Error ? error.message : String(error)}`);
+		return undefined;
+	}
+}
+
+function setupCursorMcpJsonWatcher(): vscode.FileSystemWatcher | undefined {
+	// Watch ~/.cursor/mcp.json for MCP registration changes (FR-010)
+	try {
+		const homeDir = os.homedir();
+		const cursorDir = vscode.Uri.file(path.join(homeDir, '.cursor'));
+		const pattern = new vscode.RelativePattern(cursorDir, 'mcp.json');
+		const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+		watcher.onDidCreate(() => {
+			outputChannel.appendLine('~/.cursor/mcp.json created, refreshing Agents view...');
+			refreshData();
+		});
+		watcher.onDidChange(() => {
+			outputChannel.appendLine('~/.cursor/mcp.json changed, refreshing Agents view...');
+			refreshData();
+		});
+		watcher.onDidDelete(() => {
+			outputChannel.appendLine('~/.cursor/mcp.json deleted, refreshing Agents view...');
+			refreshData();
+		});
+
+		outputChannel.appendLine('~/.cursor/mcp.json file watcher created successfully');
+		return watcher;
+	} catch (error) {
+		outputChannel.appendLine(`Unable to watch ~/.cursor/mcp.json: ${error instanceof Error ? error.message : String(error)}`);
 		return undefined;
 	}
 }
