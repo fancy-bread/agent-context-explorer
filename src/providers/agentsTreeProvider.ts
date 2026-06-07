@@ -13,6 +13,8 @@ export interface AgentRootDefinition {
 	skills: Skill[];
 	/** Flat `agents/*.md` under this agent root (see `scanAgentDefinitionsForAgentRoot`). */
 	agentDefinitions: AgentDefinition[];
+	/** Names of registered MCP servers for this agent root. Read-only; populated by McpRegistrationScanner. */
+	mcpServers: string[];
 }
 
 export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
@@ -105,7 +107,18 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 			skillsNode.iconPath = new vscode.ThemeIcon('lightbulb');
 			skillsNode.description = `${root.skills.length} skills`;
 
-			const sections = [agentsNode, commandsNode, skillsNode];
+			const mcpServers = root.mcpServers ?? [];
+			const mcpNode = new vscode.TreeItem(
+				'MCP',
+				mcpServers.length > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None
+			) as ProjectTreeItem;
+			mcpNode.contextValue = 'agent-mcp';
+			mcpNode.agentRootId = root.id;
+			mcpNode.agentSection = 'mcp';
+			mcpNode.iconPath = new vscode.ThemeIcon('plug');
+			mcpNode.description = `${mcpServers.length} servers`;
+
+			const sections = [agentsNode, commandsNode, skillsNode, mcpNode];
 			sections.sort((a, b) =>
 				String(a.label).localeCompare(String(b.label), undefined, { sensitivity: 'base' })
 			);
@@ -211,6 +224,33 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 					title: 'Open Skill',
 					arguments: [skill.uri]
 				};
+				return item;
+			});
+		}
+
+		// MCP servers under an agent root
+		if (element.contextValue === 'agent-mcp' && element.agentRootId) {
+			const root = this.agentRoots.find(r => r.id === element.agentRootId);
+			if (!root) {
+				return [];
+			}
+
+			const mcpServers = root.mcpServers ?? [];
+			if (mcpServers.length === 0) {
+				return [{
+					label: 'No MCP servers registered',
+					collapsibleState: vscode.TreeItemCollapsibleState.None,
+					description: 'Use "Set up ACE for Claude Code MCP?" to register'
+				} as ProjectTreeItem];
+			}
+
+			return mcpServers.map(serverName => {
+				const item = new vscode.TreeItem(
+					serverName,
+					vscode.TreeItemCollapsibleState.None
+				) as ProjectTreeItem;
+				item.contextValue = 'mcp-server';
+				item.iconPath = new vscode.ThemeIcon('plug');
 				return item;
 			});
 		}

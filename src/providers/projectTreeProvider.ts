@@ -31,7 +31,7 @@ export interface ProjectTreeItem extends vscode.TreeItem {
 	directory?: string;
 	project?: ProjectDefinition;
 	agentRootId?: string;
-	agentSection?: 'commands' | 'skills' | 'agents';
+	agentSection?: 'commands' | 'skills' | 'agents' | 'mcp';
 }
 
 export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
