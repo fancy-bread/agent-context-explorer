@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-07
+
+### Added
+- **MCP section in the Agents view** (spec 010): Claude Code and Cursor agent roots now display a read-only "MCP" section listing registered MCP servers by name, alongside Agents, Commands, and Skills (alphabetical ordering)
+- **Startup prompt to register ACE with Claude Code** — on activation, if Claude Code is detected and ACE is not yet registered (or the registration is stale), ACE offers a one-time "Set up ACE for Claude Code MCP?" prompt that writes the stdio entry to `~/.claude.json`
+- Live refresh of the MCP section when `~/.claude.json` or `~/.cursor/mcp.json` change externally
+
+### Fixed
+- Pinned `@types/vscode` back to `^1.105.0` to match `engines.vscode` (required for Cursor compatibility) — resolves `vsce package` failing with `@types/vscode greater than engines.vscode`
+
 ## [1.2.1] - 2026-05-10
 
 ### Added
