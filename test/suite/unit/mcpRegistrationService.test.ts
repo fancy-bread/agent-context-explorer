@@ -38,7 +38,7 @@ function writeTmpClaudeJson(content: Record<string, unknown>): string {
 
 describe('McpRegistrationService.isRegistered()', () => {
 	const extPath = '/fake/extension/path';
-	const expectedScriptPath = path.join(extPath, 'dist', 'mcp-server.js');
+	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
 	afterEach(() => {
 		// Clean up the temp ~/.claude.json after each test
@@ -64,7 +64,7 @@ describe('McpRegistrationService.isRegistered()', () => {
 	it('returns false when ACE path is stale (different extension version)', async () => {
 		writeTmpClaudeJson({
 			mcpServers: {
-				ace: { command: 'node', args: ['/old/extension/path/dist/mcp-server.js'], type: 'stdio' }
+				ace: { command: 'node', args: ['/old/extension/path/out/mcp/server.js'], type: 'stdio' }
 			}
 		});
 		const svc = new McpRegistrationService(extPath, tmpDir);
@@ -93,7 +93,7 @@ describe('McpRegistrationService.isRegistered()', () => {
 
 describe('McpRegistrationService.register()', () => {
 	const extPath = '/fake/extension/path';
-	const expectedScriptPath = path.join(extPath, 'dist', 'mcp-server.js');
+	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
 	afterEach(() => {
 		cleanUp(path.join(tmpDir, '.claude.json'));
@@ -146,7 +146,7 @@ describe('McpRegistrationService.register()', () => {
 		const claudeJsonPath = path.join(tmpDir, '.claude.json');
 		fs.writeFileSync(claudeJsonPath, JSON.stringify({
 			mcpServers: {
-				ace: { command: 'node', args: ['/old/path/dist/mcp-server.js'], type: 'stdio' }
+				ace: { command: 'node', args: ['/old/path/out/mcp/server.js'], type: 'stdio' }
 			}
 		}), 'utf-8');
 
@@ -181,7 +181,7 @@ describe('McpRegistrationService.register()', () => {
 
 describe('McpRegistrationService.promptIfNeeded()', () => {
 	const extPath = '/fake/extension/path';
-	const expectedScriptPath = path.join(extPath, 'dist', 'mcp-server.js');
+	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
 	afterEach(() => {
 		cleanUp(path.join(tmpDir, '.claude.json'));

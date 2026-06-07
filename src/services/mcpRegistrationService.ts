@@ -20,7 +20,7 @@ import * as path from 'path';
 const ACE_SERVER_KEY = 'ace';
 
 /** Relative path to the ACE MCP server script within extensionPath. */
-const ACE_MCP_SCRIPT_RELATIVE = path.join('dist', 'mcp-server.js');
+const ACE_MCP_SCRIPT_RELATIVE = path.join('out', 'mcp', 'server.js');
 
 export class McpRegistrationService {
 	private promptShownThisSession = false;
