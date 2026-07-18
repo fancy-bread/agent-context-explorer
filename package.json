@@ -140,18 +140,18 @@
 		"@types/mocha": "^10.0.0",
 		"@types/node": "^25.9.0",
 		"@types/vscode": "^1.105.0",
-		"@typescript-eslint/eslint-plugin": "^8.59.3",
-		"@typescript-eslint/parser": "^8.60.0",
+		"@typescript-eslint/eslint-plugin": "^8.61.1",
+		"@typescript-eslint/parser": "^8.61.1",
 		"@vscode/test-electron": "^2.3.0",
-		"eslint": "^9.39.1",
+		"eslint": "^10.5.0",
 		"glob": "^13.0.0",
 		"husky": "^9.1.7",
-		"lint-staged": "^17.0.5",
+		"lint-staged": "^17.1.0",
 		"mocha": "^11.7.6",
 		"nyc": "^18.0.0",
 		"ts-node": "^10.9.0",
 		"typescript": "^5.4.0",
-		"vite": "^7.3.1",
+		"vite": "^8.0.16",
 		"vscode": "file:./test/vscode-stub"
 	},
 	"lint-staged": {
@@ -161,6 +161,6 @@
 		"@modelcontextprotocol/sdk": "^1.27.1",
 		"gray-matter": "^4.0.3",
 		"yaml": "^2.3.0",
-		"zod": "^3.25.76"
+		"zod": "^4.4.3"
 	}
 }
