@@ -115,7 +115,7 @@ export class AgentsTreeProvider implements vscode.TreeDataProvider<ProjectTreeIt
 			mcpNode.contextValue = 'agent-mcp';
 			mcpNode.agentRootId = root.id;
 			mcpNode.agentSection = 'mcp';
-			mcpNode.iconPath = new vscode.ThemeIcon('plug');
+			mcpNode.iconPath = new vscode.ThemeIcon('mcp');
 			mcpNode.description = `${mcpServers.length} servers`;
 
 			const sections = [agentsNode, commandsNode, skillsNode, mcpNode];
