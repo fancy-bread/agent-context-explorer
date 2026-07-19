@@ -1,6 +1,11 @@
 # Agent Context Explorer (ACE)
 
-**View project context for AI agents** — Cursor and Claude Code rules, commands, skills, and project specs in one tree. Browse across multiple workspaces. ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
+Your AI agents are only as good as the context you give them — and that context can be scattered across several sources `.cursor/`, `.claude/`, `~/.agents/`, and a handful of config files you have to remember exist.
+
+**ACE puts it all in one tree.** 
+Rules, commands, skills, agent definitions, specs, and registered MCP servers — for every workspace and every agent platform — visible at a glance, always current. 
+
+ACE is **viewer-only**: it scans and displays intentional artifacts without managing them.
 
 ## What You See
 
@@ -16,9 +21,13 @@ Global commands and skills (`~/.cursor/commands/`, `~/.cursor/skills/`) are show
 
 | Root | Watches |
 |------|---------|
-| `~/.cursor/` | commands, skills, agent definitions |
-| `~/.claude/` | commands, skills, agent definitions |
+| `~/.cursor/` | commands, skills, agent definitions, registered MCP servers |
+| `~/.claude/` | commands, skills, agent definitions, registered MCP servers |
 | `~/.agents/` | commands, skills, agent definitions |
+
+Each root expands into four sections — **Agents**, **Commands**, **MCP**, **Skills** — in alphabetical order. The **MCP** section lists every MCP server currently registered for that platform, read straight from `~/.claude.json` (Claude Code) or `~/.cursor/mcp.json` (Cursor), so you can see what's wired up without opening a config file. It's read-only and stays live: edit either file externally and the list updates within seconds.
+
+The first time ACE detects Claude Code and finds itself unregistered, it offers a one-time prompt to add itself to `~/.claude.json` — accept it and ACE (and its context-query tools, see [MCP: AI Agent Access](#mcp-ai-agent-access) below) shows up in that same MCP section going forward.
 
 The view auto-refreshes within seconds when files are added, changed, or removed from any watched path.
 
@@ -69,6 +78,7 @@ VS Code or Cursor `^1.105.0` (see `engines.vscode` in `package.json`).
 | Claude Code artifacts missing | `CLAUDE.md` or `.claude/` directory exists in the project root |
 | Specs missing | `specs/` exists with at least one subdirectory containing `spec.md` |
 | Agents view empty | At least one of `~/.cursor/`, `~/.claude/`, or `~/.agents/` exists with artifact files |
+| MCP section empty | `~/.claude.json` or `~/.cursor/mcp.json` exists and its `mcpServers` key is valid JSON |
 | Tree not updating | Files should appear within ~3 seconds; click refresh (↻) if stale |
 
 ## License

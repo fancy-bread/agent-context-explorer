@@ -393,7 +393,7 @@ describe('AgentsTreeProvider MCP section', () => {
 		assert.deepStrictEqual(labels, ['Agents', 'Commands', 'MCP', 'Skills']);
 	});
 
-	it('MCP section node has contextValue agent-mcp and plug icon', async () => {
+	it('MCP section node has contextValue agent-mcp and mcp icon', async () => {
 		const provider = new AgentsTreeProvider();
 		provider.setAgentRoots([makeRoot('claude', ['ace'])]);
 
@@ -404,7 +404,7 @@ describe('AgentsTreeProvider MCP section', () => {
 		const sections = await provider.getChildren(rootItem);
 		const mcpSection = sections.find(s => s.label === 'MCP')!;
 		assert.strictEqual(mcpSection.contextValue, 'agent-mcp');
-		assert.strictEqual((mcpSection.iconPath as vscode.ThemeIcon).id, 'plug');
+		assert.strictEqual((mcpSection.iconPath as vscode.ThemeIcon).id, 'mcp');
 	});
 
 	it('MCP section is Collapsed when servers are present, None when empty', async () => {
