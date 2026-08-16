@@ -80,7 +80,10 @@ export class ClaudeCodeScanner {
 		const patterns = [
 			'.claude/rules/**/*.{mdc,md}',
 			'.claude/commands/*.md',
-			'.claude/skills/*/SKILL.md',
+			// Recursive (**) so folder-deletion of a whole skill is caught — VS Code
+			// collapses folder-delete events and a non-recursive `*/SKILL.md` pattern
+			// won't match the deleted parent folder.
+			'.claude/skills/**',
 			'.claude/agents/*.md',
 			'CLAUDE.md'
 		];

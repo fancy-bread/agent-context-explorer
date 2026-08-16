@@ -536,8 +536,11 @@ function setupFileWatcher() {
 	const commandsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/commands/*.md');
 	const commandsWatcher = vscode.workspace.createFileSystemWatcher(commandsPattern);
 
-	// Watch for changes in .cursor/skills directories (SKILL.md files)
-	const skillsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/skills/*/SKILL.md');
+	// Watch for changes in .cursor/skills directories (SKILL.md files).
+	// Recursive (**) so that deleting a whole skill folder (e.g. `npx skills remove`)
+	// still fires — VS Code collapses folder-delete events and won't match a
+	// non-recursive `*/SKILL.md` pattern against the deleted parent folder.
+	const skillsPattern = new vscode.RelativePattern(workspaceRoot, '.cursor/skills/**');
 	const skillsWatcher = vscode.workspace.createFileSystemWatcher(skillsPattern);
 
 	// Watch for changes in .cursor/agents (flat + nested *.md; scanner uses flat only)
@@ -658,7 +661,8 @@ function setupGlobalSkillsWatcher(): vscode.FileSystemWatcher | undefined {
 	try {
 		const homeDir = os.homedir();
 		const globalSkillsDir = vscode.Uri.file(path.join(homeDir, '.cursor', 'skills'));
-		const globalSkillsPattern = new vscode.RelativePattern(globalSkillsDir, '*/SKILL.md');
+		// Recursive (**) so folder-deletion of a whole skill (e.g. `npx skills remove`) is caught
+		const globalSkillsPattern = new vscode.RelativePattern(globalSkillsDir, '**');
 		const globalSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalSkillsPattern);
 
 		// Global skills watcher handlers
@@ -753,7 +757,8 @@ function setupGlobalClaudeSkillsWatcher(): vscode.FileSystemWatcher | undefined 
 	try {
 		const homeDir = os.homedir();
 		const globalClaudeSkillsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'skills'));
-		const globalClaudeSkillsPattern = new vscode.RelativePattern(globalClaudeSkillsDir, '*/SKILL.md');
+		// Recursive (**) so folder-deletion of a whole skill (e.g. `npx skills remove`) is caught
+		const globalClaudeSkillsPattern = new vscode.RelativePattern(globalClaudeSkillsDir, '**');
 		const globalClaudeSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalClaudeSkillsPattern);
 
 		globalClaudeSkillsWatcher.onDidCreate(() => {
@@ -846,7 +851,8 @@ function setupGlobalDotAgentsSkillsWatcher(): vscode.FileSystemWatcher | undefin
 	try {
 		const homeDir = os.homedir();
 		const globalDotAgentsSkillsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'skills'));
-		const globalDotAgentsSkillsPattern = new vscode.RelativePattern(globalDotAgentsSkillsDir, '*/SKILL.md');
+		// Recursive (**) so folder-deletion of a whole skill (e.g. `npx skills remove`) is caught
+		const globalDotAgentsSkillsPattern = new vscode.RelativePattern(globalDotAgentsSkillsDir, '**');
 		const globalDotAgentsSkillsWatcher = vscode.workspace.createFileSystemWatcher(globalDotAgentsSkillsPattern);
 
 		globalDotAgentsSkillsWatcher.onDidCreate(() => {
