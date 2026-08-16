@@ -557,23 +557,25 @@ suite('File Watcher Setup Integration Tests', () => {
 	});
 
 	describe('Global .agents Skills File Watcher', () => {
-		test('should build correct pattern for ~/.agents/skills/*/SKILL.md', () => {
+		test('should build a recursive (**) pattern rooted at ~/.agents/skills', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.agents', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 
-			assert.ok(pattern.startsWith(homeDir));
-			assert.ok(pattern.includes('.agents'));
-			assert.ok(pattern.includes('skills'));
-			assert.ok(pattern.endsWith('SKILL.md'));
+			// Must be recursive: deleting a whole skill folder (e.g. `npx skills remove`)
+			// collapses into a single event for the folder, which a non-recursive
+			// `*/SKILL.md` pattern would never match.
+			assert.strictEqual(pattern.pattern, '**');
 		});
 
 		test('should create .agents skills watcher successfully', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.agents', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
 			assert.ok(watcher, '.agents skills watcher should be created');
@@ -585,7 +587,8 @@ suite('File Watcher Setup Integration Tests', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.agents', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.agents', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
 			assert.doesNotThrow(() => {
@@ -639,23 +642,25 @@ suite('File Watcher Setup Integration Tests', () => {
 	});
 
 	describe('Global Claude Skills File Watcher', () => {
-		test('should build correct pattern for ~/.claude/skills/*/SKILL.md', () => {
+		test('should build a recursive (**) pattern rooted at ~/.claude/skills', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 
-			assert.ok(pattern.startsWith(homeDir));
-			assert.ok(pattern.includes('.claude'));
-			assert.ok(pattern.includes('skills'));
-			assert.ok(pattern.endsWith('SKILL.md'));
+			// Must be recursive: deleting a whole skill folder (e.g. `npx skills remove`)
+			// collapses into a single event for the folder, which a non-recursive
+			// `*/SKILL.md` pattern would never match.
+			assert.strictEqual(pattern.pattern, '**');
 		});
 
 		test('should create Claude skills watcher successfully', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
 			assert.ok(watcher, 'Claude skills watcher should be created');
@@ -667,7 +672,8 @@ suite('File Watcher Setup Integration Tests', () => {
 			const os = require('os');
 			const path = require('path');
 			const homeDir = os.homedir();
-			const pattern = path.join(homeDir, '.claude', 'skills', '*', 'SKILL.md');
+			const skillsDir = vscode.Uri.file(path.join(homeDir, '.claude', 'skills'));
+			const pattern = new vscode.RelativePattern(skillsDir, '**');
 			const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
 			assert.doesNotThrow(() => {
