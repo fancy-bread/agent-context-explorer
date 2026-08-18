@@ -15,6 +15,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ProjectDefinition } from '../types/project';
+import { buildProjectList, type ProjectEntry } from '../mcp/extensionBackend';
 
 /** The key used for the ACE entry in mcpServers. */
 const ACE_SERVER_KEY = 'ace';
@@ -27,8 +29,18 @@ export class McpRegistrationService {
 
 	constructor(
 		private readonly extensionPath: string,
-		private readonly homeDir: string
+		private readonly homeDir: string,
+		private readonly getProjects: () => Promise<ProjectDefinition[]> = () => Promise.resolve([])
 	) {}
+
+	/**
+	 * Snapshot of workspace folders + added projects at call time (same hierarchy as the tree view).
+	 * The static ~/.claude.json entry is written once on user consent, so this is a point-in-time
+	 * list, not a live one — see isRegistered()'s staleness check for how drift is detected.
+	 */
+	private currentProjectList(): Promise<ProjectEntry[]> {
+		return buildProjectList(this.getProjects, vscode.workspace.workspaceFolders);
+	}
 
 	private get claudeJsonPath(): string {
 		return path.join(this.homeDir, '.claude.json');
@@ -39,10 +51,42 @@ export class McpRegistrationService {
 	}
 
 	/**
-	 * Returns true when the ACE MCP entry exists in ~/.claude.json and the
-	 * registered args[0] path matches the current extension's script path.
-	 * Returns false if the entry is absent or the path differs (stale).
-	 * Returns false on any read / parse error (safe default → prompt shown).
+	 * True when the registered entry's env.ACE_PROJECT_PATHS covers the same set of project
+	 * paths as `currentProjects`. An empty currentProjects list (no workspace open, no
+	 * getProjects callback) is never considered stale on this basis.
+	 */
+	private projectPathsMatch(entryEnv: unknown, currentProjects: ProjectEntry[]): boolean {
+		const currentPaths = currentProjects.map(p => p.path).sort();
+		if (currentPaths.length === 0) {
+			return true;
+		}
+		if (entryEnv === null || typeof entryEnv !== 'object' || Array.isArray(entryEnv)) {
+			return false;
+		}
+		const raw = (entryEnv as Record<string, unknown>)['ACE_PROJECT_PATHS'];
+		if (typeof raw !== 'string') {
+			return false;
+		}
+		try {
+			const parsed: unknown = JSON.parse(raw);
+			if (!Array.isArray(parsed)) {
+				return false;
+			}
+			const parsedPaths = (parsed as Array<{ path?: unknown }>)
+				.map(p => (typeof p?.path === 'string' ? p.path : ''))
+				.sort();
+			return JSON.stringify(parsedPaths) === JSON.stringify(currentPaths);
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Returns true when the ACE MCP entry exists in ~/.claude.json, the registered args[0] path
+	 * matches the current extension's script path, and the registered ACE_PROJECT_PATHS still
+	 * covers the current workspace + added projects.
+	 * Returns false if the entry is absent, the path differs, or the project list has drifted
+	 * (stale). Returns false on any read / parse error (safe default → prompt shown).
 	 */
 	async isRegistered(): Promise<boolean> {
 		try {
@@ -67,7 +111,11 @@ export class McpRegistrationService {
 				return false;
 			}
 			// Check that the registered path matches the current extension path
-			return args[0] === this.aceMcpScriptPath;
+			if (args[0] !== this.aceMcpScriptPath) {
+				return false;
+			}
+			const currentProjects = await this.currentProjectList();
+			return this.projectPathsMatch(entry['env'], currentProjects);
 		} catch {
 			return false;
 		}
@@ -102,10 +150,16 @@ export class McpRegistrationService {
 			mcpServers = { ...(existing['mcpServers'] as Record<string, unknown>) };
 		}
 
+		// Snapshot the current workspace + added projects so the CLI-facing standalone server
+		// (no live VS Code workspace to query) can still resolve projectKey across all of them,
+		// matching the dynamic ACE_PROJECT_PATHS the in-VS Code bridge/fallback mode computes.
+		const projectList = await this.currentProjectList();
+
 		mcpServers[ACE_SERVER_KEY] = {
 			command: 'node',
 			args: [this.aceMcpScriptPath],
-			type: 'stdio'
+			type: 'stdio',
+			...(projectList.length > 0 ? { env: { ACE_PROJECT_PATHS: JSON.stringify(projectList) } } : {})
 		};
 
 		const updated: Record<string, unknown> = {
