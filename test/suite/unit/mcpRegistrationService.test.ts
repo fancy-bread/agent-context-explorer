@@ -40,9 +40,17 @@ describe('McpRegistrationService.isRegistered()', () => {
 	const extPath = '/fake/extension/path';
 	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
+	// Other test files share this vscode stub module and don't always restore
+	// workspace.workspaceFolders — pin it per-test so isRegistered()'s project-list
+	// staleness check isn't affected by leakage from tests that ran earlier.
+	beforeEach(() => {
+		vscodeStub.workspace.workspaceFolders = undefined;
+	});
+
 	afterEach(() => {
 		// Clean up the temp ~/.claude.json after each test
 		cleanUp(path.join(tmpDir, '.claude.json'));
+		vscodeStub.workspace.workspaceFolders = undefined;
 	});
 
 	it('returns true when ACE entry exists with matching path', async () => {
@@ -89,16 +97,82 @@ describe('McpRegistrationService.isRegistered()', () => {
 		const svc = new McpRegistrationService(extPath, tmpDir);
 		assert.strictEqual(await svc.isRegistered(), false);
 	});
+
+	it('returns true when registered ACE_PROJECT_PATHS covers the current workspace + added projects', async () => {
+		vscodeStub.workspace.workspaceFolders = [
+			{ uri: vscodeStub.Uri.file('/ws/projA'), name: 'projA' }
+		];
+		writeTmpClaudeJson({
+			mcpServers: {
+				ace: {
+					command: 'node',
+					args: [expectedScriptPath],
+					type: 'stdio',
+					env: {
+						ACE_PROJECT_PATHS: JSON.stringify([
+							{ projectKey: 'projA', path: '/ws/projA', label: 'projA' },
+							{ projectKey: 'projB', path: '/added/projB', label: 'Project B' }
+						])
+					}
+				}
+			}
+		});
+		const svc = new McpRegistrationService(extPath, tmpDir, async () => [
+			{ name: 'Project B', path: '/added/projB' } as any
+		]);
+		assert.strictEqual(await svc.isRegistered(), true);
+	});
+
+	it('returns false (stale) when the current project list has drifted from ACE_PROJECT_PATHS', async () => {
+		vscodeStub.workspace.workspaceFolders = [
+			{ uri: vscodeStub.Uri.file('/ws/projA'), name: 'projA' },
+			{ uri: vscodeStub.Uri.file('/ws/projC'), name: 'projC' }
+		];
+		writeTmpClaudeJson({
+			mcpServers: {
+				ace: {
+					command: 'node',
+					args: [expectedScriptPath],
+					type: 'stdio',
+					env: {
+						ACE_PROJECT_PATHS: JSON.stringify([
+							{ projectKey: 'projA', path: '/ws/projA', label: 'projA' }
+						])
+					}
+				}
+			}
+		});
+		const svc = new McpRegistrationService(extPath, tmpDir);
+		assert.strictEqual(await svc.isRegistered(), false, 'a newly added workspace folder not in ACE_PROJECT_PATHS should be stale');
+	});
+
+	it('returns false (stale) when a workspace is open but the registered entry has no env at all', async () => {
+		vscodeStub.workspace.workspaceFolders = [
+			{ uri: vscodeStub.Uri.file('/ws/projA'), name: 'projA' }
+		];
+		writeTmpClaudeJson({
+			mcpServers: {
+				ace: { command: 'node', args: [expectedScriptPath], type: 'stdio' }
+			}
+		});
+		const svc = new McpRegistrationService(extPath, tmpDir);
+		assert.strictEqual(await svc.isRegistered(), false);
+	});
 });
 
 describe('McpRegistrationService.register()', () => {
 	const extPath = '/fake/extension/path';
 	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
+	beforeEach(() => {
+		vscodeStub.workspace.workspaceFolders = undefined;
+	});
+
 	afterEach(() => {
 		cleanUp(path.join(tmpDir, '.claude.json'));
 		// Restore stub writeFile if it was overridden
 		vscodeStub.workspace.fs.writeFile = async () => {};
+		vscodeStub.workspace.workspaceFolders = undefined;
 	});
 
 	it('creates ~/.claude.json with ACE entry when file is absent', async () => {
@@ -117,6 +191,26 @@ describe('McpRegistrationService.register()', () => {
 		assert.ok(written.mcpServers);
 		assert.ok(written.mcpServers.ace);
 		assert.strictEqual(written.mcpServers.ace.args[0], expectedScriptPath);
+		assert.strictEqual(written.mcpServers.ace.env, undefined, 'no env when no workspace/projects are open');
+	});
+
+	it('writes ACE_PROJECT_PATHS covering workspace folders and added projects', async () => {
+		const claudeJsonPath = path.join(tmpDir, '.claude.json');
+		vscodeStub.workspace.fs.writeFile = async (uri: any, data: Buffer) => {
+			fs.writeFileSync(uri.fsPath, data);
+		};
+		vscodeStub.workspace.workspaceFolders = [
+			{ uri: vscodeStub.Uri.file('/ws/projA'), name: 'projA' }
+		];
+
+		const svc = new McpRegistrationService(extPath, tmpDir, async () => [
+			{ name: 'Project B', path: '/added/projB' } as any
+		]);
+		await svc.register();
+
+		const written = JSON.parse(fs.readFileSync(claudeJsonPath, 'utf-8'));
+		const projectPaths = JSON.parse(written.mcpServers.ace.env.ACE_PROJECT_PATHS).map((p: any) => p.path).sort();
+		assert.deepStrictEqual(projectPaths, ['/added/projB', '/ws/projA']);
 	});
 
 	it('preserves existing keys when adding ACE entry', async () => {
@@ -183,11 +277,16 @@ describe('McpRegistrationService.promptIfNeeded()', () => {
 	const extPath = '/fake/extension/path';
 	const expectedScriptPath = path.join(extPath, 'out', 'mcp', 'server.js');
 
+	beforeEach(() => {
+		vscodeStub.workspace.workspaceFolders = undefined;
+	});
+
 	afterEach(() => {
 		cleanUp(path.join(tmpDir, '.claude.json'));
 		vscodeStub.workspace.fs.writeFile = async () => {};
 		vscodeStub.window.showInformationMessage = () => undefined;
 		vscodeStub.window.showErrorMessage = () => {};
+		vscodeStub.workspace.workspaceFolders = undefined;
 	});
 
 	it('shows prompt when ACE is not registered', async () => {

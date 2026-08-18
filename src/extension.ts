@@ -127,7 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// ACE is not yet registered (or the registration is stale).
 	const homeDir = os.homedir();
 	const claudeDir = path.join(homeDir, '.claude');
-	mcpRegistrationService = new McpRegistrationService(context.extensionPath, homeDir);
+	mcpRegistrationService = new McpRegistrationService(context.extensionPath, homeDir, () => projectManager.getProjects());
 	void (async () => {
 		try {
 			const stat = await vscode.workspace.fs.stat(vscode.Uri.file(claudeDir));

@@ -210,6 +210,15 @@ export function getProjectKeyArg(args: unknown): string | undefined {
 }
 
 /**
+ * Real Zod raw shapes (not plain JSON-schema-like objects) — the MCP SDK's tool() overload
+ * resolution requires shape values to be actual Zod types, or it silently misclassifies the
+ * whole shape as `annotations` and registers the tool with no input schema at all, which then
+ * makes every call receive `args: undefined` regardless of what the caller sent.
+ */
+const projectKeyShape = { projectKey: z.string().optional().describe('Optional project key (omit for current workspace)') };
+const nameAndProjectKeyShape = { name: z.string().describe('Item name'), projectKey: z.string().optional().describe('Optional project key (omit for current workspace)') };
+
+/**
  * Create and configure the MCP server
  * @param workspacePath - Primary workspace (used when ACE_PROJECT_PATHS not set)
  * @param projects - When set (from ACE_PROJECT_PATHS), list_projects and resolve use this list
@@ -254,7 +263,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_rules - List all Cursor rules with metadata
-	server.tool('list_rules', 'List all Cursor rules with metadata', { projectKey: { type: 'string', description: 'Optional project key (omit for current workspace)' } } as any, async (args: any) => {
+	server.tool('list_rules', 'List all Cursor rules with metadata', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -266,7 +275,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_rule - Get rule content by name
-	server.tool('get_rule', 'Get rule content by name', { name: { type: 'string', description: 'Rule name (without extension)' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_rule', 'Get rule content by name', nameAndProjectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -285,7 +294,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_commands - List all Cursor commands with metadata
-	server.tool('list_commands', 'List all Cursor commands with metadata', { projectKey: { type: 'string', description: 'Optional project key (use list_projects to get keys)' } } as any, async (args: any) => {
+	server.tool('list_commands', 'List all Cursor commands with metadata', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -297,7 +306,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_command - Get command content by name
-	server.tool('get_command', 'Get command content by name', { name: { type: 'string', description: 'Command name (without extension)' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_command', 'Get command content by name', nameAndProjectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -316,7 +325,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_skills - List all Cursor skills with metadata
-	server.tool('list_skills', 'List all Cursor skills with metadata', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('list_skills', 'List all Cursor skills with metadata', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -328,7 +337,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_skill - Get skill content by name
-	server.tool('get_skill', 'Get skill content by name', { name: { type: 'string', description: 'Skill directory name' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_skill', 'Get skill content by name', nameAndProjectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -347,7 +356,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_agents - Agent definition files (workspace + Cursor/Claude/Global agent roots)
-	server.tool('list_agents', 'List agent definition files (.cursor/agents and user-level agent roots)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('list_agents', 'List agent definition files (.cursor/agents and user-level agent roots)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -359,7 +368,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_agent - Full agent definition markdown by name
-	server.tool('get_agent', 'Get agent definition content by name', { name: { type: 'string', description: 'Agent file stem (basename without .md) or path fragment' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_agent', 'Get agent definition content by name', nameAndProjectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -382,7 +391,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_specs - List available specifications
-	server.tool('list_specs', 'List available specifications', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('list_specs', 'List available specifications', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -394,7 +403,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_spec - Full specs/<domain>/spec.md content
-	server.tool('get_spec', 'Get full spec.md content by domain (from list_specs) or path fragment', { name: { type: 'string', description: 'Spec domain folder name or path fragment' }, projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_spec', 'Get full spec.md content by domain (from list_specs) or path fragment', nameAndProjectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -420,7 +429,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// get_project - Complete project snapshot
-	server.tool('get_project', 'Get complete project snapshot (rules, commands, skills, agent definitions, artifacts)', { projectKey: { type: 'string', description: 'Optional project key' } } as any, async (args: any) => {
+	server.tool('get_project', 'Get complete project snapshot (rules, commands, skills, agent definitions, artifacts)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -491,9 +500,6 @@ export function bridgeCall(port: number, method: string, params: Record<string, 
 		socket.setTimeout(30000, () => { socket.destroy(); reject(new Error('Bridge timeout')); });
 	});
 }
-
-const projectKeyShape = { projectKey: z.string().optional() };
-const nameAndProjectKeyShape = { name: z.string(), projectKey: z.string().optional() };
 
 const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<string, z.ZodTypeAny> }[] = [
 	{ name: 'list_projects', description: 'List registered ACE projects', inputSchema: {} },
