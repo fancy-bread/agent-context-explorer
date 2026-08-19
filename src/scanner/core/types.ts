@@ -28,11 +28,15 @@ export interface CoreRuleMetadata {
 	alwaysApply?: boolean;
 }
 
+/** Source directory convention an artifact was scanned from. */
+export type CorePlatform = 'cursor' | 'claude';
+
 export interface CoreRule {
 	path: string;
 	metadata: CoreRuleMetadata;
 	content: string;
 	fileName: string;
+	platform: CorePlatform;
 }
 
 export interface CoreCommand {
@@ -40,6 +44,7 @@ export interface CoreCommand {
 	content: string;
 	fileName: string;
 	location: 'workspace' | 'global';
+	platform: CorePlatform;
 }
 
 export interface CoreSkillMetadata {
@@ -57,6 +62,7 @@ export interface CoreSkill {
 	fileName: string;
 	location: 'workspace' | 'global';
 	metadata?: CoreSkillMetadata;
+	platform: CorePlatform;
 }
 
 /** Agent definition file (flat `agents/*.md`) — core layer, no vscode.Uri */
@@ -66,6 +72,7 @@ export interface CoreAgentDefinition {
 	/** Basename without `.md` — tree label */
 	fileName: string;
 	displayName: string;
+	platform: CorePlatform;
 }
 
 /** Core ASDLC artifacts - reuses structure from scanner/types with path strings */

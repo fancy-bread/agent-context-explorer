@@ -217,8 +217,8 @@ Rule body`;
 			const rulesDir = path.join(projectRoot, '.cursor', 'rules');
 			const filePath = path.join(rulesDir, 'bad.mdc');
 			const fs: IFileSystem = {
-				async readDirectory(): Promise<[string, FileTypeValue][]> {
-					return [['bad.mdc', FileType.File]];
+				async readDirectory(dirPath: string): Promise<[string, FileTypeValue][]> {
+					return dirPath === rulesDir ? [['bad.mdc', FileType.File]] : [];
 				},
 				async readFile(): Promise<Buffer> {
 					throw new Error('boom');
@@ -231,6 +231,42 @@ Rule body`;
 			assert.strictEqual(rules.length, 1);
 			assert.strictEqual(rules[0].path, filePath);
 			assert.strictEqual(rules[0].content, 'Error reading file content');
+			assert.strictEqual(rules[0].platform, 'cursor');
+		});
+
+		it('merges .claude/rules alongside .cursor/rules, tagged by platform (spec 011)', async () => {
+			const cursorPath = path.join(projectRoot, '.cursor', 'rules', 'a.mdc');
+			const claudePath = path.join(projectRoot, '.claude', 'rules', 'b.mdc');
+			const fs = createRulesTreeMock({
+				rulesFiles: new Map([
+					[cursorPath, Buffer.from('---\ndescription: A\n---\nBody A')],
+					[claudePath, Buffer.from('---\ndescription: B\n---\nBody B')]
+				])
+			});
+			const rules = await scanRulesCore(fs, projectRoot, '/user');
+			assert.strictEqual(rules.length, 2);
+			const cursorRule = rules.find(r => r.fileName === 'a.mdc');
+			const claudeRule = rules.find(r => r.fileName === 'b.mdc');
+			assert.strictEqual(cursorRule?.platform, 'cursor');
+			assert.strictEqual(claudeRule?.platform, 'claude');
+		});
+
+		it('returns only cursor rules when .claude/rules is absent, and vice versa (FR-006)', async () => {
+			const cursorOnlyPath = path.join(projectRoot, '.cursor', 'rules', 'only-cursor.mdc');
+			const cursorOnlyFs = createRulesTreeMock({
+				rulesFiles: new Map([[cursorOnlyPath, Buffer.from('---\ndescription: X\n---\nBody')]])
+			});
+			const cursorOnlyResult = await scanRulesCore(cursorOnlyFs, projectRoot, '/user');
+			assert.strictEqual(cursorOnlyResult.length, 1);
+			assert.strictEqual(cursorOnlyResult[0].platform, 'cursor');
+
+			const claudeOnlyPath = path.join(projectRoot, '.claude', 'rules', 'only-claude.mdc');
+			const claudeOnlyFs = createRulesTreeMock({
+				rulesFiles: new Map([[claudeOnlyPath, Buffer.from('---\ndescription: Y\n---\nBody')]])
+			});
+			const claudeOnlyResult = await scanRulesCore(claudeOnlyFs, projectRoot, '/user');
+			assert.strictEqual(claudeOnlyResult.length, 1);
+			assert.strictEqual(claudeOnlyResult[0].platform, 'claude');
 		});
 	});
 });

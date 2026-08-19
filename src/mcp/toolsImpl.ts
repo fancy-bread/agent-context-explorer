@@ -49,13 +49,13 @@ export class McpTools {
 	// =========================================================================
 
 	/**
-	 * list_rules - List all Cursor rules with metadata
+	 * list_rules - List all rules with metadata (.cursor/rules and .claude/rules)
 	 */
 	static async listRules(input?: ProjectScopedInput): Promise<RuleInfo[]> {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new RulesScanner(workspaceUri);
-		const rules = await scanner.scanRules();
+		const rules = await scanner.scanAllRules();
 
 		return rules.map(toRuleInfo);
 	}
@@ -67,7 +67,7 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new RulesScanner(workspaceUri);
-		const rules = await scanner.scanRules();
+		const rules = await scanner.scanAllRules();
 
 		const rule = findRuleByName(rules, input.name);
 
@@ -83,17 +83,17 @@ export class McpTools {
 	// =========================================================================
 
 	/**
-	 * list_commands - List all Cursor commands with metadata
+	 * list_commands - List all commands with metadata (.cursor/commands and .claude/commands)
 	 */
 	static async listCommands(input?: ProjectScopedInput): Promise<CommandInfo[]> {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new CommandsScanner(workspaceUri);
 
-		// Get both workspace and global commands
+		// Get both workspace and global commands (each already covering both platforms)
 		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanWorkspaceCommands(),
-			scanner.scanGlobalCommands()
+			scanner.scanAllWorkspaceCommands(),
+			scanner.scanAllGlobalCommands()
 		]);
 
 		const allCommands = [...workspaceCommands, ...globalCommands];
@@ -108,10 +108,10 @@ export class McpTools {
 
 		const scanner = new CommandsScanner(workspaceUri);
 
-		// Get both workspace and global commands
+		// Get both workspace and global commands (each already covering both platforms)
 		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanWorkspaceCommands(),
-			scanner.scanGlobalCommands()
+			scanner.scanAllWorkspaceCommands(),
+			scanner.scanAllGlobalCommands()
 		]);
 
 		const allCommands = [...workspaceCommands, ...globalCommands];
@@ -130,17 +130,17 @@ export class McpTools {
 	// =========================================================================
 
 	/**
-	 * list_skills - List all Cursor skills with metadata
+	 * list_skills - List all skills with metadata (.cursor/skills and .claude/skills)
 	 */
 	static async listSkills(input?: ProjectScopedInput): Promise<SkillInfo[]> {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new SkillsScanner(workspaceUri);
 
-		// Get both workspace and global skills
+		// Get both workspace and global skills (each already covering both platforms)
 		const [workspaceSkills, globalSkills] = await Promise.all([
-			scanner.scanWorkspaceSkills(),
-			scanner.scanGlobalSkills()
+			scanner.scanAllWorkspaceSkills(),
+			scanner.scanAllGlobalSkills()
 		]);
 
 		const allSkills = [...workspaceSkills, ...globalSkills];
@@ -155,10 +155,10 @@ export class McpTools {
 
 		const scanner = new SkillsScanner(workspaceUri);
 
-		// Get both workspace and global skills
+		// Get both workspace and global skills (each already covering both platforms)
 		const [workspaceSkills, globalSkills] = await Promise.all([
-			scanner.scanWorkspaceSkills(),
-			scanner.scanGlobalSkills()
+			scanner.scanAllWorkspaceSkills(),
+			scanner.scanAllGlobalSkills()
 		]);
 
 		const allSkills = [...workspaceSkills, ...globalSkills];
@@ -182,7 +182,7 @@ export class McpTools {
 	private static async collectTaggedAgentDefinitions(workspaceUri: vscode.Uri): Promise<Array<{ def: AgentDefinition; location: AgentDefinitionLocation }>> {
 		const out: Array<{ def: AgentDefinition; location: AgentDefinitionLocation }> = [];
 		const scanner = new AgentsScanner(workspaceUri);
-		const workspaceAgents = await scanner.scanWorkspaceAgentDefinitions();
+		const workspaceAgents = await scanner.scanAllWorkspaceAgentDefinitions();
 		for (const def of workspaceAgents) {
 			out.push({ def, location: 'workspace' });
 		}

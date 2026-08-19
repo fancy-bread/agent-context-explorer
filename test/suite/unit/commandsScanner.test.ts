@@ -92,6 +92,38 @@ describe('Commands Scanner Tests', () => {
 		});
 	});
 
+	describe('scanAllWorkspaceCommands / scanAllGlobalCommands (spec 011)', () => {
+		it('scanWorkspaceCommands stays cursor-only when .claude/commands also has content', async () => {
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.endsWith('/.cursor/commands') && uri.fsPath.includes('/workspace')) return [['valid-command.md', 1]];
+				if (uri.fsPath.endsWith('/.claude/commands')) return [['claude-command.md', 1]];
+				return [];
+			};
+			const commands = await scanner.scanWorkspaceCommands();
+			assert.strictEqual(commands.length, 1);
+			assert.strictEqual(commands[0].platform, 'cursor');
+		});
+
+		it('scanAllWorkspaceCommands returns both platforms, tagged', async () => {
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.endsWith('/.cursor/commands') && uri.fsPath.includes('/workspace')) return [['valid-command.md', 1]];
+				if (uri.fsPath.endsWith('/.claude/commands')) return [['claude-command.md', 1]];
+				return [];
+			};
+			const commands = await scanner.scanAllWorkspaceCommands();
+			assert.strictEqual(commands.length, 2);
+			assert.ok(commands.every(c => c.location === 'workspace'));
+			assert.ok(commands.some(c => c.platform === 'cursor'));
+			assert.ok(commands.some(c => c.platform === 'claude'));
+		});
+
+		it('scanAllGlobalCommands remains cursor-only — no global .claude scanning (FR-007)', async () => {
+			const commands = await scanner.scanAllGlobalCommands();
+			assert.ok(commands.every(c => c.platform === 'cursor'));
+			assert.ok(commands.every(c => c.location === 'global'));
+		});
+	});
+
 	describe('File Watching', () => {
 		it('should create file watcher for workspace commands', async () => {
 			const watcher = await scanner.watchWorkspaceCommands();

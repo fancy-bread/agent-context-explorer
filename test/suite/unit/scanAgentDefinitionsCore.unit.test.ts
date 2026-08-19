@@ -64,6 +64,41 @@ describe('scanner/core/scanAgentDefinitionsCore', () => {
 		assert.strictEqual(out[0].content, '# Alpha');
 	});
 
+	it('scanWorkspaceAgentDefinitionsCore merges .claude/agents alongside .cursor/agents, tagged by platform (spec 011)', async () => {
+		const cursorDir = workspaceAgentsDirectory(proj);
+		const claudeDir = path.join(proj, '.claude', 'agents');
+		const cursorPath = path.join(cursorDir, 'cursor-agent.md');
+		const claudePath = path.join(claudeDir, 'claude-agent.md');
+		const fs = createMockFs(
+			new Map([
+				[cursorPath, Buffer.from('# Cursor Agent')],
+				[claudePath, Buffer.from('# Claude Agent')]
+			]),
+			new Map([
+				[cursorDir, [['cursor-agent.md', FileType.File]]],
+				[claudeDir, [['claude-agent.md', FileType.File]]]
+			])
+		);
+		const out = await scanWorkspaceAgentDefinitionsCore(fs, proj);
+		assert.strictEqual(out.length, 2);
+		const cursorAgent = out.find(a => a.fileName === 'cursor-agent');
+		const claudeAgent = out.find(a => a.fileName === 'claude-agent');
+		assert.strictEqual(cursorAgent?.platform, 'cursor');
+		assert.strictEqual(claudeAgent?.platform, 'claude');
+	});
+
+	it('returns only claude agent definitions when .cursor/agents is absent (FR-006)', async () => {
+		const claudeDir = path.join(proj, '.claude', 'agents');
+		const claudePath = path.join(claudeDir, 'claude-only.md');
+		const fs = createMockFs(
+			new Map([[claudePath, Buffer.from('# Claude Only')]]),
+			new Map([[claudeDir, [['claude-only.md', FileType.File]]]])
+		);
+		const out = await scanWorkspaceAgentDefinitionsCore(fs, proj);
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].platform, 'claude');
+	});
+
 	it('scanAgentDefinitionsInDirectory returns empty when directory missing', async () => {
 		const fs = createMockFs(new Map(), new Map());
 		const out = await scanAgentDefinitionsInDirectory(fs, path.join(proj, '.cursor', 'agents'));

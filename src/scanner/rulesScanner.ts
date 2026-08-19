@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { MDCParser } from '../utils/mdcParser';
 import { VSCodeFsAdapter } from './adapters/vscodeFsAdapter';
 import { scanRulesCore } from './core/scanRulesCore';
+import type { CorePlatform } from './core/types';
 import * as os from 'os';
 
 export interface RuleMetadata {
@@ -17,12 +18,19 @@ export interface Rule {
 	metadata: RuleMetadata;
 	content: string;
 	fileName: string;
+	platform: CorePlatform;
 }
 
 export class RulesScanner {
 	constructor(private workspaceRoot: vscode.Uri) {}
 
 	async scanRules(): Promise<Rule[]> {
+		const all = await this.scanAllRules();
+		return all.filter((r) => r.platform === 'cursor');
+	}
+
+	/** All rules from both `.cursor/rules/` and `.claude/rules/`, platform-tagged (spec 011). */
+	async scanAllRules(): Promise<Rule[]> {
 		try {
 			const fs = new VSCodeFsAdapter();
 			const projectRoot = this.workspaceRoot.fsPath;
@@ -33,7 +41,8 @@ export class RulesScanner {
 				uri: vscode.Uri.file(r.path),
 				metadata: r.metadata,
 				content: r.content,
-				fileName: r.fileName
+				fileName: r.fileName,
+				platform: r.platform
 			}));
 		} catch {
 			return [];

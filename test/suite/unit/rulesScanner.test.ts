@@ -65,6 +65,31 @@ describe('Rules Scanner Tests (real RulesScanner + vscode stub)', () => {
 		});
 	});
 
+	describe('scanAllRules vs scanRules (spec 011)', () => {
+		it('scanRules stays cursor-only when .claude/rules also has content', async () => {
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.endsWith('/.cursor/rules')) return [['valid-rule.mdc', 1]];
+				if (uri.fsPath.endsWith('/.claude/rules')) return [['claude-rule.mdc', 1]];
+				return [];
+			};
+			const rules = await scanner.scanRules();
+			assert.strictEqual(rules.length, 1);
+			assert.strictEqual(rules[0].platform, 'cursor');
+		});
+
+		it('scanAllRules returns both platforms, tagged', async () => {
+			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath.endsWith('/.cursor/rules')) return [['valid-rule.mdc', 1]];
+				if (uri.fsPath.endsWith('/.claude/rules')) return [['claude-rule.mdc', 1]];
+				return [];
+			};
+			const rules = await scanner.scanAllRules();
+			assert.strictEqual(rules.length, 2);
+			assert.ok(rules.some(r => r.platform === 'cursor'));
+			assert.ok(rules.some(r => r.platform === 'claude'));
+		});
+	});
+
 	describe('watchRules', () => {
 		it('should create file watcher', async () => {
 			const watcher = await scanner.watchRules();

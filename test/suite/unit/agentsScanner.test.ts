@@ -50,6 +50,47 @@ describe('AgentsScanner', () => {
 		}
 	});
 
+	describe('scanAllWorkspaceAgentDefinitions (spec 011)', () => {
+		const claudeAgentsDir = path.join('/workspace', '.claude', 'agents');
+
+		it('scanWorkspaceAgentDefinitions stays cursor-only when .claude/agents also has content', async () => {
+			const origReadDir = vscode.__overrides.readDirectory;
+			vscode.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath === agentsDir) return [['builder.md', 1]];
+				if (uri.fsPath === claudeAgentsDir) return [['reviewer.md', 1]];
+				return [];
+			};
+
+			try {
+				const scanner = new AgentsScanner(vscode.Uri.file('/workspace'));
+				const results = await scanner.scanWorkspaceAgentDefinitions();
+				assert.strictEqual(results.length, 1);
+				assert.strictEqual(results[0].platform, 'cursor');
+			} finally {
+				vscode.__overrides.readDirectory = origReadDir;
+			}
+		});
+
+		it('scanAllWorkspaceAgentDefinitions returns both platforms, tagged', async () => {
+			const origReadDir = vscode.__overrides.readDirectory;
+			vscode.__overrides.readDirectory = async (uri: { fsPath: string }) => {
+				if (uri.fsPath === agentsDir) return [['builder.md', 1]];
+				if (uri.fsPath === claudeAgentsDir) return [['reviewer.md', 1]];
+				return [];
+			};
+
+			try {
+				const scanner = new AgentsScanner(vscode.Uri.file('/workspace'));
+				const results = await scanner.scanAllWorkspaceAgentDefinitions();
+				assert.strictEqual(results.length, 2);
+				assert.ok(results.some(r => r.platform === 'cursor'));
+				assert.ok(results.some(r => r.platform === 'claude'));
+			} finally {
+				vscode.__overrides.readDirectory = origReadDir;
+			}
+		});
+	});
+
 	it('scanWorkspaceAgentDefinitions returns [] when core throws', async () => {
 		// Patch the core module export so the outer try/catch in agentsScanner is exercised
 		// eslint-disable-next-line @typescript-eslint/no-require-imports

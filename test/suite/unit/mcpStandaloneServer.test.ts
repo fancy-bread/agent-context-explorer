@@ -32,7 +32,8 @@ describe('mcp/server (standalone entrypoint helpers)', () => {
 		const manual = coreRuleToRuleInfo({
 			fileName: 'my-rule.mdc',
 			metadata: { description: 'd' },
-			path: '/x/my-rule.mdc'
+			path: '/x/my-rule.mdc',
+			platform: 'cursor'
 		});
 		assert.strictEqual(manual.name, 'my-rule');
 		assert.strictEqual(manual.type, 'manual');
@@ -40,16 +41,45 @@ describe('mcp/server (standalone entrypoint helpers)', () => {
 		const always = coreRuleToRuleInfo({
 			fileName: 'always.mdc',
 			metadata: { description: '', alwaysApply: true },
-			path: '/x/always.mdc'
+			path: '/x/always.mdc',
+			platform: 'cursor'
 		});
 		assert.strictEqual(always.type, 'always');
 
 		const glob = coreRuleToRuleInfo({
 			fileName: 'glob.md',
 			metadata: { description: '', globs: ['*.ts'] },
-			path: '/x/glob.md'
+			path: '/x/glob.md',
+			platform: 'cursor'
 		});
 		assert.strictEqual(glob.type, 'glob');
+	});
+
+	it('coreRuleToRuleInfo/coreCommandToCommandInfo/coreSkillToSkillInfo propagate platform (spec 011)', () => {
+		const rule = coreRuleToRuleInfo({
+			fileName: 'r.mdc',
+			metadata: { description: 'd' },
+			path: '/x/r.mdc',
+			platform: 'claude'
+		});
+		assert.strictEqual(rule.platform, 'claude');
+
+		const command = coreCommandToCommandInfo({
+			fileName: 'c.md',
+			content: '',
+			path: '/x/c.md',
+			location: 'workspace',
+			platform: 'claude'
+		});
+		assert.strictEqual(command.platform, 'claude');
+
+		const skill = coreSkillToSkillInfo({
+			fileName: 's',
+			path: '/x/s',
+			location: 'workspace',
+			platform: 'claude'
+		});
+		assert.strictEqual(skill.platform, 'claude');
 	});
 
 	it('coreCommandToCommandInfo extracts description from Overview or first paragraph', () => {
@@ -57,7 +87,8 @@ describe('mcp/server (standalone entrypoint helpers)', () => {
 			fileName: 'cmd.md',
 			content: '# X\n\n## Overview\n\nHello world\n\n## More\nx',
 			path: '/x/cmd.md',
-			location: 'workspace'
+			location: 'workspace',
+			platform: 'cursor'
 		});
 		assert.strictEqual(fromOverview.description, 'Hello world');
 
@@ -65,7 +96,8 @@ describe('mcp/server (standalone entrypoint helpers)', () => {
 			fileName: 'cmd.md',
 			content: '# X\n\nFirst paragraph here\n\n## More\nx',
 			path: '/x/cmd.md',
-			location: 'global'
+			location: 'global',
+			platform: 'cursor'
 		});
 		assert.strictEqual(fromParagraph.description, 'First paragraph here');
 		assert.strictEqual(fromParagraph.location, 'global');
@@ -76,7 +108,8 @@ describe('mcp/server (standalone entrypoint helpers)', () => {
 			fileName: 'my-skill',
 			metadata: { overview: 'o' },
 			path: '/x/my-skill',
-			location: 'workspace'
+			location: 'workspace',
+			platform: 'cursor'
 		});
 		assert.strictEqual(skill.title, 'my-skill');
 		assert.strictEqual(skill.overview, 'o');

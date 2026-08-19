@@ -80,6 +80,7 @@ describe('Rule Labels Removal', () => {
 		mockRule = {
 			uri: vscode.Uri.file('/test/path/.cursor/rules/test.mdc'),
 			fileName: 'test.mdc',
+			platform: 'cursor',
 			metadata: {
 				description: 'Test rule description',
 				globs: ['*.ts'],
@@ -180,6 +181,7 @@ describe('Rule Labels Removal', () => {
 			const alwaysRule: Rule = {
 				uri: vscode.Uri.file('/test/path/.cursor/rules/always.mdc'),
 				fileName: 'always.mdc',
+				platform: 'cursor',
 				metadata: {
 					description: 'Always applied rule',
 					globs: ['*.ts'],
@@ -191,6 +193,7 @@ describe('Rule Labels Removal', () => {
 			const autoRule: Rule = {
 				uri: vscode.Uri.file('/test/path/.cursor/rules/auto.mdc'),
 				fileName: 'auto.mdc',
+				platform: 'cursor',
 				metadata: {
 					description: 'Auto rule',
 					globs: ['*.js'],
@@ -254,6 +257,7 @@ describe('Rule Labels Removal', () => {
 			const testRule: Rule = {
 				uri: vscode.Uri.file('/test/path/.cursor/rules/test.mdc'),
 				fileName: 'test.mdc',
+				platform: 'cursor',
 				metadata: {
 					description: 'Test rule for testing',
 					globs: ['*.test.ts'],
@@ -271,6 +275,7 @@ describe('Rule Labels Removal', () => {
 			const securityRule: Rule = {
 				uri: vscode.Uri.file('/test/path/.cursor/rules/security.mdc'),
 				fileName: 'security.mdc',
+				platform: 'cursor',
 				metadata: {
 					description: 'Security rules for authentication',
 					globs: ['*.ts'],
@@ -287,6 +292,7 @@ describe('Rule Labels Removal', () => {
 			const performanceRule: Rule = {
 				uri: vscode.Uri.file('/test/path/.cursor/rules/performance.mdc'),
 				fileName: 'performance.mdc',
+				platform: 'cursor',
 				metadata: {
 					description: 'Performance optimization rules',
 					globs: ['*.ts'],
