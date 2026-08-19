@@ -4,7 +4,7 @@
 
 ## Summary
 
-MCP tools (`list_rules`, `list_commands`, `list_skills`, `list_agents`, and the `get_*`/`get_project` equivalents) currently call `.cursor`-only core scan functions, so they never see `.claude/<type>/` artifacts — confirmed by a live query returning 4 skills instead of 15 for a project using Claude Code conventions. The tree view already scans both platforms correctly, but via a second, unconnected scanner (`scanClaudeCodeCore.ts`). This plan merges `.claude/<type>/` scanning into the four `scan*Core.ts` functions (reusing `scanClaudeCodeCore.ts`'s existing per-type helpers), tags every result with a new `platform: 'cursor' | 'claude'` field, and repoints both the MCP tools and the tree view's scanner classes at this single unified scan — leaving the tree view's visible Cursor/Claude Code section split unchanged.
+MCP tools (`list_rules`, `list_commands`, `list_skills`, `list_agents`, and the `get_*`/`get_project` equivalents) currently call `.cursor`-only core scan functions, so they never see `.claude/<type>/` artifacts — confirmed by a live query returning 4 skills instead of 15 for a project using Claude Code conventions. The tree view already scans both platforms correctly, but via a second, unconnected scanner (`scanClaudeCodeCore.ts`). ACE actually has **two** live MCP tool implementations sharing this bug independently: `src/mcp/server.ts` (standalone mode) and `src/mcp/toolsImpl.ts`'s `McpTools` class (bridge mode — the path exercised by a running extension, and the one behind the original defect report). This plan merges `.claude/<type>/` scanning into the four `scan*Core.ts` functions (reusing `scanClaudeCodeCore.ts`'s existing per-type helpers), tags every result with a new `platform: 'cursor' | 'claude'` field, gives each `src/scanner/*Scanner.ts` class a new unfiltered (both-platform) read method alongside its existing cursor-only methods, and repoints both MCP implementations and the tree view's `ClaudeCodeScanner` at this single unified scan — leaving the tree view's visible Cursor/Claude Code section split, and every existing scanner-class method's behavior, unchanged.
 
 ## Technical Context
 
@@ -60,14 +60,16 @@ src/
 │   │   ├── scanCommandsCore.ts      ← merge in .claude/commands workspace scan; tag platform
 │   │   ├── scanSkillsCore.ts        ← merge in .claude/skills workspace scan; tag platform
 │   │   ├── scanAgentDefinitionsCore.ts ← merge in .claude/agents workspace scan; tag platform
-│   │   └── scanClaudeCodeCore.ts    ← per-type helpers reused by the above; aggregate scanClaudeCodeCore() keeps only CLAUDE.md/claudeFolderExists concerns
-│   ├── rulesScanner.ts              ← filter unified scan by platform === 'cursor' (Cursor section) / 'claude' (Claude Code section)
-│   ├── commandsScanner.ts           ← same pattern
-│   ├── skillsScanner.ts             ← same pattern
-│   ├── agentsScanner.ts             ← same pattern
-│   └── claudeCodeScanner.ts         ← drop artifact-scanning responsibility; keep CLAUDE.md/claudeFolderExists
+│   │   └── scanClaudeCodeCore.ts    ← export per-type helpers (scanClaudeRules/Commands/Skills/AgentDefs) for reuse above; aggregate scanClaudeCodeCore() keeps only CLAUDE.md/claudeFolderExists concerns
+│   ├── rulesScanner.ts              ← existing `scanRules()` stays platform === 'cursor'-filtered (unchanged caller: tree view); add unfiltered method for MCP consumers
+│   ├── commandsScanner.ts           ← same pattern (`scanWorkspaceCommands`/`scanGlobalCommands` stay cursor-filtered; add unfiltered method)
+│   ├── skillsScanner.ts             ← same pattern (`scanWorkspaceSkills`/`scanGlobalSkills` stay cursor-filtered; add unfiltered method)
+│   ├── agentsScanner.ts             ← same pattern (`scanWorkspaceAgentDefinitions` stays cursor-filtered; add unfiltered method)
+│   └── claudeCodeScanner.ts         ← drop private artifact-scanning; source rules/commands/skills/agentDefinitions from the new unfiltered scanner methods, filtered to platform === 'claude'; keep CLAUDE.md/claudeFolderExists
 ├── mcp/
-│   └── server.ts                    ← consume unified core scans; add platform to *Info output types; get_* precedence resolution; update tool descriptions (FR-009)
+│   ├── server.ts                    ← standalone-mode tools: consume unified core scans directly; add platform to local *Info interfaces; get_* precedence resolution; update tool descriptions (FR-009)
+│   ├── toolsImpl.ts                 ← bridge-mode `McpTools` class: call each scanner's new unfiltered method instead of the cursor-only ones; get_* precedence resolution
+│   └── types.ts                     ← add platform to RuleInfo/CommandInfo/SkillInfo/AgentDefinitionInfo; update to*Info mapper functions
 
 test/
 └── suite/unit/
@@ -75,11 +77,13 @@ test/
     ├── scanCommandsCore.test.ts     ← add cross-platform fixtures
     ├── scanSkillsCore.test.ts       ← add cross-platform fixtures
     ├── scanAgentDefinitionsCore.test.ts ← add cross-platform fixtures
-    ├── mcpServer*.test.ts           ← assert platform field + get_* precedence
+    ├── rulesScanner.test.ts, commandsScanner.test.ts, skillsScanner.test.ts, agentsScanner.test.ts ← assert existing methods stay cursor-only filtered; assert new unfiltered method returns both platforms
+    ├── mcpServer*.test.ts           ← assert platform field + get_* precedence (standalone mode)
+    ├── toolsImpl.test.ts (or equivalent) ← assert platform field + get_* precedence (bridge mode)
     └── (existing tree view scanner tests) ← assert unchanged section content (NFR-002)
 ```
 
-**Structure Decision**: Single VS Code extension + bundled MCP server project (existing layout, no new top-level directories). Changes are confined to `src/scanner/core/` (shared scan logic), the four `src/scanner/*Scanner.ts` tree-view wrappers, and `src/mcp/server.ts`.
+**Structure Decision**: Single VS Code extension + bundled MCP server project (existing layout, no new top-level directories). Changes are confined to `src/scanner/core/` (shared scan logic), the four `src/scanner/*Scanner.ts` tree-view/MCP wrappers, and both MCP implementations (`src/mcp/server.ts`, `src/mcp/toolsImpl.ts`, `src/mcp/types.ts`).
 
 ## Complexity Tracking
 

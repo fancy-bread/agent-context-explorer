@@ -86,7 +86,7 @@ A developer viewing the Workspaces tree in VS Code/Cursor sees the same Cursor s
 
 - **Unified core scan**: One scan function per artifact type (`scanRulesCore`, `scanCommandsCore`, `scanSkillsCore`, `scanAgentDefinitionsCore`) — today `.cursor`-only; extended to also cover the `.claude/*` scanning already implemented in `scanClaudeCodeCore.ts`, with results tagged by platform.
 - **Platform tag**: New `platform: 'cursor' | 'claude'` metadata field on scanned artifacts, alongside the existing `location: 'workspace' | 'global'` field.
-- **MCP tool layer**: `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `get_project` — consumers of the unified scan; currently call the `.cursor`-only core functions directly.
+- **MCP tool layer**: `list_rules`, `get_rule`, `list_commands`, `get_command`, `list_skills`, `get_skill`, `list_agents`, `get_agent`, `get_project` — consumers of the unified scan. ACE has two independent implementations of this tool layer that both currently call the `.cursor`-only core functions and both need this fix: `src/mcp/server.ts` (standalone mode) and `src/mcp/toolsImpl.ts`'s `McpTools` class (bridge mode — the path used by a running extension).
 - **Tree view scanners**: The per-section scanner layers for the Workspaces tree — after unification, these become thin partitioners over the single merged scan rather than independent scans.
 
 ## Success Criteria *(mandatory)*
@@ -122,6 +122,8 @@ A developer viewing the Workspaces tree in VS Code/Cursor sees the same Cursor s
 | Skills core scan | `src/scanner/core/scanSkillsCore.ts` | Merge in `.claude/skills` workspace scan; add `platform` tag |
 | Agent definitions core scan | `src/scanner/core/scanAgentDefinitionsCore.ts` | Merge in `.claude/agents` workspace scan; add `platform` tag |
 | Claude Code per-project scan | `src/scanner/core/scanClaudeCodeCore.ts` | Source of the `.claude/*` scanning logic being merged in; candidate for retirement once merged |
-| MCP tool layer | `src/mcp/server.ts` | Consume unified core scans; update tool descriptions (FR-009); resolve `get_*` collisions (FR-008) |
+| MCP tool layer (standalone mode) | `src/mcp/server.ts` | Consume unified core scans; update tool descriptions in both the `server.tool()` registrations and the separate `BRIDGE_TOOLS` array (FR-009); resolve `get_*` collisions (FR-008) |
+| MCP tool layer (bridge mode) | `src/mcp/toolsImpl.ts` (`McpTools` class) | A second, independent implementation of the same tool contract, used when the extension is running (via `extensionBackend.ts`). Currently has the identical `.cursor`-only bug and must be fixed in parallel with `server.ts` — not covered by fixing `server.ts` alone. |
+| MCP output types (bridge mode) | `src/mcp/types.ts` | `RuleInfo`/`CommandInfo`/`SkillInfo`/`AgentDefinitionInfo` interfaces and `to*Info` mapper functions used by `toolsImpl.ts`, parallel to `server.ts`'s own local copies of the same interfaces — both need the `platform` field added |
 | Tree view scanners | `src/scanner/skillsScanner.ts`, `rulesScanner.ts`, `commandsScanner.ts`, `agentsScanner.ts`, `claudeCodeScanner.ts` | Partition unified scan results by platform tag instead of running independent scans |
-| Tests | `test/suite/unit/*Core*.test.ts`, `*Scanner*.test.ts`, MCP server tests | Add cross-platform fixtures; assert tree view parity (SC-002) |
+| Tests | `test/suite/unit/*Core*.test.ts`, `*Scanner*.test.ts`, `mcpServer*.test.ts`, `mcpTools.test.ts` | Add cross-platform fixtures; assert tree view parity (SC-002); assert both MCP implementations return complete results |

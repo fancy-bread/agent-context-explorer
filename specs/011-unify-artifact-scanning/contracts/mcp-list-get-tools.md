@@ -4,6 +4,10 @@
 
 `list_rules`, `list_commands`, `list_skills`, `list_agents`, `get_rule`, `get_command`, `get_skill`, `get_agent`, and `get_project` return artifacts from both `.cursor/<type>/` and `.claude/<type>/` at the workspace level for a project, instead of `.cursor/<type>/` only.
 
+## Applies to Both Live Implementations
+
+This contract is implementation-agnostic — it covers the externally-observable tool behavior regardless of which of ACE's two MCP implementations serves the call: `src/mcp/server.ts` (standalone mode, no running extension) or `src/mcp/toolsImpl.ts`'s `McpTools` class (bridge mode, via a running extension's `extensionBackend.ts`). A caller cannot tell which implementation answered, and neither should differ in output shape or completeness (see research.md Decision 5).
+
 ## Tool Names, Input Schemas — Unchanged
 
 No tool is renamed, added, or removed. Input schemas (`projectKeyShape`, `nameAndProjectKeyShape`) are unchanged — this is a completeness and metadata change to tool *output*, not the contract surface described by NFR-001.
