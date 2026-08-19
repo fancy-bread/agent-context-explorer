@@ -837,6 +837,19 @@ describe('MCP Server contract (tools-only)', () => {
 		assert.ok(EXPECTED_MCP_TOOLS.includes('get_project'));
 		assert.strictEqual(EXPECTED_MCP_TOOLS.length, 12);
 	});
+
+	it('tool descriptions no longer imply Cursor-only coverage (spec 011 FR-009)', () => {
+		const serverPath = path.resolve(process.cwd(), 'src', 'mcp', 'server.ts');
+		const content = fs.readFileSync(serverPath, 'utf-8');
+		assert.ok(
+			!content.includes('List all Cursor'),
+			'server.ts must not describe list_* tools as Cursor-only (checks both server.tool() registrations and BRIDGE_TOOLS)'
+		);
+		assert.ok(content.includes('.claude/rules'), 'list_rules description should mention .claude/rules');
+		assert.ok(content.includes('.claude/commands'), 'list_commands description should mention .claude/commands');
+		assert.ok(content.includes('.claude/skills'), 'list_skills description should mention .claude/skills');
+		assert.ok(content.includes('.claude/agents'), 'list_agents description should mention .claude/agents');
+	});
 });
 
 // =============================================================================

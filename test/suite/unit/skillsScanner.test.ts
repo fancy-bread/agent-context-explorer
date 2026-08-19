@@ -157,6 +157,7 @@ guidance:
 					content: 'body',
 					fileName: 'ws-skill',
 					location: 'workspace',
+					platform: 'cursor',
 					metadata: { title: 'WS', overview: 'o' }
 				},
 				{
@@ -164,6 +165,7 @@ guidance:
 					content: 'g',
 					fileName: 'glob-skill',
 					location: 'global',
+					platform: 'cursor',
 					metadata: undefined
 				}
 			];
@@ -186,6 +188,82 @@ guidance:
 			const scanner = new SkillsScanner(workspaceRoot);
 			assert.deepStrictEqual(await scanner.scanWorkspaceSkills(), []);
 			assert.deepStrictEqual(await scanner.scanGlobalSkills(), []);
+		});
+
+		describe('scanAllWorkspaceSkills / scanAllGlobalSkills (spec 011)', () => {
+			it('scanWorkspaceSkills/scanGlobalSkills stay cursor-only when claude results are present', async () => {
+				const coreRows: CoreSkill[] = [
+					{
+						path: '/test/workspace/.cursor/skills/ws-skill/SKILL.md',
+						content: 'body',
+						fileName: 'ws-skill',
+						location: 'workspace',
+						platform: 'cursor',
+						metadata: { title: 'WS', overview: 'o' }
+					},
+					{
+						path: '/test/workspace/.claude/skills/claude-skill/SKILL.md',
+						content: 'body',
+						fileName: 'claude-skill',
+						location: 'workspace',
+						platform: 'claude',
+						metadata: { title: 'Claude', overview: 'o' }
+					}
+				];
+				mod.scanSkillsCore = async () => coreRows;
+				const scanner = new SkillsScanner(workspaceRoot);
+				const ws = await scanner.scanWorkspaceSkills();
+				assert.strictEqual(ws.length, 1);
+				assert.strictEqual(ws[0].platform, 'cursor');
+			});
+
+			it('scanAllWorkspaceSkills returns both platforms, tagged', async () => {
+				const coreRows: CoreSkill[] = [
+					{
+						path: '/test/workspace/.cursor/skills/ws-skill/SKILL.md',
+						content: 'body',
+						fileName: 'ws-skill',
+						location: 'workspace',
+						platform: 'cursor',
+						metadata: { title: 'WS', overview: 'o' }
+					},
+					{
+						path: '/test/workspace/.claude/skills/claude-skill/SKILL.md',
+						content: 'body',
+						fileName: 'claude-skill',
+						location: 'workspace',
+						platform: 'claude',
+						metadata: { title: 'Claude', overview: 'o' }
+					}
+				];
+				mod.scanSkillsCore = async () => coreRows;
+				const scanner = new SkillsScanner(workspaceRoot);
+				const all = await scanner.scanAllWorkspaceSkills();
+				assert.strictEqual(all.length, 2);
+				assert.ok(all.some(s => s.platform === 'cursor'));
+				assert.ok(all.some(s => s.platform === 'claude'));
+			});
+
+			it('an unrecognized platform value is excluded from both scanWorkspaceSkills and a claude-only filter (spec 011 edge case)', async () => {
+				const coreRows = [
+					{
+						path: '/test/workspace/.mystery/skills/x/SKILL.md',
+						content: 'body',
+						fileName: 'x',
+						location: 'workspace',
+						platform: 'mystery',
+						metadata: undefined
+					}
+				] as unknown as CoreSkill[];
+				mod.scanSkillsCore = async () => coreRows;
+				const scanner = new SkillsScanner(workspaceRoot);
+				const all = await scanner.scanAllWorkspaceSkills();
+				assert.strictEqual(all.length, 1, 'unfiltered scan still returns the raw entry');
+				const cursorOnly = await scanner.scanWorkspaceSkills();
+				assert.strictEqual(cursorOnly.length, 0, 'not silently included in the cursor-filtered section');
+				const claudeOnly = all.filter(s => s.platform === 'claude');
+				assert.strictEqual(claudeOnly.length, 0, 'not silently included in the claude-filtered section either');
+			});
 		});
 	});
 });

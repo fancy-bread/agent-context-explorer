@@ -1,12 +1,14 @@
 // Shared skills scanning - NO vscode dependency
 import * as path from 'path';
 import type { IFileSystem } from './types';
-import type { CoreSkill } from './types';
+import type { CoreSkill, CorePlatform } from './types';
 import { FileType } from './types';
 import { parseSKILLMetadata } from '../skillParsing';
+import { scanClaudeSkills } from './scanClaudeCodeCore';
 
 /**
- * Scan for Cursor skills in project .cursor/skills/ and user ~/.cursor/skills/.
+ * Scan for skills in project .cursor/skills/ + .claude/skills/ (workspace),
+ * and user ~/.cursor/skills/ (global — no global .claude scan; see spec 011 FR-007).
  * One level: each subdir contains SKILL.md.
  */
 export async function scanSkillsCore(
@@ -16,13 +18,16 @@ export async function scanSkillsCore(
 ): Promise<CoreSkill[]> {
 	const skills: CoreSkill[] = [];
 
-	// Project skills
+	// Project skills (Cursor)
 	const projectSkillsDir = path.join(projectRoot, '.cursor', 'skills');
-	await scanSkillsInDir(fs, projectSkillsDir, 'workspace', skills);
+	await scanSkillsInDir(fs, projectSkillsDir, 'workspace', 'cursor', skills);
+
+	// Project skills (Claude Code)
+	skills.push(...await scanClaudeSkills(fs, projectRoot));
 
 	// User/global skills (from ~/.cursor)
 	const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
-	await scanSkillsInDir(fs, userSkillsDir, 'global', skills);
+	await scanSkillsInDir(fs, userSkillsDir, 'global', 'cursor', skills);
 
 	return skills;
 }
@@ -31,6 +36,7 @@ async function scanSkillsInDir(
 	fs: IFileSystem,
 	skillsDir: string,
 	location: 'workspace' | 'global',
+	platform: CorePlatform,
 	results: CoreSkill[]
 ): Promise<void> {
 	try {
@@ -50,6 +56,7 @@ async function scanSkillsInDir(
 					content: text,
 					fileName: name,
 					location,
+					platform,
 					metadata: metadata ? {
 						title: metadata.title,
 						overview: metadata.overview,
@@ -64,7 +71,8 @@ async function scanSkillsInDir(
 					path: skillPath,
 					content: 'Error reading file content',
 					fileName: name,
-					location
+					location,
+					platform
 				});
 			}
 		}
@@ -83,6 +91,8 @@ export async function scanAgentSkillsCore(
 ): Promise<CoreSkill[]> {
 	const skills: CoreSkill[] = [];
 	const skillsDir = path.join(agentRoot, 'skills');
-	await scanSkillsInDir(fs, skillsDir, 'global', skills);
+	// Agent-root scans (Agents view: Cursor/Claude/Global roots) aren't platform-filtered by any
+	// consumer — this field is only meaningful for project-level scanSkillsCore above.
+	await scanSkillsInDir(fs, skillsDir, 'global', 'cursor', skills);
 	return skills;
 }

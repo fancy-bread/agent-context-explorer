@@ -3,10 +3,10 @@
 import * as vscode from 'vscode';
 import { VSCodeFsAdapter } from './adapters/vscodeFsAdapter';
 import { scanClaudeCodeCore } from './core/scanClaudeCodeCore';
-import type { Rule } from './rulesScanner';
-import type { Command } from './commandsScanner';
-import type { Skill } from './skillsScanner';
-import type { AgentDefinition } from './agentsScanner';
+import { RulesScanner, type Rule } from './rulesScanner';
+import { CommandsScanner, type Command } from './commandsScanner';
+import { SkillsScanner, type Skill } from './skillsScanner';
+import { AgentsScanner, type AgentDefinition } from './agentsScanner';
 
 export interface ClaudeMdFile {
 	uri: vscode.Uri;
@@ -29,37 +29,29 @@ export class ClaudeCodeScanner {
 	async scan(): Promise<ClaudeCodeArtifacts> {
 		try {
 			const fs = new VSCodeFsAdapter();
-			const core = await scanClaudeCodeCore(fs, this.workspaceRoot.fsPath);
+			const rulesScanner = new RulesScanner(this.workspaceRoot);
+			const commandsScanner = new CommandsScanner(this.workspaceRoot);
+			const skillsScanner = new SkillsScanner(this.workspaceRoot);
+			const agentsScanner = new AgentsScanner(this.workspaceRoot);
+
+			// claudeMdPath/claudeFolderExists/hasAnyArtifacts are unrelated to the four artifact
+			// types unified in spec 011 — sourced from scanClaudeCodeCore() unchanged.
+			const [core, allRules, allCommands, allSkills, allAgentDefinitions] = await Promise.all([
+				scanClaudeCodeCore(fs, this.workspaceRoot.fsPath),
+				rulesScanner.scanAllRules(),
+				commandsScanner.scanAllWorkspaceCommands(),
+				skillsScanner.scanAllWorkspaceSkills(),
+				agentsScanner.scanAllWorkspaceAgentDefinitions()
+			]);
 
 			return {
 				claudeMd: core.claudeMdPath
 					? { uri: vscode.Uri.file(core.claudeMdPath), path: core.claudeMdPath }
 					: undefined,
-				rules: core.rules.map(r => ({
-					uri: vscode.Uri.file(r.path),
-					metadata: r.metadata,
-					content: r.content,
-					fileName: r.fileName
-				})),
-				commands: core.commands.map(c => ({
-					uri: vscode.Uri.file(c.path),
-					content: c.content,
-					fileName: c.fileName,
-					location: 'workspace' as const
-				})),
-				skills: core.skills.map(s => ({
-					uri: vscode.Uri.file(s.path),
-					content: s.content,
-					fileName: s.fileName,
-					location: 'workspace' as const,
-					metadata: s.metadata
-				})),
-				agentDefinitions: core.agentDefinitions.map(ad => ({
-					uri: vscode.Uri.file(ad.path),
-					content: ad.content,
-					fileName: ad.fileName,
-					displayName: ad.displayName
-				})),
+				rules: allRules.filter(r => r.platform === 'claude'),
+				commands: allCommands.filter(c => c.platform === 'claude'),
+				skills: allSkills.filter(s => s.platform === 'claude'),
+				agentDefinitions: allAgentDefinitions.filter(a => a.platform === 'claude'),
 				claudeFolderExists: core.claudeFolderExists,
 				hasAnyArtifacts: core.hasAnyArtifacts
 			};

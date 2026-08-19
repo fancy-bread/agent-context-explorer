@@ -60,7 +60,7 @@ async function statClaudeFolder(fs: IFileSystem, projectRoot: string): Promise<b
 /**
  * Scan `.claude/agents/*.md` (flat, no recursion) for project-level agent definitions.
  */
-async function scanClaudeAgentDefs(fs: IFileSystem, projectRoot: string): Promise<CoreAgentDefinition[]> {
+export async function scanClaudeAgentDefs(fs: IFileSystem, projectRoot: string): Promise<CoreAgentDefinition[]> {
 	const agentsDir = path.join(projectRoot, '.claude', 'agents');
 	const filePaths = await listFilesFlat(fs, agentsDir, ['.md'], ['README.md']);
 
@@ -81,14 +81,16 @@ async function scanClaudeAgentDefs(fs: IFileSystem, projectRoot: string): Promis
 				path: filePath,
 				content: text,
 				fileName: displayName,
-				displayName
+				displayName,
+				platform: 'claude'
 			});
 		} catch {
 			results.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: displayName,
-				displayName
+				displayName,
+				platform: 'claude'
 			});
 		}
 	}
@@ -105,7 +107,7 @@ async function statClaudeMd(fs: IFileSystem, projectRoot: string): Promise<strin
 	}
 }
 
-async function scanClaudeRules(fs: IFileSystem, projectRoot: string): Promise<CoreRule[]> {
+export async function scanClaudeRules(fs: IFileSystem, projectRoot: string): Promise<CoreRule[]> {
 	const rulesDir = path.join(projectRoot, '.claude', 'rules');
 	const rules: CoreRule[] = [];
 	const filePaths = await listFilesRecursive(fs, rulesDir, ['.mdc', '.md']);
@@ -115,20 +117,21 @@ async function scanClaudeRules(fs: IFileSystem, projectRoot: string): Promise<Co
 			const content = await fs.readFile(filePath);
 			const text = content.toString('utf8');
 			const { metadata, content: body } = parseRuleFromString(text);
-			rules.push({ path: filePath, metadata, content: body, fileName: path.basename(filePath) });
+			rules.push({ path: filePath, metadata, content: body, fileName: path.basename(filePath), platform: 'claude' });
 		} catch {
 			rules.push({
 				path: filePath,
 				metadata: { description: 'Error parsing file' },
 				content: 'Error reading file content',
-				fileName: path.basename(filePath)
+				fileName: path.basename(filePath),
+				platform: 'claude'
 			});
 		}
 	}
 	return rules;
 }
 
-async function scanClaudeCommands(fs: IFileSystem, projectRoot: string): Promise<CoreCommand[]> {
+export async function scanClaudeCommands(fs: IFileSystem, projectRoot: string): Promise<CoreCommand[]> {
 	const commandsDir = path.join(projectRoot, '.claude', 'commands');
 	const commands: CoreCommand[] = [];
 	const filePaths = await listFilesFlat(fs, commandsDir, ['.md'], ['README.md']);
@@ -141,21 +144,23 @@ async function scanClaudeCommands(fs: IFileSystem, projectRoot: string): Promise
 				path: filePath,
 				content: text,
 				fileName: path.basename(filePath, '.md'),
-				location: 'workspace'
+				location: 'workspace',
+				platform: 'claude'
 			});
 		} catch {
 			commands.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: path.basename(filePath, '.md'),
-				location: 'workspace'
+				location: 'workspace',
+				platform: 'claude'
 			});
 		}
 	}
 	return commands;
 }
 
-async function scanClaudeSkills(fs: IFileSystem, projectRoot: string): Promise<CoreSkill[]> {
+export async function scanClaudeSkills(fs: IFileSystem, projectRoot: string): Promise<CoreSkill[]> {
 	const skillsDir = path.join(projectRoot, '.claude', 'skills');
 	const skills: CoreSkill[] = [];
 
@@ -173,6 +178,7 @@ async function scanClaudeSkills(fs: IFileSystem, projectRoot: string): Promise<C
 					content: text,
 					fileName: name,
 					location: 'workspace',
+					platform: 'claude',
 					metadata: metadata ? {
 						title: metadata.title,
 						overview: metadata.overview,
@@ -187,7 +193,8 @@ async function scanClaudeSkills(fs: IFileSystem, projectRoot: string): Promise<C
 					path: skillPath,
 					content: 'Error reading file content',
 					fileName: name,
-					location: 'workspace'
+					location: 'workspace',
+					platform: 'claude'
 				});
 			}
 		}

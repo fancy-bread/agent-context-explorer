@@ -41,6 +41,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/security.mdc'),
 					fileName: 'security.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Security best practices for VS Code extensions',
 						globs: ['**/*.ts'],
@@ -55,6 +56,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/testing.mdc'),
 					fileName: 'testing.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Testing strategies for VS Code extensions',
 						globs: ['**/*.test.ts'],
@@ -69,6 +71,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/performance.mdc'),
 					fileName: 'performance.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Performance optimization for VS Code extensions',
 						globs: ['**/*.ts'],
@@ -83,6 +86,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/typescript-extension.mdc'),
 					fileName: 'typescript-extension.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'TypeScript VS Code extension development best practices',
 						globs: ['**/*.ts'],
@@ -97,6 +101,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/ui-ux.mdc'),
 					fileName: 'ui-ux.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'UI/UX guidelines for VS Code extension development',
 						globs: ['**/*.ts'],
@@ -111,6 +116,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/error-handling.mdc'),
 					fileName: 'error-handling.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Comprehensive error handling patterns for VS Code extensions',
 						globs: ['**/*.ts'],
@@ -125,6 +131,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/project-specific.mdc'),
 					fileName: 'project-specific.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Specific rules for the Agent Context Explorer extension',
 						globs: ['**/*.ts'],
@@ -139,6 +146,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/documentation/documentation.mdc'),
 					fileName: 'documentation.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'Documentation standards for VS Code extensions',
 						globs: ['**/*.md'],
@@ -153,6 +161,7 @@ describe('Icon Analysis for Real Rules', () => {
 				rule: {
 					uri: vscode.Uri.file('/test/deployment/publishing.mdc'),
 					fileName: 'publishing.mdc',
+					platform: 'cursor',
 					metadata: {
 						description: 'VS Code extension publishing and deployment guidelines',
 						globs: ['package.json'],
@@ -193,6 +202,7 @@ describe('Icon Analysis for Real Rules', () => {
 		const testingRule: Rule = {
 			uri: vscode.Uri.file('/test/testing.mdc'),
 			fileName: 'testing.mdc',
+			platform: 'cursor',
 			metadata: {
 				description: 'Testing strategies',
 				globs: [],
@@ -209,6 +219,7 @@ describe('Icon Analysis for Real Rules', () => {
 		const subDirRule: Rule = {
 			uri: vscode.Uri.file('/test/deployment/publishing.mdc'),
 			fileName: 'publishing.mdc',
+			platform: 'cursor',
 			metadata: {
 				description: 'Publishing guidelines',
 				globs: [],

@@ -6,6 +6,7 @@ import {
 	scanAgentDefinitionsInDirectory,
 	scanWorkspaceAgentDefinitionsCore
 } from './core/scanAgentDefinitionsCore';
+import type { CorePlatform } from './core/types';
 
 export interface AgentDefinition {
 	uri: vscode.Uri;
@@ -13,12 +14,19 @@ export interface AgentDefinition {
 	/** Display stem (basename without `.md`) */
 	fileName: string;
 	displayName: string;
+	platform: CorePlatform;
 }
 
 export class AgentsScanner {
 	constructor(private workspaceRoot: vscode.Uri) {}
 
 	async scanWorkspaceAgentDefinitions(): Promise<AgentDefinition[]> {
+		const all = await this.scanAllWorkspaceAgentDefinitions();
+		return all.filter((a) => a.platform === 'cursor');
+	}
+
+	/** All workspace agent definitions from both `.cursor/agents/` and `.claude/agents/`, platform-tagged (spec 011). */
+	async scanAllWorkspaceAgentDefinitions(): Promise<AgentDefinition[]> {
 		try {
 			const fs = new VSCodeFsAdapter();
 			const core = await scanWorkspaceAgentDefinitionsCore(fs, this.workspaceRoot.fsPath);
@@ -26,7 +34,8 @@ export class AgentsScanner {
 				uri: vscode.Uri.file(c.path),
 				content: c.content,
 				fileName: c.fileName,
-				displayName: c.displayName
+				displayName: c.displayName,
+				platform: c.platform
 			}));
 		} catch {
 			return [];
@@ -47,7 +56,8 @@ export async function scanAgentDefinitionsForAgentRoot(agentRootAbsolutePath: st
 			uri: vscode.Uri.file(c.path),
 			content: c.content,
 			fileName: c.fileName,
-			displayName: c.displayName
+			displayName: c.displayName,
+			platform: c.platform
 		}));
 	} catch {
 		return [];

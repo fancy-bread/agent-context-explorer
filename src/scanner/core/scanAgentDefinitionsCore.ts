@@ -1,8 +1,9 @@
 // Shared agent definitions scanning - NO vscode dependency
 import * as path from 'path';
 import type { IFileSystem } from './types';
-import type { CoreAgentDefinition } from './types';
+import type { CoreAgentDefinition, CorePlatform } from './types';
 import { listFilesFlat } from './listFiles';
+import { scanClaudeAgentDefs } from './scanClaudeCodeCore';
 
 /**
  * Absolute path to workspace-scoped agent definitions: `<projectRoot>/.cursor/agents`.
@@ -22,10 +23,15 @@ export function agentRootAgentsDirectory(agentRoot: string): string {
 /**
  * Scan a single `agents` directory for flat `*.md` files (non-recursive).
  * Missing or unreadable directory → empty array.
+ *
+ * `platform` defaults to `'cursor'` — meaningful for the workspace `.cursor/agents` scan below;
+ * not platform-filtered by any consumer for agent-root (Agents view) scans, which pass it through
+ * unchanged for type consistency only.
  */
 export async function scanAgentDefinitionsInDirectory(
 	fs: IFileSystem,
-	agentsDirAbsolute: string
+	agentsDirAbsolute: string,
+	platform: CorePlatform = 'cursor'
 ): Promise<CoreAgentDefinition[]> {
 	const files = await listFilesFlat(fs, agentsDirAbsolute, ['.md'], ['README.md']);
 	const sorted = [...files].sort((a, b) => {
@@ -45,14 +51,16 @@ export async function scanAgentDefinitionsInDirectory(
 				path: filePath,
 				content: text,
 				fileName: displayName,
-				displayName
+				displayName,
+				platform
 			});
 		} catch {
 			results.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: displayName,
-				displayName
+				displayName,
+				platform
 			});
 		}
 	}
@@ -61,12 +69,14 @@ export async function scanAgentDefinitionsInDirectory(
 }
 
 /**
- * Workspace project: `.cursor/agents/*.md` only.
+ * Workspace project: `.cursor/agents/*.md` + `.claude/agents/*.md`.
  */
 export async function scanWorkspaceAgentDefinitionsCore(
 	fs: IFileSystem,
 	projectRoot: string
 ): Promise<CoreAgentDefinition[]> {
 	const dir = workspaceAgentsDirectory(projectRoot);
-	return scanAgentDefinitionsInDirectory(fs, dir);
+	const cursorDefs = await scanAgentDefinitionsInDirectory(fs, dir, 'cursor');
+	const claudeDefs = await scanClaudeAgentDefs(fs, projectRoot);
+	return [...cursorDefs, ...claudeDefs];
 }

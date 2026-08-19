@@ -487,7 +487,8 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				uri: vscode.Uri.file(c.path),
 				content: c.content,
 				fileName: c.fileName,
-				location: 'global'
+				location: 'global',
+				platform: c.platform
 			}));
 
 			const skills: Skill[] = coreSkills.map(s => ({
@@ -495,7 +496,8 @@ async function resolveAgentRootsWithData(): Promise<AgentRootDefinition[]> {
 				content: s.content,
 				fileName: s.fileName,
 				location: 'global',
-				metadata: s.metadata
+				metadata: s.metadata,
+				platform: s.platform
 			}));
 
 			roots.push({

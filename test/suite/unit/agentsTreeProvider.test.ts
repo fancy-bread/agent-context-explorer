@@ -332,7 +332,8 @@ describe('AgentsTreeProvider agents section (agent root)', () => {
 			uri: adUri,
 			content: '# Home\n',
 			fileName: 'home',
-			displayName: 'home'
+			displayName: 'home',
+			platform: 'cursor'
 		};
 		const roots: AgentRootDefinition[] = [
 			{

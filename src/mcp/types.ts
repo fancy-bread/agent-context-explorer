@@ -5,6 +5,7 @@ import { Command } from '../scanner/commandsScanner';
 import { Skill } from '../scanner/skillsScanner';
 import type { AgentDefinition } from '../scanner/agentsScanner';
 import type { AsdlcArtifacts, SpecFile } from '../scanner/types';
+import type { CorePlatform } from '../scanner/core/types';
 
 // =============================================================================
 // Rule Types (for MCP tools)
@@ -19,6 +20,7 @@ export interface RuleInfo {
 	type: 'always' | 'glob' | 'manual';
 	path: string;
 	globs?: string[];
+	platform: CorePlatform;
 }
 
 /**
@@ -31,6 +33,7 @@ export interface RuleContent {
 	path: string;
 	content: string;
 	globs?: string[];
+	platform: CorePlatform;
 }
 
 /**
@@ -45,7 +48,8 @@ export function toRuleInfo(rule: Rule): RuleInfo {
 		description: rule.metadata.description || '',
 		type,
 		path: rule.uri.fsPath,
-		globs: rule.metadata.globs
+		globs: rule.metadata.globs,
+		platform: rule.platform
 	};
 }
 
@@ -62,7 +66,8 @@ export function toRuleContent(rule: Rule): RuleContent {
 		type,
 		path: rule.uri.fsPath,
 		content: rule.content,
-		globs: rule.metadata.globs
+		globs: rule.metadata.globs,
+		platform: rule.platform
 	};
 }
 
@@ -78,6 +83,7 @@ export interface CommandInfo {
 	description: string;
 	path: string;
 	location: 'workspace' | 'global';
+	platform: CorePlatform;
 }
 
 /**
@@ -89,6 +95,7 @@ export interface CommandContent {
 	path: string;
 	location: 'workspace' | 'global';
 	content: string;
+	platform: CorePlatform;
 }
 
 /**
@@ -122,7 +129,8 @@ export function toCommandInfo(command: Command): CommandInfo {
 		name: command.fileName.replace(/\.md$/, ''),
 		description: extractCommandDescription(command.content),
 		path: command.uri.fsPath,
-		location: command.location
+		location: command.location,
+		platform: command.platform
 	};
 }
 
@@ -135,7 +143,8 @@ export function toCommandContent(command: Command): CommandContent {
 		description: extractCommandDescription(command.content),
 		path: command.uri.fsPath,
 		location: command.location,
-		content: command.content
+		content: command.content,
+		platform: command.platform
 	};
 }
 
@@ -152,6 +161,7 @@ export interface SkillInfo {
 	overview?: string;
 	path: string;
 	location: 'workspace' | 'global';
+	platform: CorePlatform;
 }
 
 /**
@@ -169,6 +179,7 @@ export interface SkillContent {
 		steps?: string[];
 		tools?: string[];
 	};
+	platform: CorePlatform;
 }
 
 /**
@@ -180,7 +191,8 @@ export function toSkillInfo(skill: Skill): SkillInfo {
 		title: skill.metadata?.title,
 		overview: skill.metadata?.overview,
 		path: skill.uri.fsPath,
-		location: skill.location
+		location: skill.location,
+		platform: skill.platform
 	};
 }
 
@@ -199,7 +211,8 @@ export function toSkillContent(skill: Skill): SkillContent {
 			prerequisites: skill.metadata?.prerequisites,
 			steps: skill.metadata?.steps,
 			tools: skill.metadata?.tools
-		}
+		},
+		platform: skill.platform
 	};
 }
 
@@ -218,6 +231,7 @@ export interface AgentDefinitionInfo {
 	displayName: string;
 	path: string;
 	location: AgentDefinitionLocation;
+	platform: CorePlatform;
 }
 
 /**
@@ -229,6 +243,7 @@ export interface AgentDefinitionContent {
 	path: string;
 	location: AgentDefinitionLocation;
 	content: string;
+	platform: CorePlatform;
 }
 
 export function toAgentDefinitionInfo(def: AgentDefinition, location: AgentDefinitionLocation): AgentDefinitionInfo {
@@ -236,7 +251,8 @@ export function toAgentDefinitionInfo(def: AgentDefinition, location: AgentDefin
 		name: def.fileName,
 		displayName: def.displayName,
 		path: def.uri.fsPath,
-		location
+		location,
+		platform: def.platform
 	};
 }
 

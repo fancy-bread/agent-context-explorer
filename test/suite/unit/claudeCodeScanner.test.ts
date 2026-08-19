@@ -123,6 +123,31 @@ describe('ClaudeCodeScanner.scan() — skills', () => {
 	});
 });
 
+describe('ClaudeCodeScanner.scan() — cross-platform parity (spec 011)', () => {
+	it('only returns .claude/* rules/commands/skills when .cursor/* also has content (SC-002)', async () => {
+		vscodeStub.__overrides.readDirectory = (uri: any) => {
+			const p = uri.fsPath as string;
+			if (p.endsWith('.claude/rules')) return [['claude-rule.mdc', 1]];
+			if (p.endsWith('.cursor/rules')) return [['cursor-rule.mdc', 1]];
+			if (p.endsWith('.claude/commands')) return [['claude-cmd.md', 1]];
+			if (p.endsWith('.cursor/commands')) return [['cursor-cmd.md', 1]];
+			if (p.endsWith('.claude/skills')) return [['claude-skill', 2]];
+			if (p.endsWith('.cursor/skills')) return [['cursor-skill', 2]];
+			return [];
+		};
+
+		const scanner = new ClaudeCodeScanner(testUri as any);
+		const result = await scanner.scan();
+
+		assert.strictEqual(result.rules.length, 1);
+		assert.strictEqual(result.rules[0].fileName, 'claude-rule.mdc');
+		assert.strictEqual(result.commands.length, 1);
+		assert.strictEqual(result.commands[0].fileName, 'claude-cmd');
+		assert.strictEqual(result.skills.length, 1);
+		assert.strictEqual(result.skills[0].fileName, 'claude-skill');
+	});
+});
+
 describe('ClaudeCodeScanner.scan() — error handling', () => {
 	it('returns empty artifacts when scan throws (catch block)', async () => {
 		// Pass null as workspaceRoot — accessing .fsPath throws TypeError inside scan()

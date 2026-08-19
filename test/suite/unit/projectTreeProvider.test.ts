@@ -357,6 +357,7 @@ describe('ProjectTreeProvider agents (Cursor — agent-definitions)', () => {
 
 	it('returns agent leaves with hubot icon and vscode.open (US1)', async () => {
 		const ad: AgentDefinition = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/agents/my-agent.md'),
 			content: '# My Agent\n',
 			fileName: 'my-agent',
@@ -383,6 +384,7 @@ describe('ProjectTreeProvider agents (Cursor — agent-definitions)', () => {
 describe('ProjectTreeProvider commands', () => {
 	it('commands returns workspace command items with preview tooltip', async () => {
 		const cmd: Command = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/commands/test.md'),
 			fileName: 'test.md',
 			content: '# Test Command\n\nDescription',
@@ -411,6 +413,7 @@ describe('ProjectTreeProvider commands', () => {
 
 	it('commands tooltip uses first non-empty line when no heading', async () => {
 		const cmd: Command = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/commands/plain.md'),
 			fileName: 'plain.md',
 			content: 'Plain first line\n\nMore text',
@@ -427,6 +430,7 @@ describe('ProjectTreeProvider commands', () => {
 
 	it('commands tooltip uses first 100 chars when no heading or non-empty line', async () => {
 		const cmd: Command = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/commands/empty.md'),
 			fileName: 'empty.md',
 			content: '',
@@ -445,6 +449,7 @@ describe('ProjectTreeProvider commands', () => {
 describe('ProjectTreeProvider skills', () => {
 	it('skills returns workspace skill items', async () => {
 		const skill: Skill = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/skills/foo/SKILL.md'),
 			fileName: 'SKILL.md',
 			location: 'workspace',
@@ -475,6 +480,7 @@ describe('ProjectTreeProvider skills', () => {
 describe('ProjectTreeProvider rules', () => {
 	it('rules returns rule items', async () => {
 		const rule: Rule = {
+		platform: 'cursor',
 			uri: vscode.Uri.file('/test/.cursor/rules/test.mdc'),
 			fileName: 'test.mdc',
 			metadata: { description: 'A rule', globs: [], alwaysApply: false },
@@ -679,7 +685,7 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 	});
 
 	it('T008: renders Rules group with count and bookmark icon', async () => {
-		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'desc', globs: [], alwaysApply: false }, content: '' };
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'desc', globs: [], alwaysApply: false }, content: '', platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 
@@ -703,7 +709,7 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 	});
 
 	it('T009: renders Commands group with count and terminal icon', async () => {
-		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/foo.md'), fileName: 'foo.md', content: '', location: 'workspace' };
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/foo.md'), fileName: 'foo.md', content: '', location: 'workspace', platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 
@@ -727,7 +733,7 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 	});
 
 	it('T010: renders Skills group with count and play-circle icon', async () => {
-		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'Foo', overview: 'Overview' } };
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'Foo', overview: 'Overview' }, platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 
@@ -753,7 +759,7 @@ describe('ProjectTreeProvider claude-code children (T007-T010)', () => {
 
 describe('ProjectTreeProvider claude-rules leaf items (T008)', () => {
 	it('returns rule leaf items with correct properties', async () => {
-		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/my-rule.md'), fileName: 'my-rule.md', metadata: { description: 'My rule desc', globs: [], alwaysApply: false }, content: '' };
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/my-rule.md'), fileName: 'my-rule.md', metadata: { description: 'My rule desc', globs: [], alwaysApply: false }, content: '', platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 		const rulesItem: ProjectTreeItem = { label: 'Rules (1)', collapsibleState: 1, category: 'claude-rules', project: mockProject } as ProjectTreeItem;
@@ -772,7 +778,7 @@ describe('ProjectTreeProvider claude-rules leaf items (T008)', () => {
 
 describe('ProjectTreeProvider claude-commands leaf items (T009)', () => {
 	it('strips .md extension from command label', async () => {
-		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/deploy.md'), fileName: 'deploy.md', content: '', location: 'workspace' };
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/deploy.md'), fileName: 'deploy.md', content: '', location: 'workspace', platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 		const commandsItem: ProjectTreeItem = { label: 'Commands (1)', collapsibleState: 1, category: 'claude-commands', project: mockProject } as ProjectTreeItem;
@@ -788,7 +794,7 @@ describe('ProjectTreeProvider claude-commands leaf items (T009)', () => {
 	});
 
 	it('uses fileName as-is when it has no .md extension', async () => {
-		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/review'), fileName: 'review', content: '', location: 'workspace' };
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/review'), fileName: 'review', content: '', location: 'workspace', platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ commands: [cmd], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 		const commandsItem: ProjectTreeItem = { label: 'Commands (1)', collapsibleState: 1, category: 'claude-commands', project: mockProject } as ProjectTreeItem;
@@ -801,7 +807,7 @@ describe('ProjectTreeProvider claude-commands leaf items (T009)', () => {
 
 describe('ProjectTreeProvider claude-skills leaf items (T010)', () => {
 	it('uses metadata.title as label when present', async () => {
-		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'My Skill', overview: 'Does stuff' } };
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/foo/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'My Skill', overview: 'Does stuff' }, platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 		const skillsItem: ProjectTreeItem = { label: 'Skills (1)', collapsibleState: 1, category: 'claude-skills', project: mockProject } as ProjectTreeItem;
@@ -818,7 +824,7 @@ describe('ProjectTreeProvider claude-skills leaf items (T010)', () => {
 	});
 
 	it('falls back to fileName when metadata.title is absent', async () => {
-		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/bar/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: undefined };
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/bar/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: undefined, platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ skills: [skill], hasAnyArtifacts: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 		const skillsItem: ProjectTreeItem = { label: 'Skills (1)', collapsibleState: 1, category: 'claude-skills', project: mockProject } as ProjectTreeItem;
@@ -949,6 +955,7 @@ describe('ProjectTreeProvider spec008 — Claude → Agents subsection (claude-c
 
 	it('claude-code Agents shows count in description', async () => {
 		const ad: AgentDefinition = {
+		platform: 'claude',
 			uri: vscode.Uri.file('/test/.claude/agents/my-agent.md'),
 			content: '# My Agent',
 			fileName: 'my-agent',
@@ -964,9 +971,9 @@ describe('ProjectTreeProvider spec008 — Claude → Agents subsection (claude-c
 	});
 
 	it('claude-code groups are sorted alphabetically (Agents, Commands, Rules, Skills after CLAUDE.md)', async () => {
-		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'r', globs: [], alwaysApply: false }, content: '' };
-		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/c.md'), fileName: 'c.md', content: '', location: 'workspace' };
-		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/s/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'S', overview: '' } };
+		const rule: Rule = { uri: vscode.Uri.file('/test/.claude/rules/r.md'), fileName: 'r.md', metadata: { description: 'r', globs: [], alwaysApply: false }, content: '', platform: 'claude' };
+		const cmd: Command = { uri: vscode.Uri.file('/test/.claude/commands/c.md'), fileName: 'c.md', content: '', location: 'workspace', platform: 'claude' };
+		const skill: Skill = { uri: vscode.Uri.file('/test/.claude/skills/s/SKILL.md'), fileName: 'SKILL.md', content: '', location: 'workspace', metadata: { title: 'S', overview: '' }, platform: 'claude' };
 		const artifacts = makeClaudeCodeArtifacts({ rules: [rule], commands: [cmd], skills: [skill], claudeFolderExists: true });
 		const provider = new ProjectTreeProvider(createProjectData({ claudeCodeArtifacts: artifacts }), [mockProject], mockProject);
 
@@ -997,6 +1004,7 @@ describe('ProjectTreeProvider spec008 — claude-agent-definitions handler', () 
 
 	it('returns agent leaf items with hubot icon and vscode.open when non-empty', async () => {
 		const ad: AgentDefinition = {
+		platform: 'claude',
 			uri: vscode.Uri.file('/test/.claude/agents/my-agent.md'),
 			content: '# My Agent',
 			fileName: 'my-agent',
@@ -1024,6 +1032,7 @@ describe('ProjectTreeProvider spec008 — claude-agent-definitions handler', () 
 
 	it('agent leaf tooltip includes file path', async () => {
 		const ad: AgentDefinition = {
+		platform: 'claude',
 			uri: vscode.Uri.file('/test/.claude/agents/coder.md'),
 			content: '# Coder\n\nDoes coding.',
 			fileName: 'coder',

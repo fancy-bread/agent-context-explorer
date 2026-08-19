@@ -22,9 +22,10 @@ import {
 	scanAgentDefinitionsInDirectory,
 	agentRootAgentsDirectory
 } from '../scanner/core/scanAgentDefinitionsCore';
-import type { CoreAgentDefinition } from '../scanner/core/types';
+import type { CoreAgentDefinition, CorePlatform } from '../scanner/core/types';
 import type { AgentDefinitionInfo, AgentDefinitionLocation } from './types';
 import { findSpecByName } from './toolsFind';
+import { pickByPrecedence } from './precedence';
 
 // =============================================================================
 // Types (MCP tool output format)
@@ -36,6 +37,7 @@ interface RuleInfo {
 	type: 'always' | 'glob' | 'manual';
 	path: string;
 	globs?: string[];
+	platform: CorePlatform;
 }
 
 interface CommandInfo {
@@ -43,6 +45,7 @@ interface CommandInfo {
 	description: string;
 	path: string;
 	location: 'workspace' | 'global';
+	platform: CorePlatform;
 }
 
 interface SkillInfo {
@@ -51,20 +54,22 @@ interface SkillInfo {
 	overview?: string;
 	path: string;
 	location: 'workspace' | 'global';
+	platform: CorePlatform;
 }
 
-export function coreRuleToRuleInfo(r: { fileName: string; metadata: { description: string; globs?: string[]; alwaysApply?: boolean }; path: string }): RuleInfo {
+export function coreRuleToRuleInfo(r: { fileName: string; metadata: { description: string; globs?: string[]; alwaysApply?: boolean }; path: string; platform: CorePlatform }): RuleInfo {
 	const type = r.metadata.alwaysApply ? 'always' : (r.metadata.globs && r.metadata.globs.length > 0) ? 'glob' : 'manual';
 	return {
 		name: r.fileName.replace(/\.(mdc|md)$/, ''),
 		description: r.metadata.description || '',
 		type,
 		path: r.path,
-		globs: r.metadata.globs
+		globs: r.metadata.globs,
+		platform: r.platform
 	};
 }
 
-export function coreCommandToCommandInfo(c: { fileName: string; content: string; path: string; location: 'workspace' | 'global' }): CommandInfo {
+export function coreCommandToCommandInfo(c: { fileName: string; content: string; path: string; location: 'workspace' | 'global'; platform: CorePlatform }): CommandInfo {
 	let description = '';
 	const overviewMatch = c.content.match(/## Overview\s*\n+([^\n#]+)/);
 	if (overviewMatch) {
@@ -83,17 +88,19 @@ export function coreCommandToCommandInfo(c: { fileName: string; content: string;
 		name: c.fileName,
 		description,
 		path: c.path,
-		location: c.location
+		location: c.location,
+		platform: c.platform
 	};
 }
 
-export function coreSkillToSkillInfo(s: { fileName: string; metadata?: { title?: string; overview?: string }; path: string; location: 'workspace' | 'global' }): SkillInfo {
+export function coreSkillToSkillInfo(s: { fileName: string; metadata?: { title?: string; overview?: string }; path: string; location: 'workspace' | 'global'; platform: CorePlatform }): SkillInfo {
 	return {
 		name: s.fileName,
 		title: s.metadata?.title || s.fileName,
 		overview: s.metadata?.overview,
 		path: s.path,
-		location: s.location
+		location: s.location,
+		platform: s.platform
 	};
 }
 
@@ -140,7 +147,8 @@ function coreAgentToInfo(c: CoreAgentDefinition, location: AgentDefinitionLocati
 		name: c.fileName,
 		displayName: c.displayName,
 		path: c.path,
-		location
+		location,
+		platform: c.platform
 	};
 }
 
@@ -178,11 +186,12 @@ function findCoreAgentByName(
 ): { core: CoreAgentDefinition; location: AgentDefinitionLocation } | undefined {
 	const normalizedName = name.toLowerCase().replace(/\.md$/, '');
 	const needle = name.toLowerCase();
-	return items.find(({ core: c }) => {
+	const matches = items.filter(({ core: c }) => {
 		const stem = c.fileName.toLowerCase();
 		const display = c.displayName.toLowerCase();
 		return stem === normalizedName || display === normalizedName || c.path.toLowerCase().includes(needle);
 	});
+	return pickByPrecedence(matches, ({ core, location }) => ({ location, platform: core.platform }));
 }
 
 async function getAsdlcArtifacts(workspacePath: string) {
@@ -262,8 +271,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
-	// list_rules - List all Cursor rules with metadata
-	server.tool('list_rules', 'List all Cursor rules with metadata', projectKeyShape, async (args: any) => {
+	// list_rules - List all rules with metadata (.cursor/rules and .claude/rules)
+	server.tool('list_rules', 'List all rules with metadata (.cursor/rules and .claude/rules)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -282,7 +291,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		}
 		const rules = await getRules(resolved.path);
 		const normalizedName = args.name.toLowerCase().replace(/\.(mdc|md)$/, '');
-		const rule = rules.find(r => r.fileName.toLowerCase().replace(/\.(mdc|md)$/, '') === normalizedName);
+		const matches = rules.filter(r => r.fileName.toLowerCase().replace(/\.(mdc|md)$/, '') === normalizedName);
+		const rule = pickByPrecedence(matches, r => ({ platform: r.platform }));
 
 		if (!rule) {
 			return { content: [{ type: 'text' as const, text: `Rule "${args.name}" not found` }], isError: true };
@@ -293,8 +303,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
-	// list_commands - List all Cursor commands with metadata
-	server.tool('list_commands', 'List all Cursor commands with metadata', projectKeyShape, async (args: any) => {
+	// list_commands - List all commands with metadata (.cursor/commands and .claude/commands)
+	server.tool('list_commands', 'List all commands with metadata (.cursor/commands and .claude/commands)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -313,7 +323,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		}
 		const commands = await getCommands(resolved.path);
 		const normalizedName = args.name.toLowerCase().replace(/\.md$/, '');
-		const command = commands.find(c => c.fileName.toLowerCase() === normalizedName);
+		const matches = commands.filter(c => c.fileName.toLowerCase() === normalizedName);
+		const command = pickByPrecedence(matches, c => ({ location: c.location, platform: c.platform }));
 
 		if (!command) {
 			return { content: [{ type: 'text' as const, text: `Command "${args.name}" not found` }], isError: true };
@@ -324,8 +335,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		};
 	});
 
-	// list_skills - List all Cursor skills with metadata
-	server.tool('list_skills', 'List all Cursor skills with metadata', projectKeyShape, async (args: any) => {
+	// list_skills - List all skills with metadata (.cursor/skills and .claude/skills)
+	server.tool('list_skills', 'List all skills with metadata (.cursor/skills and .claude/skills)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -344,7 +355,8 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 		}
 		const skills = await getSkills(resolved.path);
 		const normalizedName = args.name.toLowerCase();
-		const skill = skills.find(s => s.fileName.toLowerCase() === normalizedName);
+		const matches = skills.filter(s => s.fileName.toLowerCase() === normalizedName);
+		const skill = pickByPrecedence(matches, s => ({ location: s.location, platform: s.platform }));
 
 		if (!skill) {
 			return { content: [{ type: 'text' as const, text: `Skill "${args.name}" not found` }], isError: true };
@@ -356,7 +368,7 @@ export function createServer(workspacePath: string, projects?: ProjectEntry[]): 
 	});
 
 	// list_agents - Agent definition files (workspace + Cursor/Claude/Global agent roots)
-	server.tool('list_agents', 'List agent definition files (.cursor/agents and user-level agent roots)', projectKeyShape, async (args: any) => {
+	server.tool('list_agents', 'List agent definition files (.cursor/agents, .claude/agents, and user-level agent roots)', projectKeyShape, async (args: any) => {
 		const resolved = resolveProjectRoot(getProjectKeyArg(args));
 		if ('error' in resolved) {
 			return { content: [{ type: 'text' as const, text: JSON.stringify({ isError: true, message: resolved.error }) }], isError: true };
@@ -503,13 +515,13 @@ export function bridgeCall(port: number, method: string, params: Record<string, 
 
 const BRIDGE_TOOLS: { name: string; description: string; inputSchema: Record<string, z.ZodTypeAny> }[] = [
 	{ name: 'list_projects', description: 'List registered ACE projects', inputSchema: {} },
-	{ name: 'list_rules', description: 'List all Cursor rules with metadata', inputSchema: projectKeyShape },
+	{ name: 'list_rules', description: 'List all rules with metadata (.cursor/rules and .claude/rules)', inputSchema: projectKeyShape },
 	{ name: 'get_rule', description: 'Get rule content by name', inputSchema: nameAndProjectKeyShape },
-	{ name: 'list_commands', description: 'List all Cursor commands with metadata', inputSchema: projectKeyShape },
+	{ name: 'list_commands', description: 'List all commands with metadata (.cursor/commands and .claude/commands)', inputSchema: projectKeyShape },
 	{ name: 'get_command', description: 'Get command content by name', inputSchema: nameAndProjectKeyShape },
-	{ name: 'list_skills', description: 'List all Cursor skills with metadata', inputSchema: projectKeyShape },
+	{ name: 'list_skills', description: 'List all skills with metadata (.cursor/skills and .claude/skills)', inputSchema: projectKeyShape },
 	{ name: 'get_skill', description: 'Get skill content by name', inputSchema: nameAndProjectKeyShape },
-	{ name: 'list_agents', description: 'List agent definition files', inputSchema: projectKeyShape },
+	{ name: 'list_agents', description: 'List agent definition files (.cursor/agents, .claude/agents, and user-level agent roots)', inputSchema: projectKeyShape },
 	{ name: 'get_agent', description: 'Get agent definition content by name', inputSchema: nameAndProjectKeyShape },
 	{ name: 'list_specs', description: 'List available specifications', inputSchema: projectKeyShape },
 	{ name: 'get_spec', description: 'Get full spec.md by domain', inputSchema: nameAndProjectKeyShape },

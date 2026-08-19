@@ -7,11 +7,13 @@ import { FileType } from '../../../src/scanner/core/types';
 function createMockFs(options: {
 	projectFiles?: [string, FileTypeValue][];
 	globalFiles?: [string, FileTypeValue][];
+	claudeProjectFiles?: [string, FileTypeValue][];
 	readFileThrows?: (filePath: string) => boolean;
 }): IFileSystem {
-	const { projectFiles = [], globalFiles = [], readFileThrows = () => false } = options;
+	const { projectFiles = [], globalFiles = [], claudeProjectFiles = [], readFileThrows = () => false } = options;
 	const projectDir = path.join('/project', '.cursor', 'commands');
 	const globalDir = path.join('/home/user', '.cursor', 'commands');
+	const claudeProjectDir = path.join('/project', '.claude', 'commands');
 
 	return {
 		async readDirectory(dirPath: string): Promise<[string, FileTypeValue][]> {
@@ -21,6 +23,9 @@ function createMockFs(options: {
 			}
 			if (normalized === globalDir || normalized.endsWith('/.cursor/commands') && normalized.includes('/home/user')) {
 				return globalFiles;
+			}
+			if (normalized === claudeProjectDir || normalized.endsWith('/.claude/commands')) {
+				return claudeProjectFiles;
 			}
 			return [];
 		},
@@ -139,6 +144,47 @@ describe('scanCommandsCore', () => {
 			assert.ok(gl);
 			assert.strictEqual(ws!.fileName, 'ws-cmd');
 			assert.strictEqual(gl!.fileName, 'gl-cmd');
+		});
+	});
+
+	describe('cross-platform merge (spec 011)', () => {
+		it('merges .claude/commands workspace commands alongside .cursor/commands, tagged by platform', async () => {
+			const fs = createMockFs({
+				projectFiles: [['cursor-cmd.md', FileType.File]],
+				claudeProjectFiles: [['claude-cmd.md', FileType.File]],
+				globalFiles: []
+			});
+			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
+			assert.strictEqual(commands.length, 2);
+			const cursorCmd = commands.find((c) => c.fileName === 'cursor-cmd');
+			const claudeCmd = commands.find((c) => c.fileName === 'claude-cmd');
+			assert.strictEqual(cursorCmd?.platform, 'cursor');
+			assert.strictEqual(cursorCmd?.location, 'workspace');
+			assert.strictEqual(claudeCmd?.platform, 'claude');
+			assert.strictEqual(claudeCmd?.location, 'workspace');
+		});
+
+		it('returns only claude commands when .cursor/commands is absent (FR-006)', async () => {
+			const fs = createMockFs({
+				projectFiles: [],
+				claudeProjectFiles: [['claude-only.md', FileType.File]],
+				globalFiles: []
+			});
+			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
+			assert.strictEqual(commands.length, 1);
+			assert.strictEqual(commands[0].platform, 'claude');
+		});
+
+		it('global commands remain platform: cursor only — no new global .claude scanning (FR-007)', async () => {
+			const fs = createMockFs({
+				projectFiles: [],
+				claudeProjectFiles: [],
+				globalFiles: [['global-cmd.md', FileType.File]]
+			});
+			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
+			const global = commands.filter((c) => c.location === 'global');
+			assert.strictEqual(global.length, 1);
+			assert.strictEqual(global[0].platform, 'cursor');
 		});
 	});
 

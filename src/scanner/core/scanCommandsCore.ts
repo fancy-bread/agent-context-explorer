@@ -3,10 +3,11 @@ import * as path from 'path';
 import type { IFileSystem } from './types';
 import type { CoreCommand } from './types';
 import { listFilesFlat } from './listFiles';
+import { scanClaudeCommands } from './scanClaudeCodeCore';
 
 /**
- * Scan for Cursor commands in project .cursor/commands/ and user ~/.cursor/commands/.
- * Flat structure only - no recursion.
+ * Scan for commands in project .cursor/commands/ + .claude/commands/ (workspace),
+ * and user ~/.cursor/commands/ (global — no global .claude scan; see spec 011 FR-007).
  */
 export async function scanCommandsCore(
 	fs: IFileSystem,
@@ -15,7 +16,7 @@ export async function scanCommandsCore(
 ): Promise<CoreCommand[]> {
 	const commands: CoreCommand[] = [];
 
-	// Project commands
+	// Project commands (Cursor)
 	const projectCommandsDir = path.join(projectRoot, '.cursor', 'commands');
 	const projectFiles = await listFilesFlat(fs, projectCommandsDir, ['.md'], ['README.md']);
 
@@ -27,17 +28,22 @@ export async function scanCommandsCore(
 				path: filePath,
 				content: text,
 				fileName: path.basename(filePath, '.md'),
-				location: 'workspace'
+				location: 'workspace',
+				platform: 'cursor'
 			});
 		} catch {
 			commands.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: path.basename(filePath, '.md'),
-				location: 'workspace'
+				location: 'workspace',
+				platform: 'cursor'
 			});
 		}
 	}
+
+	// Project commands (Claude Code)
+	commands.push(...await scanClaudeCommands(fs, projectRoot));
 
 	// User/global commands (from ~/.cursor)
 	const userCommandsDir = path.join(userRoot, '.cursor', 'commands');
@@ -51,14 +57,16 @@ export async function scanCommandsCore(
 				path: filePath,
 				content: text,
 				fileName: path.basename(filePath, '.md'),
-				location: 'global'
+				location: 'global',
+				platform: 'cursor'
 			});
 		} catch {
 			commands.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: path.basename(filePath, '.md'),
-				location: 'global'
+				location: 'global',
+				platform: 'cursor'
 			});
 		}
 	}
@@ -86,14 +94,18 @@ export async function scanAgentCommandsCore(
 				path: filePath,
 				content: text,
 				fileName: path.basename(filePath, '.md'),
-				location: 'global'
+				location: 'global',
+				// Agent-root scans (Agents view: Cursor/Claude/Global roots) aren't platform-filtered by
+				// any consumer — this field is only meaningful for project-level scanCommandsCore above.
+				platform: 'cursor'
 			});
 		} catch {
 			commands.push({
 				path: filePath,
 				content: 'Error reading file content',
 				fileName: path.basename(filePath, '.md'),
-				location: 'global'
+				location: 'global',
+				platform: 'cursor'
 			});
 		}
 	}
