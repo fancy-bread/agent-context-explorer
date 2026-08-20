@@ -117,11 +117,6 @@ describe('Commands Scanner Tests', () => {
 			assert.ok(commands.some(c => c.platform === 'claude'));
 		});
 
-		it('scanAllGlobalCommands remains cursor-only — no global .claude scanning (FR-007)', async () => {
-			const commands = await scanner.scanAllGlobalCommands();
-			assert.ok(commands.every(c => c.platform === 'cursor'));
-			assert.ok(commands.every(c => c.location === 'global'));
-		});
 	});
 
 	describe('File Watching', () => {
@@ -189,76 +184,6 @@ describe('Commands Scanner Tests', () => {
 
 			assert.ok(validCommands.length > 0);
 			assert.ok(errorCommands.length > 0);
-		});
-	});
-
-	describe('Global Commands Scanning', () => {
-		it('should scan and read global commands', async () => {
-			const commands = await scanner.scanGlobalCommands();
-			assert.ok(Array.isArray(commands));
-			assert.ok(commands.length > 0);
-		});
-
-		it('should set location to global for global commands', async () => {
-			const commands = await scanner.scanGlobalCommands();
-
-			commands.forEach((command: any) => {
-				assert.equal(command.location, 'global');
-			});
-		});
-
-		it('should read global commands from ~/.cursor/commands directory', async () => {
-			const commands = await scanner.scanGlobalCommands();
-			const globalCommand = commands.find((cmd: any) => cmd.fileName === 'global-command');
-
-			assert.ok(globalCommand);
-			assert.ok(globalCommand.content.startsWith('# Global Command'));
-			assert.equal(globalCommand.location, 'global');
-		});
-
-		it('should return empty array when global commands directory does not exist', async () => {
-			const os = require('os');
-			const home = os.homedir();
-			vscodeStub.__overrides.readDirectory = async (uri: { fsPath: string }) => {
-				if (uri.fsPath.startsWith(home) && uri.fsPath.includes('.cursor/commands')) {
-					throw new Error('Directory not found');
-				}
-				// Workspace: return default so scan runs; only global path throws
-				if (uri.fsPath.includes('/workspace') && uri.fsPath.includes('.cursor/commands')) {
-					return [['valid-command.md', 1], ['security-audit.md', 1], ['error-command.md', 1]];
-				}
-				return [];
-			};
-
-			const commands = await scanner.scanGlobalCommands();
-			assert.equal(commands.length, 0);
-		});
-
-		it('should handle file read errors gracefully for global commands', async () => {
-			const commands = await scanner.scanGlobalCommands();
-
-			commands.forEach((command: any) => {
-				assert.ok(typeof command.content === 'string');
-				assert.equal(command.location, 'global');
-			});
-		});
-
-		it('should return empty array on global scanning errors', async () => {
-			vscodeStub.__overrides.readDirectory = async () => {
-				throw new Error('Scanning failed');
-			};
-
-			const commands = await scanner.scanGlobalCommands();
-			assert.equal(commands.length, 0);
-		});
-
-		it('should include URI for each global command', async () => {
-			const commands = await scanner.scanGlobalCommands();
-
-			commands.forEach((command: any) => {
-				assert.ok(command.uri);
-				assert.ok(command.uri.fsPath);
-			});
 		});
 	});
 });

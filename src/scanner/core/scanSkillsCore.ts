@@ -5,19 +5,17 @@ import type { CoreSkill, CorePlatform } from './types';
 import { FileType } from './types';
 import { parseSKILLMetadata } from '../skillParsing';
 import { scanClaudeSkills } from './scanClaudeCodeCore';
-import { directoryExists } from './listFiles';
 
 /**
- * Scan for skills in project .cursor/skills/ + .claude/skills/ (workspace),
- * and user ~/.cursor/skills/ (global — no global .claude scan; see spec 011 FR-007).
- * The global scan only runs if the project has a local .cursor/ folder — a project that
- * only uses Claude Code conventions shouldn't pull in the user's personal Cursor skills.
+ * Scan for skills in project .cursor/skills/ + .claude/skills/ (workspace only).
+ * No global fallback — the Agents view (scanAgentSkillsCore below) is the dedicated,
+ * non-project-scoped way to browse a user's global skill roots.
  * One level: each subdir contains SKILL.md.
  */
 export async function scanSkillsCore(
 	fs: IFileSystem,
 	projectRoot: string,
-	userRoot: string
+	_userRoot: string
 ): Promise<CoreSkill[]> {
 	const skills: CoreSkill[] = [];
 
@@ -27,12 +25,6 @@ export async function scanSkillsCore(
 
 	// Project skills (Claude Code)
 	skills.push(...await scanClaudeSkills(fs, projectRoot));
-
-	// User/global skills (from ~/.cursor) — only for projects that have a local .cursor/ folder
-	if (await directoryExists(fs, path.join(projectRoot, '.cursor'))) {
-		const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
-		await scanSkillsInDir(fs, userSkillsDir, 'global', 'cursor', skills);
-	}
 
 	return skills;
 }

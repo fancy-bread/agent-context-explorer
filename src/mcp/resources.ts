@@ -78,11 +78,7 @@ export class McpResources {
 	 */
 	async listCommandsResources(): Promise<ResourceMetadata[]> {
 		const scanner = new CommandsScanner(this.workspaceUri);
-		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanWorkspaceCommands(),
-			scanner.scanGlobalCommands()
-		]);
-		const allCommands = [...workspaceCommands, ...globalCommands];
+		const allCommands = await scanner.scanWorkspaceCommands();
 
 		// Add list resource
 		const resources: ResourceMetadata[] = [
@@ -244,11 +240,7 @@ export class McpResources {
 	 */
 	private async getCommandsResource(name: string): Promise<ResourceContent | null> {
 		const scanner = new CommandsScanner(this.workspaceUri);
-		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanWorkspaceCommands(),
-			scanner.scanGlobalCommands()
-		]);
-		const allCommands = [...workspaceCommands, ...globalCommands];
+		const allCommands = await scanner.scanWorkspaceCommands();
 
 		// If no name, return list
 		if (!name) {

@@ -80,16 +80,3 @@ export async function listFilesFlat(
 
 	return results;
 }
-
-/**
- * Whether `dirPath` exists and is a directory. Returns false on any error
- * (missing path, permission denied, etc.) — never throws.
- */
-export async function directoryExists(fs: IFileSystem, dirPath: string): Promise<boolean> {
-	try {
-		const stat = await fs.stat(dirPath);
-		return stat.type === FileType.Directory;
-	} catch {
-		return false;
-	}
-}

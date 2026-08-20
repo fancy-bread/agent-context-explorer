@@ -89,15 +89,8 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new CommandsScanner(workspaceUri);
-
-		// Get both workspace and global commands (each already covering both platforms)
-		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanAllWorkspaceCommands(),
-			scanner.scanAllGlobalCommands()
-		]);
-
-		const allCommands = [...workspaceCommands, ...globalCommands];
-		return allCommands.map(toCommandInfo);
+		const commands = await scanner.scanAllWorkspaceCommands();
+		return commands.map(toCommandInfo);
 	}
 
 	/**
@@ -107,16 +100,9 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new CommandsScanner(workspaceUri);
+		const commands = await scanner.scanAllWorkspaceCommands();
 
-		// Get both workspace and global commands (each already covering both platforms)
-		const [workspaceCommands, globalCommands] = await Promise.all([
-			scanner.scanAllWorkspaceCommands(),
-			scanner.scanAllGlobalCommands()
-		]);
-
-		const allCommands = [...workspaceCommands, ...globalCommands];
-
-		const command = findCommandByName(allCommands, input.name);
+		const command = findCommandByName(commands, input.name);
 
 		if (!command) {
 			return null;
@@ -136,15 +122,8 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new SkillsScanner(workspaceUri);
-
-		// Get both workspace and global skills (each already covering both platforms)
-		const [workspaceSkills, globalSkills] = await Promise.all([
-			scanner.scanAllWorkspaceSkills(),
-			scanner.scanAllGlobalSkills()
-		]);
-
-		const allSkills = [...workspaceSkills, ...globalSkills];
-		return allSkills.map(toSkillInfo);
+		const skills = await scanner.scanAllWorkspaceSkills();
+		return skills.map(toSkillInfo);
 	}
 
 	/**
@@ -154,16 +133,9 @@ export class McpTools {
 		const workspaceUri = assertWorkspaceUriForMcp(input?.projectPath);
 
 		const scanner = new SkillsScanner(workspaceUri);
+		const skills = await scanner.scanAllWorkspaceSkills();
 
-		// Get both workspace and global skills (each already covering both platforms)
-		const [workspaceSkills, globalSkills] = await Promise.all([
-			scanner.scanAllWorkspaceSkills(),
-			scanner.scanAllGlobalSkills()
-		]);
-
-		const allSkills = [...workspaceSkills, ...globalSkills];
-
-		const skill = findSkillByName(allSkills, input.name);
+		const skill = findSkillByName(skills, input.name);
 
 		if (!skill) {
 			return null;
