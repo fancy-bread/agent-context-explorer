@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-08-19
+
+### Added
+- **Unified artifact scanning across MCP tools and the Workspaces tree** (spec 011): `.claude/` rules, commands, skills, and agent definitions are now included in `list_rules`/`list_commands`/`list_skills`/`list_agents` and `get_project` results, matching what the tree view already showed. `get_rule`/`get_command`/`get_skill`/`get_agent` resolve name collisions between `.cursor/` and `.claude/` via documented precedence (workspace before global, cursor before claude).
+
+### Fixed
+- Standalone MCP server: tool calls (`list_rules`, `get_rule`, etc.) were silently receiving no arguments due to a schema registration bug — fixed, and the registered server now knows about every workspace and added project so `projectKey` resolves correctly across all of them
+- Skills directories are now watched recursively, so deleting an entire skill folder is caught (not just individual file edits)
+- Global `~/.cursor/skills` and `~/.cursor/commands` are no longer automatically merged into a project's MCP results or Workspaces tree — the Agents view is the correct, dedicated place to browse global skill/command libraries
+
 ## [1.3.1] - 2026-07-18
 
 ### Fixed
