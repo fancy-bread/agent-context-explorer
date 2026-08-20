@@ -22,9 +22,7 @@ describe('mcp/tools (McpTools)', () => {
 
 	const rulesScan = RulesScanner.prototype.scanAllRules;
 	const commandsWorkspaceScan = CommandsScanner.prototype.scanAllWorkspaceCommands;
-	const commandsGlobalScan = CommandsScanner.prototype.scanAllGlobalCommands;
 	const skillsWorkspaceScan = SkillsScanner.prototype.scanAllWorkspaceSkills;
-	const skillsGlobalScan = SkillsScanner.prototype.scanAllGlobalSkills;
 	const asdlcScanAll = AsdlcArtifactScanner.prototype.scanAll;
 	const agentsWorkspaceScan = AgentsScanner.prototype.scanAllWorkspaceAgentDefinitions;
 	const agentsScanRoot = agentsScanner.scanAgentDefinitionsForAgentRoot;
@@ -36,9 +34,7 @@ describe('mcp/tools (McpTools)', () => {
 		(vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
 		RulesScanner.prototype.scanAllRules = rulesScan;
 		CommandsScanner.prototype.scanAllWorkspaceCommands = commandsWorkspaceScan;
-		CommandsScanner.prototype.scanAllGlobalCommands = commandsGlobalScan;
 		SkillsScanner.prototype.scanAllWorkspaceSkills = skillsWorkspaceScan;
-		SkillsScanner.prototype.scanAllGlobalSkills = skillsGlobalScan;
 		AsdlcArtifactScanner.prototype.scanAll = asdlcScanAll;
 		AgentsScanner.prototype.scanAllWorkspaceAgentDefinitions = agentsWorkspaceScan;
 		agentsModuleMutable.scanAgentDefinitionsForAgentRoot = agentsScanRoot;
@@ -65,7 +61,6 @@ describe('mcp/tools (McpTools)', () => {
 			metadata: {}
 		};
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [s];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 
 		const out = await McpTools.getSkill({ name: 'nested-only', projectPath: '/workspace' });
 		assert.ok(out);
@@ -83,7 +78,6 @@ describe('mcp/tools (McpTools)', () => {
 			metadata: { title: 'T' }
 		};
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [s];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 
 		const out = await McpTools.getSkill({ name: 'ONLYNAME', projectPath: '/workspace' });
 		assert.ok(out);
@@ -100,7 +94,6 @@ describe('mcp/tools (McpTools)', () => {
 			location: 'workspace'
 		};
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [c];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 
 		const out = await McpTools.getCommand({ name: 'deep/nested', projectPath: '/workspace' });
 		assert.ok(out);
@@ -124,9 +117,7 @@ describe('mcp/tools (McpTools)', () => {
 		(vscode.workspace as any).workspaceFolders = undefined;
 		RulesScanner.prototype.scanAllRules = async () => [];
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 		AgentsScanner.prototype.scanAllWorkspaceAgentDefinitions = async () => [];
 		agentsModuleMutable.scanAgentDefinitionsForAgentRoot = async () => [];
 		AsdlcArtifactScanner.prototype.scanAll = async () => ({
@@ -183,23 +174,19 @@ describe('mcp/tools (McpTools)', () => {
 		assert.strictEqual(out?.content, 'hello');
 	});
 
-	it('listCommands returns combined workspace + global', async () => {
+	it('listCommands returns workspace commands', async () => {
 		setWorkspaceFolders('/workspace');
 		const w: Command = { uri: vscode.Uri.file('/w.md') as any, fileName: 'w.md', content: '# W', location: 'workspace', platform: 'cursor' };
-		const g: Command = { uri: vscode.Uri.file('/g.md') as any, fileName: 'g.md', content: '# G', location: 'global', platform: 'cursor' };
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [w];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [g];
 
 		const out = await McpTools.listCommands({ projectPath: '/workspace' });
-		assert.strictEqual(out.length, 2);
-		assert.ok(out.some(c => c.name === 'w'));
-		assert.ok(out.some(c => c.name === 'g'));
+		assert.strictEqual(out.length, 1);
+		assert.strictEqual(out[0].name, 'w');
 	});
 
 	it('getCommand returns null when not found', async () => {
 		setWorkspaceFolders('/workspace');
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 
 		const out = await McpTools.getCommand({ name: 'missing', projectPath: '/workspace' });
 		assert.strictEqual(out, null);
@@ -215,7 +202,6 @@ describe('mcp/tools (McpTools)', () => {
 			location: 'workspace'
 		};
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [c];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 
 		const out = await McpTools.getCommand({ name: 'foo-bar.md', projectPath: '/workspace' });
 		assert.ok(out);
@@ -288,7 +274,6 @@ describe('mcp/tools (McpTools)', () => {
 			location: 'workspace'
 		};
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [c];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 
 		const out = await McpTools.getCommand({ name: 'plan', projectPath: '/workspace' });
 		assert.ok(out);
@@ -298,7 +283,6 @@ describe('mcp/tools (McpTools)', () => {
 	it('getSkill returns null when no skill matches', async () => {
 		setWorkspaceFolders('/workspace');
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 
 		const out = await McpTools.getSkill({ name: 'nope', projectPath: '/workspace' });
 		assert.strictEqual(out, null);
@@ -315,7 +299,6 @@ describe('mcp/tools (McpTools)', () => {
 			metadata: { title: 'T', overview: 'o' }
 		};
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [s];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 
 		const out = await McpTools.getSkill({ name: 'foo', projectPath: '/workspace' });
 		assert.ok(out);
@@ -333,7 +316,6 @@ describe('mcp/tools (McpTools)', () => {
 			metadata: {}
 		};
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [s];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 
 		const out = await McpTools.getSkill({ name: 'skills/bar', projectPath: '/workspace' });
 		assert.ok(out);
@@ -356,7 +338,7 @@ describe('mcp/tools (McpTools)', () => {
 		assert.strictEqual(out[0].domain, 'a');
 	});
 
-	it('listSkills returns combined workspace + global', async () => {
+	it('listSkills returns workspace skills', async () => {
 		setWorkspaceFolders('/workspace');
 		const w: Skill = {
 		platform: 'cursor',
@@ -366,21 +348,11 @@ describe('mcp/tools (McpTools)', () => {
 			location: 'workspace',
 			metadata: { title: 'W', overview: 'o' }
 		};
-		const g: Skill = {
-		platform: 'cursor',
-			uri: vscode.Uri.file('/g/SKILL.md') as any,
-			fileName: 'g-skill',
-			content: '',
-			location: 'global',
-			metadata: { title: 'G', overview: 'o' }
-		};
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [w];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [g];
 
 		const out = await McpTools.listSkills({ projectPath: '/workspace' });
-		assert.strictEqual(out.length, 2);
+		assert.strictEqual(out.length, 1);
 		assert.ok(out.some(s => s.name === 'w-skill' && s.title === 'W'));
-		assert.ok(out.some(s => s.name === 'g-skill' && s.title === 'G'));
 	});
 
 	it('getSpec reads spec file when domain matches', async () => {
@@ -426,9 +398,7 @@ describe('mcp/tools (McpTools)', () => {
 		setWorkspaceFolders('/workspace');
 		RulesScanner.prototype.scanAllRules = async () => [];
 		CommandsScanner.prototype.scanAllWorkspaceCommands = async () => [];
-		CommandsScanner.prototype.scanAllGlobalCommands = async () => [];
 		SkillsScanner.prototype.scanAllWorkspaceSkills = async () => [];
-		SkillsScanner.prototype.scanAllGlobalSkills = async () => [];
 		AgentsScanner.prototype.scanAllWorkspaceAgentDefinitions = async () => [];
 		agentsModuleMutable.scanAgentDefinitionsForAgentRoot = async () => [];
 		AsdlcArtifactScanner.prototype.scanAll = async () => ({

@@ -142,15 +142,7 @@ guidance:
 			assert.ok(Array.isArray(skills));
 		});
 
-		it('scanGlobalSkills returns array (wrapper executes without error)', async () => {
-			const scanner = new SkillsScanner(workspaceRoot);
-
-			const skills = await scanner.scanGlobalSkills();
-
-			assert.ok(Array.isArray(skills));
-		});
-
-		it('maps workspace and global skills from core results', async () => {
+		it('maps workspace skills from core results', async () => {
 			const coreRows: CoreSkill[] = [
 				{
 					path: '/test/workspace/.cursor/skills/ws-skill/SKILL.md',
@@ -159,14 +151,6 @@ guidance:
 					location: 'workspace',
 					platform: 'cursor',
 					metadata: { title: 'WS', overview: 'o' }
-				},
-				{
-					path: '/home/.cursor/skills/glob-skill/SKILL.md',
-					content: 'g',
-					fileName: 'glob-skill',
-					location: 'global',
-					platform: 'cursor',
-					metadata: undefined
 				}
 			];
 			mod.scanSkillsCore = async () => coreRows;
@@ -175,10 +159,6 @@ guidance:
 			assert.strictEqual(ws.length, 1);
 			assert.strictEqual(ws[0].fileName, 'ws-skill');
 			assert.strictEqual(ws[0].location, 'workspace');
-			const gl = await scanner.scanGlobalSkills();
-			assert.strictEqual(gl.length, 1);
-			assert.strictEqual(gl[0].fileName, 'glob-skill');
-			assert.strictEqual(gl[0].location, 'global');
 		});
 
 		it('returns empty array when scanSkillsCore throws', async () => {
@@ -187,7 +167,6 @@ guidance:
 			};
 			const scanner = new SkillsScanner(workspaceRoot);
 			assert.deepStrictEqual(await scanner.scanWorkspaceSkills(), []);
-			assert.deepStrictEqual(await scanner.scanGlobalSkills(), []);
 		});
 
 		describe('scanAllWorkspaceSkills / scanAllGlobalSkills (spec 011)', () => {

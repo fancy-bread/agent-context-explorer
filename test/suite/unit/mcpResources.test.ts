@@ -10,7 +10,6 @@ import { AsdlcArtifactScanner } from '../../../src/scanner/asdlcArtifactScanner'
 describe('mcp/resources (McpResources)', () => {
 	const originalRulesScan = RulesScanner.prototype.scanRules;
 	const originalWorkspaceCommandsScan = CommandsScanner.prototype.scanWorkspaceCommands;
-	const originalGlobalCommandsScan = CommandsScanner.prototype.scanGlobalCommands;
 	const originalAsdlcScanAll = AsdlcArtifactScanner.prototype.scanAll;
 	const originalWorkspaceFsReadFile = vscode.workspace.fs.readFile;
 
@@ -34,15 +33,6 @@ describe('mcp/resources (McpResources)', () => {
 			}
 		]);
 
-		(CommandsScanner.prototype.scanGlobalCommands as any) = async () => ([
-			{
-				fileName: 'global.md',
-				path: '/tmp/global.md',
-				uri: vscode.Uri.file('/tmp/global.md'),
-				content: '# Global\n\nHi'
-			}
-		]);
-
 		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
 			agentsMd: { exists: false },
 			specs: { exists: true, specs: [{ domain: 'demo', path: '/tmp/spec.md', hasBlueprint: false, hasContract: false }] },
@@ -57,7 +47,6 @@ describe('mcp/resources (McpResources)', () => {
 	afterEach(() => {
 		(RulesScanner.prototype.scanRules as any) = originalRulesScan;
 		(CommandsScanner.prototype.scanWorkspaceCommands as any) = originalWorkspaceCommandsScan;
-		(CommandsScanner.prototype.scanGlobalCommands as any) = originalGlobalCommandsScan;
 		(AsdlcArtifactScanner.prototype.scanAll as any) = originalAsdlcScanAll;
 		(vscode.workspace.fs.readFile as any) = originalWorkspaceFsReadFile;
 	});
@@ -94,7 +83,6 @@ describe('mcp/resources (McpResources)', () => {
 		assert.ok(commands);
 		assert.strictEqual(commands!.mimeType, 'application/json');
 		assert.ok(commands!.content.includes('hello'));
-		assert.ok(commands!.content.includes('global'));
 	});
 
 	it('getResource returns null for missing rule/command and returns markdown for existing', async () => {
@@ -188,11 +176,7 @@ describe('mcp/resources (McpResources)', () => {
 		assert.strictEqual(await r.getResource('ace://specs/demo'), null);
 	});
 
-	it('listCommandsResources suffixes global in name and uses schemaId or fallback in description', async () => {
-		(CommandsScanner.prototype.scanWorkspaceCommands as any) = async () => ([]);
-		(CommandsScanner.prototype.scanGlobalCommands as any) = async () => ([
-			{ fileName: 'g.md', uri: vscode.Uri.file('/g.md'), content: '# G', location: 'global' }
-		]);
+	it('listAsdlcResources uses schemaId or fallback in description', async () => {
 		(AsdlcArtifactScanner.prototype.scanAll as any) = async () => ({
 			agentsMd: { exists: false },
 			specs: { exists: false, specs: [] },
@@ -200,10 +184,6 @@ describe('mcp/resources (McpResources)', () => {
 			hasAnyArtifacts: true
 		});
 		const r = new McpResources(vscode.Uri.file('/workspace'));
-		const cmds = await r.listCommandsResources();
-		const g = cmds.find(x => x.uri === 'ace://commands/g');
-		assert.ok(g);
-		assert.ok(g!.name.includes('(global)'));
 		const schemasMeta = await r.listAsdlcResources();
 		const one = schemasMeta.find(x => x.uri === 'ace://schemas/anon');
 		assert.ok(one!.description.includes('Schema: anon'));

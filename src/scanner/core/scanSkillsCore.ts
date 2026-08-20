@@ -7,14 +7,15 @@ import { parseSKILLMetadata } from '../skillParsing';
 import { scanClaudeSkills } from './scanClaudeCodeCore';
 
 /**
- * Scan for skills in project .cursor/skills/ + .claude/skills/ (workspace),
- * and user ~/.cursor/skills/ (global — no global .claude scan; see spec 011 FR-007).
+ * Scan for skills in project .cursor/skills/ + .claude/skills/ (workspace only).
+ * No global fallback — the Agents view (scanAgentSkillsCore below) is the dedicated,
+ * non-project-scoped way to browse a user's global skill roots.
  * One level: each subdir contains SKILL.md.
  */
 export async function scanSkillsCore(
 	fs: IFileSystem,
 	projectRoot: string,
-	userRoot: string
+	_userRoot: string
 ): Promise<CoreSkill[]> {
 	const skills: CoreSkill[] = [];
 
@@ -24,10 +25,6 @@ export async function scanSkillsCore(
 
 	// Project skills (Claude Code)
 	skills.push(...await scanClaudeSkills(fs, projectRoot));
-
-	// User/global skills (from ~/.cursor)
-	const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
-	await scanSkillsInDir(fs, userSkillsDir, 'global', 'cursor', skills);
 
 	return skills;
 }

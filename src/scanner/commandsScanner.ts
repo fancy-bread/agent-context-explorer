@@ -1,4 +1,4 @@
-// Commands Scanner - Scan for .cursor/commands/*.md files in workspace and global
+// Commands Scanner - Scan for .cursor/commands/*.md files in the workspace
 // Uses shared scanCommandsCore with VSCodeFsAdapter
 import * as vscode from 'vscode';
 import * as os from 'os';
@@ -31,17 +31,6 @@ export class CommandsScanner {
 	async watchWorkspaceCommands(): Promise<vscode.FileSystemWatcher> {
 		const pattern = new vscode.RelativePattern(this.workspaceRoot, '.cursor/commands/*.md');
 		return vscode.workspace.createFileSystemWatcher(pattern);
-	}
-
-	async scanGlobalCommands(): Promise<Command[]> {
-		const all = await this.scanAllGlobalCommands();
-		return all.filter((c) => c.platform === 'cursor');
-	}
-
-	/** All global commands (currently `.cursor` only — see FR-007), platform-tagged (spec 011). */
-	async scanAllGlobalCommands(): Promise<Command[]> {
-		const all = await this.scanAll();
-		return all.filter((c) => c.location === 'global');
 	}
 
 	private async scanAll(): Promise<Command[]> {

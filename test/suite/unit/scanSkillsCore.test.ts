@@ -53,7 +53,7 @@ describe('scanner/core/scanSkillsCore', () => {
 		assert.ok(out[0].metadata?.title?.includes('Create Plan'));
 	});
 
-	it('scans global skill from userRoot .cursor/skills', async () => {
+	it('does not include user-root .cursor/skills — no global fallback (spec 011 follow-up)', async () => {
 		const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
 		const skillPath = path.join(userSkillsDir, 'review-code', 'SKILL.md');
 		const content = Buffer.from('# Review Code\n\n## Overview\n\nReview code.');
@@ -62,9 +62,7 @@ describe('scanner/core/scanSkillsCore', () => {
 			new Map([[userSkillsDir, [['review-code', FileType.Directory]]]])
 		);
 		const out = await scanSkillsCore(fs, projectRoot, userRoot);
-		assert.strictEqual(out.length, 1);
-		assert.strictEqual(out[0].fileName, 'review-code');
-		assert.strictEqual(out[0].location, 'global');
+		assert.deepStrictEqual(out, []);
 	});
 
 	it('skips non-directory entries in skills dir', async () => {
@@ -147,17 +145,23 @@ describe('scanner/core/scanSkillsCore', () => {
 		assert.strictEqual(out[0].platform, 'claude');
 	});
 
-	it('global skills remain platform: cursor only — no new global .claude scanning (FR-007)', async () => {
-		const userSkillsDir = path.join(userRoot, '.cursor', 'skills');
-		const skillPath = path.join(userSkillsDir, 'review-code', 'SKILL.md');
+	it('never returns location: global — project-scoped scan is workspace-only', async () => {
+		const cursorSkillsDir = path.join(projectRoot, '.cursor', 'skills');
+		const claudeSkillsDir = path.join(projectRoot, '.claude', 'skills');
+		const cursorSkillPath = path.join(cursorSkillsDir, 'cursor-skill', 'SKILL.md');
+		const claudeSkillPath = path.join(claudeSkillsDir, 'claude-skill', 'SKILL.md');
 		const fs = createMockFs(
-			new Map([[skillPath, Buffer.from('# Review Code')]]),
-			new Map([[userSkillsDir, [['review-code', FileType.Directory]]]])
+			new Map([
+				[cursorSkillPath, Buffer.from('# Cursor Skill')],
+				[claudeSkillPath, Buffer.from('# Claude Skill')]
+			]),
+			new Map([
+				[cursorSkillsDir, [['cursor-skill', FileType.Directory]]],
+				[claudeSkillsDir, [['claude-skill', FileType.Directory]]]
+			])
 		);
 		const out = await scanSkillsCore(fs, projectRoot, userRoot);
-		const global = out.filter(s => s.location === 'global');
-		assert.strictEqual(global.length, 1);
-		assert.strictEqual(global[0].platform, 'cursor');
+		assert.ok(out.every(s => s.location === 'workspace'));
 	});
 
 	it('scanAgentSkillsCore scans skills from an agent root', async () => {

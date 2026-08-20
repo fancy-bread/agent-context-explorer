@@ -6,13 +6,11 @@ import { FileType } from '../../../src/scanner/core/types';
 
 function createMockFs(options: {
 	projectFiles?: [string, FileTypeValue][];
-	globalFiles?: [string, FileTypeValue][];
 	claudeProjectFiles?: [string, FileTypeValue][];
 	readFileThrows?: (filePath: string) => boolean;
 }): IFileSystem {
-	const { projectFiles = [], globalFiles = [], claudeProjectFiles = [], readFileThrows = () => false } = options;
+	const { projectFiles = [], claudeProjectFiles = [], readFileThrows = () => false } = options;
 	const projectDir = path.join('/project', '.cursor', 'commands');
-	const globalDir = path.join('/home/user', '.cursor', 'commands');
 	const claudeProjectDir = path.join('/project', '.claude', 'commands');
 
 	return {
@@ -20,9 +18,6 @@ function createMockFs(options: {
 			const normalized = dirPath.replace(/\\/g, '/');
 			if (normalized === projectDir || normalized.endsWith('/.cursor/commands') && normalized.includes('/project')) {
 				return projectFiles;
-			}
-			if (normalized === globalDir || normalized.endsWith('/.cursor/commands') && normalized.includes('/home/user')) {
-				return globalFiles;
 			}
 			if (normalized === claudeProjectDir || normalized.endsWith('/.claude/commands')) {
 				return claudeProjectFiles;
@@ -48,8 +43,7 @@ describe('scanCommandsCore', () => {
 	describe('project commands', () => {
 		it('should return workspace commands from project .cursor/commands', async () => {
 			const fs = createMockFs({
-				projectFiles: [['valid.md', FileType.File], ['other.md', FileType.File]],
-				globalFiles: []
+				projectFiles: [['valid.md', FileType.File], ['other.md', FileType.File]]
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
 			const workspace = commands.filter((c) => c.location === 'workspace');
@@ -61,8 +55,7 @@ describe('scanCommandsCore', () => {
 
 		it('should exclude README.md from project commands', async () => {
 			const fs = createMockFs({
-				projectFiles: [['README.md', FileType.File], ['real-command.md', FileType.File]],
-				globalFiles: []
+				projectFiles: [['README.md', FileType.File], ['real-command.md', FileType.File]]
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
 			const workspace = commands.filter((c) => c.location === 'workspace');
@@ -73,7 +66,6 @@ describe('scanCommandsCore', () => {
 		it('should add error placeholder when readFile throws for project command', async () => {
 			const fs = createMockFs({
 				projectFiles: [['failing.md', FileType.File]],
-				globalFiles: [],
 				readFileThrows: (p) => p.includes('failing.md')
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
@@ -84,66 +76,9 @@ describe('scanCommandsCore', () => {
 		});
 
 		it('should return empty when project commands dir has no .md files', async () => {
-			const fs = createMockFs({
-				projectFiles: [],
-				globalFiles: []
-			});
+			const fs = createMockFs({ projectFiles: [] });
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
 			assert.strictEqual(commands.length, 0);
-		});
-	});
-
-	describe('global commands', () => {
-		it('should return global commands from user .cursor/commands', async () => {
-			const fs = createMockFs({
-				projectFiles: [],
-				globalFiles: [['global-cmd.md', FileType.File]]
-			});
-			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
-			const global = commands.filter((c) => c.location === 'global');
-			assert.strictEqual(global.length, 1);
-			assert.strictEqual(global[0].fileName, 'global-cmd');
-		});
-
-		it('should add error placeholder when readFile throws for global command', async () => {
-			const fs = createMockFs({
-				projectFiles: [],
-				globalFiles: [['broken.md', FileType.File]],
-				readFileThrows: (p) => p.includes('broken.md')
-			});
-			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
-			const global = commands.filter((c) => c.location === 'global');
-			assert.strictEqual(global.length, 1);
-			assert.strictEqual(global[0].content, 'Error reading file content');
-			assert.strictEqual(global[0].location, 'global');
-		});
-
-		it('should exclude README.md from global commands', async () => {
-			const fs = createMockFs({
-				projectFiles: [],
-				globalFiles: [['README.md', FileType.File], ['my-cmd.md', FileType.File]]
-			});
-			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
-			const global = commands.filter((c) => c.location === 'global');
-			assert.strictEqual(global.length, 1);
-			assert.strictEqual(global[0].fileName, 'my-cmd');
-		});
-	});
-
-	describe('combined', () => {
-		it('should return both workspace and global commands', async () => {
-			const fs = createMockFs({
-				projectFiles: [['ws-cmd.md', FileType.File]],
-				globalFiles: [['gl-cmd.md', FileType.File]]
-			});
-			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
-			assert.strictEqual(commands.length, 2);
-			const ws = commands.find((c) => c.location === 'workspace');
-			const gl = commands.find((c) => c.location === 'global');
-			assert.ok(ws);
-			assert.ok(gl);
-			assert.strictEqual(ws!.fileName, 'ws-cmd');
-			assert.strictEqual(gl!.fileName, 'gl-cmd');
 		});
 	});
 
@@ -151,8 +86,7 @@ describe('scanCommandsCore', () => {
 		it('merges .claude/commands workspace commands alongside .cursor/commands, tagged by platform', async () => {
 			const fs = createMockFs({
 				projectFiles: [['cursor-cmd.md', FileType.File]],
-				claudeProjectFiles: [['claude-cmd.md', FileType.File]],
-				globalFiles: []
+				claudeProjectFiles: [['claude-cmd.md', FileType.File]]
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
 			assert.strictEqual(commands.length, 2);
@@ -167,24 +101,22 @@ describe('scanCommandsCore', () => {
 		it('returns only claude commands when .cursor/commands is absent (FR-006)', async () => {
 			const fs = createMockFs({
 				projectFiles: [],
-				claudeProjectFiles: [['claude-only.md', FileType.File]],
-				globalFiles: []
+				claudeProjectFiles: [['claude-only.md', FileType.File]]
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
 			assert.strictEqual(commands.length, 1);
 			assert.strictEqual(commands[0].platform, 'claude');
 		});
+	});
 
-		it('global commands remain platform: cursor only — no new global .claude scanning (FR-007)', async () => {
+	describe('no global fallback', () => {
+		it('never returns location: global — project-scoped scan is workspace-only', async () => {
 			const fs = createMockFs({
-				projectFiles: [],
-				claudeProjectFiles: [],
-				globalFiles: [['global-cmd.md', FileType.File]]
+				projectFiles: [['cursor-cmd.md', FileType.File]],
+				claudeProjectFiles: [['claude-cmd.md', FileType.File]]
 			});
 			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
-			const global = commands.filter((c) => c.location === 'global');
-			assert.strictEqual(global.length, 1);
-			assert.strictEqual(global[0].platform, 'cursor');
+			assert.ok(commands.every((c) => c.location === 'workspace'));
 		});
 	});
 

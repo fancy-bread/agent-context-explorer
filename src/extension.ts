@@ -264,21 +264,12 @@ async function refreshData() {
 			rules: Rule[],
 			state: ProjectState,
 			commands: Command[],
-			globalCommands: Command[],
 			skills: Skill[],
-			globalSkills: Skill[],
 			agentDefinitions: AgentDefinition[],
 			asdlcArtifacts: AsdlcArtifacts,
 			claudeCodeArtifacts?: ClaudeCodeArtifacts,
 			cursorFolderExists?: boolean
 		}>();
-
-		// Scan global commands and skills once (shared across all projects)
-		const [globalCommands, globalSkills] = await Promise.all([
-			commandsScanner?.scanGlobalCommands() || Promise.resolve([]),
-			skillsScanner?.scanGlobalSkills() || Promise.resolve([])
-		]);
-		outputChannel.appendLine(`Scanned global: ${globalCommands.length} commands, ${globalSkills.length} skills`);
 
 		if (currentWorkspaceRoot) {
 			outputChannel.appendLine(`Scanning current workspace: ${currentWorkspaceRoot.fsPath}`);
@@ -300,9 +291,7 @@ async function refreshData() {
 				rules: currentRules,
 				state: EMPTY_PROJECT_STATE,
 				commands: currentCommands,
-				globalCommands,
 				skills: currentSkills,
-				globalSkills,
 				agentDefinitions: currentAgentDefs,
 				asdlcArtifacts: currentAsdlcArtifacts,
 				claudeCodeArtifacts: currentClaudeCode,
@@ -350,9 +339,7 @@ async function refreshData() {
 					rules,
 					state: EMPTY_PROJECT_STATE,
 					commands,
-					globalCommands,
 					skills,
-					globalSkills,
 					agentDefinitions,
 					asdlcArtifacts,
 					claudeCodeArtifacts,
@@ -368,9 +355,7 @@ async function refreshData() {
 					rules: [],
 					state: EMPTY_PROJECT_STATE,
 					commands: [],
-					globalCommands: globalCommands,
 					skills: [],
-					globalSkills: globalSkills,
 					agentDefinitions: [],
 					asdlcArtifacts: {
 						agentsMd: { exists: false, sections: [] },

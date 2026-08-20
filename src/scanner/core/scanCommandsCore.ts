@@ -6,13 +6,14 @@ import { listFilesFlat } from './listFiles';
 import { scanClaudeCommands } from './scanClaudeCodeCore';
 
 /**
- * Scan for commands in project .cursor/commands/ + .claude/commands/ (workspace),
- * and user ~/.cursor/commands/ (global — no global .claude scan; see spec 011 FR-007).
+ * Scan for commands in project .cursor/commands/ + .claude/commands/ (workspace only).
+ * No global fallback — the Agents view (scanAgentCommandsCore below) is the dedicated,
+ * non-project-scoped way to browse a user's global command roots.
  */
 export async function scanCommandsCore(
 	fs: IFileSystem,
 	projectRoot: string,
-	userRoot: string
+	_userRoot: string
 ): Promise<CoreCommand[]> {
 	const commands: CoreCommand[] = [];
 
@@ -44,32 +45,6 @@ export async function scanCommandsCore(
 
 	// Project commands (Claude Code)
 	commands.push(...await scanClaudeCommands(fs, projectRoot));
-
-	// User/global commands (from ~/.cursor)
-	const userCommandsDir = path.join(userRoot, '.cursor', 'commands');
-	const userFiles = await listFilesFlat(fs, userCommandsDir, ['.md'], ['README.md']);
-
-	for (const filePath of userFiles) {
-		try {
-			const content = await fs.readFile(filePath);
-			const text = content.toString('utf8');
-			commands.push({
-				path: filePath,
-				content: text,
-				fileName: path.basename(filePath, '.md'),
-				location: 'global',
-				platform: 'cursor'
-			});
-		} catch {
-			commands.push({
-				path: filePath,
-				content: 'Error reading file content',
-				fileName: path.basename(filePath, '.md'),
-				location: 'global',
-				platform: 'cursor'
-			});
-		}
-	}
 
 	return commands;
 }

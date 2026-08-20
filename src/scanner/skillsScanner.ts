@@ -1,4 +1,4 @@
-// Skills Scanner - Scan for .cursor/skills/*/SKILL.md files in workspace and global
+// Skills Scanner - Scan for .cursor/skills/*/SKILL.md files in the workspace
 // Uses shared scanSkillsCore with VSCodeFsAdapter
 import * as vscode from 'vscode';
 import * as os from 'os';
@@ -30,17 +30,6 @@ export class SkillsScanner {
 	async scanAllWorkspaceSkills(): Promise<Skill[]> {
 		const all = await this.scanAll();
 		return all.filter((s) => s.location === 'workspace');
-	}
-
-	async scanGlobalSkills(): Promise<Skill[]> {
-		const all = await this.scanAllGlobalSkills();
-		return all.filter((s) => s.platform === 'cursor');
-	}
-
-	/** All global skills (currently `.cursor` only — see FR-007), platform-tagged (spec 011). */
-	async scanAllGlobalSkills(): Promise<Skill[]> {
-		const all = await this.scanAll();
-		return all.filter((s) => s.location === 'global');
 	}
 
 	private async scanAll(): Promise<Skill[]> {
