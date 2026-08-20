@@ -9,11 +9,14 @@ function createMockFs(options: {
 	globalFiles?: [string, FileTypeValue][];
 	claudeProjectFiles?: [string, FileTypeValue][];
 	readFileThrows?: (filePath: string) => boolean;
+	/** Whether the project has a local .cursor/ folder — gates the global .cursor scan. Defaults to true. */
+	projectHasCursorFolder?: boolean;
 }): IFileSystem {
-	const { projectFiles = [], globalFiles = [], claudeProjectFiles = [], readFileThrows = () => false } = options;
+	const { projectFiles = [], globalFiles = [], claudeProjectFiles = [], readFileThrows = () => false, projectHasCursorFolder = true } = options;
 	const projectDir = path.join('/project', '.cursor', 'commands');
 	const globalDir = path.join('/home/user', '.cursor', 'commands');
 	const claudeProjectDir = path.join('/project', '.claude', 'commands');
+	const projectCursorFolder = path.join('/project', '.cursor');
 
 	return {
 		async readDirectory(dirPath: string): Promise<[string, FileTypeValue][]> {
@@ -35,7 +38,13 @@ function createMockFs(options: {
 			}
 			return Buffer.from(`# Command\n\nContent of ${path.basename(filePath)}`);
 		},
-		async stat(): Promise<{ type: FileTypeValue; mtime?: number }> {
+		async stat(statPath: string): Promise<{ type: FileTypeValue; mtime?: number }> {
+			if (statPath === projectCursorFolder) {
+				if (!projectHasCursorFolder) {
+					throw new Error('ENOENT');
+				}
+				return { type: FileType.Directory };
+			}
 			return { type: FileType.File };
 		}
 	};
@@ -185,6 +194,29 @@ describe('scanCommandsCore', () => {
 			const global = commands.filter((c) => c.location === 'global');
 			assert.strictEqual(global.length, 1);
 			assert.strictEqual(global[0].platform, 'cursor');
+		});
+
+		it('global .cursor commands are omitted when the project has no local .cursor/ folder', async () => {
+			const fs = createMockFs({
+				projectFiles: [],
+				claudeProjectFiles: [['claude-only.md', FileType.File]],
+				globalFiles: [['global-cmd.md', FileType.File]],
+				projectHasCursorFolder: false
+			});
+			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
+			assert.strictEqual(commands.length, 1, 'only the .claude workspace command, no global cursor command');
+			assert.strictEqual(commands[0].platform, 'claude');
+		});
+
+		it('global .cursor commands are included when the project has a local .cursor/ folder', async () => {
+			const fs = createMockFs({
+				projectFiles: [],
+				globalFiles: [['global-cmd.md', FileType.File]],
+				projectHasCursorFolder: true
+			});
+			const commands = await scanCommandsCore(fs, projectRoot, userRoot);
+			assert.strictEqual(commands.length, 1);
+			assert.strictEqual(commands[0].location, 'global');
 		});
 	});
 

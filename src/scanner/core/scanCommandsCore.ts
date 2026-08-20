@@ -2,12 +2,14 @@
 import * as path from 'path';
 import type { IFileSystem } from './types';
 import type { CoreCommand } from './types';
-import { listFilesFlat } from './listFiles';
+import { listFilesFlat, directoryExists } from './listFiles';
 import { scanClaudeCommands } from './scanClaudeCodeCore';
 
 /**
  * Scan for commands in project .cursor/commands/ + .claude/commands/ (workspace),
  * and user ~/.cursor/commands/ (global — no global .claude scan; see spec 011 FR-007).
+ * The global scan only runs if the project has a local .cursor/ folder — a project that
+ * only uses Claude Code conventions shouldn't pull in the user's personal Cursor commands.
  */
 export async function scanCommandsCore(
 	fs: IFileSystem,
@@ -45,29 +47,31 @@ export async function scanCommandsCore(
 	// Project commands (Claude Code)
 	commands.push(...await scanClaudeCommands(fs, projectRoot));
 
-	// User/global commands (from ~/.cursor)
-	const userCommandsDir = path.join(userRoot, '.cursor', 'commands');
-	const userFiles = await listFilesFlat(fs, userCommandsDir, ['.md'], ['README.md']);
+	// User/global commands (from ~/.cursor) — only for projects that have a local .cursor/ folder
+	if (await directoryExists(fs, path.join(projectRoot, '.cursor'))) {
+		const userCommandsDir = path.join(userRoot, '.cursor', 'commands');
+		const userFiles = await listFilesFlat(fs, userCommandsDir, ['.md'], ['README.md']);
 
-	for (const filePath of userFiles) {
-		try {
-			const content = await fs.readFile(filePath);
-			const text = content.toString('utf8');
-			commands.push({
-				path: filePath,
-				content: text,
-				fileName: path.basename(filePath, '.md'),
-				location: 'global',
-				platform: 'cursor'
-			});
-		} catch {
-			commands.push({
-				path: filePath,
-				content: 'Error reading file content',
-				fileName: path.basename(filePath, '.md'),
-				location: 'global',
-				platform: 'cursor'
-			});
+		for (const filePath of userFiles) {
+			try {
+				const content = await fs.readFile(filePath);
+				const text = content.toString('utf8');
+				commands.push({
+					path: filePath,
+					content: text,
+					fileName: path.basename(filePath, '.md'),
+					location: 'global',
+					platform: 'cursor'
+				});
+			} catch {
+				commands.push({
+					path: filePath,
+					content: 'Error reading file content',
+					fileName: path.basename(filePath, '.md'),
+					location: 'global',
+					platform: 'cursor'
+				});
+			}
 		}
 	}
 
